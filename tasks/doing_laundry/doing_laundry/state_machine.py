@@ -48,6 +48,12 @@ class DoingLaundry(yasmin.StateMachine):
         )
 
         self.add_state(
+            "TUCK_ARM_1",
+            TuckArm(),
+            transitions={"succeeded": "SPAWN", "failed": "SPAWN"},
+        )
+
+        self.add_state(
             "SPAWN",
             Spawn(model_path=basket_sdf, x=0.6, y=0.0, z=0.0, settle=1.5),
             transitions={"succeeded": "LOOK_DOWN", "failed": "LOOK_DOWN"},

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 basket_grasp_state.py — Floor laundry-basket perception as a YASMIN state.
 
@@ -336,9 +337,9 @@ class BasketPerception:
         boxes_t, logits_t, _ = predict(
             model=self.dino_model,
             image=image_tensor,
-            caption="t-shirt",
-            box_threshold=0.30,
-            text_threshold=0.25,
+            caption="fabric clothing, folded cloth",
+            box_threshold=0.50,
+            text_threshold=0.40,
             device=self.device,
         )
 
@@ -351,6 +352,11 @@ class BasketPerception:
                 rim_z=rim_z,
             )
 
+        # 신뢰도 로깅
+        for i, score in enumerate(logits_t):
+            self.node.get_logger().info(f"T-shirt candidate {i}: confidence = {score:.4f}")
+
+        # 가장 신뢰도가 높은 바운딩 박스 추출
         best_t = boxes_t[torch.argmax(logits_t)]
         tx, ty, tw, th = best_t
 
@@ -360,7 +366,6 @@ class BasketPerception:
         t_ymax = int((ty + th / 2) * h_img)
 
         # 티셔츠 바운딩 박스 안쪽에 있는 3D Depth 점들을 필터링합니다.
-        # 이 때 바구니 벽(플라스틱)을 집지 않도록 안쪽으로 여유(inset)를 둡니다.
         inset = self.gripper_half + self.safe_margin
 
         tshirt_mask = (us >= t_xmin) & (us <= t_xmax) & (vs >= t_ymin) & (vs <= t_ymax)
@@ -392,17 +397,34 @@ class BasketPerception:
                 rim_z=rim_z,
             )
 
+        # ==========================================
+        # 3. 물리적 부피 검증 (Depth Volume Check)
+        # ==========================================
+        # 바닥(floor_z) 기준으로 3cm 이상 솟아오른 점들만 추출하여 진짜 티셔츠 부피가 있는지 확인
+        min_shirt_height = floor_z + 0.01
+        shirt_volume_pts = safe_pts[safe_pts[:, 2] > min_shirt_height]
+
+        if shirt_volume_pts.shape[0] < 30:
+            return GraspResult(
+                "empty",
+                f"Detected t-shirt 2D box, but no 3D volume ({shirt_volume_pts.shape[0]} pts > 3cm)",
+                frame=base,
+                basket_xy=(basket_3d_x, basket_3d_y),
+                rim_z=rim_z,
+            )
+
         # 가장 Z값이 큰(가장 위로 솟아오른) 점을 파지점(Grasp)으로 선택합니다.
-        max_z_idx = np.argmax(safe_pts[:, 2])
-        grasp_pt = safe_pts[max_z_idx]
+        # 주의: 이제 파지점은 부피 검증을 통과한 점들(shirt_volume_pts) 중에서 고릅니다!
+        max_z_idx = np.argmax(shirt_volume_pts[:, 2])
+        grasp_pt = shirt_volume_pts[max_z_idx]
 
         gx, gy = float(grasp_pt[0]), float(grasp_pt[1])
         gz = float(grasp_pt[2])
 
         # 그리퍼 방향 결정을 위해 파지점 주변 옷감의 주름 방향(PCA)을 계산합니다.
         r = self.gripper_half
-        d = np.linalg.norm(safe_pts[:, :2] - np.array([gx, gy]), axis=1)
-        nb = safe_pts[d < r]
+        d = np.linalg.norm(shirt_volume_pts[:, :2] - np.array([gx, gy]), axis=1)
+        nb = shirt_volume_pts[d < r]
 
         if nb.shape[0] >= 3:
             ridge_yaw, _ = _pca_yaw(nb[:, :2])
@@ -419,7 +441,7 @@ class BasketPerception:
             f"[grasp] xy=({gx:.3f},{gy:.3f}) z={gz:.3f} floor={floor_z:.3f} rim={rim_z:.3f}"
         )
 
-        # 완벽하게 규격화된 결과를 pick.py 로 넘깁니다!
+        # 완벽하게 규격화된 결과를 넘깁니다.
         return GraspResult(
             "grasp_ready",
             "ok",
