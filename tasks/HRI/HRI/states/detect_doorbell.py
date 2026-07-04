@@ -1,4 +1,3 @@
-import os
 import csv
 import numpy as np
 import pyaudio
@@ -8,9 +7,9 @@ import yasmin
 import yasmin_ros
 import time
 import rclpy
-
+from pathlib import Path
 from scipy.signal import resample_poly  # Add this import at the top
-
+import os
 
 class DetectDoorbell(yasmin.State):
     FORMAT = pyaudio.paInt16
@@ -22,13 +21,41 @@ class DetectDoorbell(yasmin.State):
     WAIT_FOR_DOORBELL_TIMEOUT = 30
 
     def __init__(
-        self, device_id=0, score_threshold=0.25, excluded_classes=["Speech", "Silence"]
+        self, device_id="default", score_threshold=0.20,
+        included_classes=[
+                            "Buzzer",
+                            "Telephone bell ringing",
+                            "Alarm clock",
+                            "AlarmSmoke detector, smoke alarm",
+                            "Chink, clink",
+                            "Smoke detector, smoke alarm",
+                            "Beep, bleep",
+                            "Chink, clink",
+                            "Bell",
+                            "Bicycle bell",
+                            "Glass",
+                            "Percussion",
+                            "Doorbell",
+                            "Music",
+                            "Percussion",
+                            "Glockenspiel",
+                            "Marimba, xylophone",
+                            "Chime",
+                            "Glockenspiel",
+                            "Fire alarm",
+                            "Siren",
+                            "Whistle",
+                            "Air horn, truck horn",
+                            "Vehicle horn, car horn, honking",
+                            "Cowbell",
+                            "Bagpipes"
+                        ]
     ):
         super().__init__(outcomes=["succeeded", "failed"])
         # Ensure correct hardware device ID discovered from the step 1 script
         self.device_id = device_id
         self.score_threshold = score_threshold
-        self.excluded_classes = excluded_classes
+        self.included_classes = included_classes
 
         # State variables
         self.model = None
@@ -63,13 +90,17 @@ class DetectDoorbell(yasmin.State):
                 audio_chunk, self.TARGET_RATE, self.HARDWARE_RATE
             )
 
-        yasmin_ros.logger_node.get_logger().info(
-            f"Max amplitude: {np.max(np.abs(audio_chunk)):.4f}"
-        )
         self.audio_buffer = np.append(self.audio_buffer, audio_chunk)
 
     def load_model(self):
-        model_path = kagglehub.model_download("google/yamnet/tensorFlow2/yamnet")
+        relative_path = Path("~/.cache/kagglehub/models/google/yamnet/tensorFlow2/yamnet/1")
+        absolute_path = relative_path.expanduser().resolve()
+
+        if os.path.exists(absolute_path):
+            model_path = absolute_path
+        else:
+            model_path = kagglehub.model_download("google/yamnet/tensorFlow2/yamnet")
+
         self.model = tf.saved_model.load(model_path)
 
     def load_class_map(self):
@@ -84,7 +115,6 @@ class DetectDoorbell(yasmin.State):
                 self.class_names.append(row["display_name"])
 
     def run_inference(self):
-        yasmin_ros.logger_node.get_logger().info(f"Run inference")
 
         if len(self.audio_buffer) >= self.REQUIRED_SAMPLES:
             input_data = self.audio_buffer[-self.REQUIRED_SAMPLES :]
@@ -97,8 +127,8 @@ class DetectDoorbell(yasmin.State):
             prediction_name = self.class_names[top_class_index]
 
             if (
-                top_score > self.score_threshold
-                and prediction_name not in self.excluded_classes
+                top_score > self.score_threshold and prediction_name in self.included_classes
+
             ):
                 yasmin_ros.logger_node.get_logger().info(
                     f" Detected: {prediction_name:<25} (Score: {top_score:.2f})"
@@ -123,16 +153,12 @@ class DetectDoorbell(yasmin.State):
         try:
             t_end = time.time() + self.WAIT_FOR_DOORBELL_TIMEOUT
             found = False
-            yasmin_ros.logger_node.get_logger().info(f"Before loop")
 
             while time.time() < t_end and not found:
-                yasmin_ros.logger_node.get_logger().info(f"Im loop")
 
                 self.process_audio_frame()
-                yasmin_ros.logger_node.get_logger().info(f"Processed audio frame loop")
 
                 found = self.run_inference()
-                yasmin_ros.logger_node.get_logger().info(f"found hqs vqlue {found}")
             if found:
                 return "succeeded"
             else:
