@@ -48,6 +48,15 @@ class DoingLaundry(yasmin.StateMachine):
         )
 
         self.add_state(
+            "START",
+            Start(),
+            transitions={
+                "succeeded": "LOOK_FOR_BASKET",
+                "failed": "failed",
+            },
+        )
+
+        self.add_state(
             "TUCK_ARM_1",
             TuckArm(),
             transitions={"succeeded": "SPAWN", "failed": "SPAWN"},
