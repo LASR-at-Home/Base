@@ -20,7 +20,7 @@ class VerbalConfirm(yasmin.StateMachine):
 
         self.add_state(
             "CHECK_RESPONSE",
-            yasmin.CBState(
+            yasmin.CbState(
                 outcomes=["yes", "no", "unknown"], 
                 callback=self.parseResponse),
             transitions={

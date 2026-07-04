@@ -1,18 +1,20 @@
 from typing import Any
 
 import rclpy
+from rclpy.time import Time
 import yasmin
 from yasmin import Blackboard
 import yasmin_ros
 
-from geometry_msgs.msg import Point, Pose, Quaternion
+from std_msgs.msg import Header
+from geometry_msgs.msg import Point, Pose, Quaternion, PointStamped
 from rclpy.wait_for_message import wait_for_message
 from sensor_msgs.msg import Image
 
 from GPSR.world import load_locations
 from GPSR.tts import say
 from lasr_vision_interfaces.srv import BodyPixKeypointDetection, DetectFaces as DetectFacesSrv
-from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait, Detect3D, LookToPoint, Say
+from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait, Detect3D, LookToPoint, Say, PlayMotion
 
 import time
 from typing import List, Union, Optional
@@ -264,7 +266,7 @@ class DispatchSkill(yasmin.State):
     def _give_to_person(self, args: dict[str, Any]):
         obj = self._first_arg(args, "object") or "object"
         try:
-            outcome = HandoverObject(object_name=obj).execute()
+            outcome = HandoverObject(object_name=obj)(self.task_bb)
         except Exception as exc:
             self.node.get_logger().error(f"HandoverObject failed: {exc}")
             self._say(f"Please take the {obj} from my hand.")
@@ -273,7 +275,7 @@ class DispatchSkill(yasmin.State):
     
     def _follow_person(self):
         try:
-            outcome = FollowPerson().execute()
+            outcome = FollowPerson()(self.task_bb)
         except Exception as exc:
             self.node.get_logger().error(f"FollowPerson failed: {exc}")
             self._say(f"I'm sorry. I am unable to follow you.")
@@ -281,27 +283,107 @@ class DispatchSkill(yasmin.State):
         return outcome
     
     def _find_object(self, object):
+        def getPoint(blackboard):
+            detections = blackboard.get("detections_3d").detected_objects
+            if detections:
+                blackboard['object_point'] = PointStamped(
+                header=Header(
+                    frame_id="map",
+                    stamp=Time().to_msg(),
+                ),
+                point=detections[0].point,
+            )
+                
+                yasmin.YASMIN_LOG_INFO(f" An object is at {blackboard['object_point']}")
+                return "succeeded"
+            
+            return "failed"
         try:
+            yasmin.YASMIN_LOG_INFO(f"object to detect: {object}")
+            filter_list = []
+            if object is not None:
+                filter_list = [object]
+
             sm = yasmin.StateMachine(outcomes=["succeeded", "failed"])
             sm.add_state(
-                "DETECT3D",
-                Detect3D(model="best.pt", filter=[object]),
-                transitions={"succeeded": "LOOK_AT_OBJECT", "failed": "failed"},
+                "LOOK_CENTRE",
+                PlayMotion("look_centre"),
+                transitions={
+                    "succeeded": "DETECT3D_UP",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
             )
+            sm.add_state(
+                "DETECT3D_UP",
+                Detect3D(model="best.pt", filter=filter_list),
+                transitions={"succeeded": "GET_POINT_UP", "failed": "failed"},
+            )
+            sm.add_state(
+                "GET_POINT_UP",
+                yasmin.CbState(outcomes=["succeeded", "failed"], callback=getPoint),
+                transitions={"succeeded": "LOOK_AT_OBJECT", "failed": "LOOK_DOWN"},
+            )
+            sm.add_state(
+                "LOOK_DOWN",
+                PlayMotion("look_down_centre"),
+                transitions={
+                    "succeeded": "DETECT3D_DOWN",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+            sm.add_state(
+                "DETECT3D_DOWN",
+                Detect3D(model="best.pt", filter=filter_list),
+                transitions={"succeeded": "GET_POINT_DOWN", "failed": "failed"},
+            )
+            sm.add_state(
+                "GET_POINT_DOWN",
+                yasmin.CbState(outcomes=["succeeded", "failed"], callback=getPoint),
+                transitions={"succeeded": "LOOK_AT_OBJECT", "failed": "NO_OBJECT"},
+            )
+
             sm.add_state(
                 "LOOK_AT_OBJECT",
                 LookToPoint(),
-                transitions={"succeeded": "CONFIRM", "failed": "failed"},
+                transitions={
+                      "succeeded": "CONFIRM", 
+                    "aborted": "failed",
+                    "canceled": "failed"},
+                remappings={"pointstamped": "object_point"}
             )
             sm.add_state(
                 "CONFIRM",
                 Say(text=f"I can see the {object}."),
-                transitions={"succeeded": "succeeded", "failed": "failed"},
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+
+            sm.add_state(
+                "NO_OBJECT",
+                Say(text=f"I cannot see the {object}."),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+            sm.add_state(
+                "PRE_NAV",
+                PlayMotion("look_centre"),
+                transitions={
+                    "succeeded": "DETECT3D",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
             )
             outcome = sm(self.task_bb)
         except Exception as exc:
-            self.node.get_logger().error(f"FollowPerson failed: {exc}")
-            self._say(f"I'm sorry. I am unable to follow you.")
+            self.node.get_logger().error(f"Find Object failed: {exc}")
             return "failed"
         return outcome
 
@@ -370,7 +452,17 @@ def main():
 
     try:
         bb = Blackboard()
-        bb["steps"] = [{'skill': 'go_to_location', 'args': {'location': 'living room'}}, {'skill': 'go_to_location', 'args': {'location': 'coffee table'}}, {'skill': 'find_object', 'args': {'name': "Rubik's Cube", 'location': 'coffee table'}}, {'skill': 'pick_up', 'args': {'object': "Rubik's Cube"}}, {'skill': 'go_to_person', 'args': {'person': 'me'}}, {'skill': 'go_to_location', 'args': {'location': 'instruction point'}}, {'skill': 'give_to_person', 'args': {'person': 'operator'}}]
+        bb["steps"] = [
+            #{"skill": "go_to_location", "args": {"location": "laundry"}}, 
+            #{"skill": "go_to_location", "args": {"location": "shelf"}}, 
+            {"skill": "find_object", "args": {"object": "red_bull", "location": "shelf"}}, 
+            {"skill": "pick_up", "args": {"object": "red_bull"}}, 
+            #{"skill": "go_to_location", "args": {"location": "living room"}}, 
+            #{"skill": "go_to_location", "args": {"location": "coffee table"}}, 
+            {"skill": "place_object", "args": {"location": "coffee table"}}
+        ]
+        
+        
         outcome = DispatchSkill(node)(bb)
 
         yasmin.YASMIN_LOG_INFO(outcome)
