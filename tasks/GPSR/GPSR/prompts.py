@@ -555,6 +555,9 @@ JSON: {{"can_do": true, "announcement": "Here is my plan. Step 1: tell you my te
 Command: find the person by the bed and ask their name | Known locations: bedroom, kitchen, laundry, living room, bed
 JSON: {{"can_do": true, "announcement": "Here is my plan. Step 1: go to the bedroom. Step 2: go to the bed. Step 3: find the person. Step 4: get their name. Step 5: return to the operator. Step 6. report the name of the person.", "steps": [{{"skill": "go_to_location", "args": {{"location": "bedroom"}}}}, {{"skill": "go_to_location", "args": {{"location": "bed"}}}}, {{"skill": "find_person", "args": {{"location": "bed"}}}}, {{"skill": "get_person_info", "args": {{"info": "name", "location": "bed"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "say", "args": {{"text": "The name of the person by the bed is [result]."}}}}]}}
 
+Command: go to the living room find the seaweed and bring it to me | Known locations: bedroom, kitchen, laundry, living room | Objects: seaweed (snack at shelf in laundry)
+JSON: {{"can_do": true, "announcement": "Here is my plan. Step 1: go to the living room. Step 2: find the seaweed. Step 3: pick it up. Step 4: return to you. Step 5: give you the seaweed.", "steps": [{{"skill": "go_to_location", "args": {{"location": "living room"}}}}, {{"skill": "find_object", "args": {{"object": "seaweed", "location": "living room"}}}}, {{"skill": "pick_up", "args": {{"object": "seaweed"}}}}, {{"skill": "go_to_location", "args": {{"location": "instruction point"}}}}, {{"skill": "give_to_person", "args": {{"person": "operator"}}}}]}}
+
 Command: {command} | Known locations: {locations} | Placeable locations: {placement_locations}
 JSON: """
 
