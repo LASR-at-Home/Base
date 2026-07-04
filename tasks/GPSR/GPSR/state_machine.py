@@ -199,9 +199,12 @@ class GPSR(yasmin.StateMachine):
             },
         )
 
+        readback_state = yasmin.CbState(outcomes=["succeeded"], callback=self.readback)
+        readback_state.add_input_key("transcribed_speech")
+        readback_state.add_input_key("steps")
         self.add_state(
             "READBACK",
-            yasmin.CbState(outcomes=["succeeded"], callback=self.readback),
+            readback_state,
             transitions={"succeeded": "WAIT_BEFORE_NEXT"},
         )
 
@@ -416,9 +419,15 @@ class GPSR(yasmin.StateMachine):
 
     def readback(self, blackboard):
         try:
+            command = blackboard["transcribed_speech"].strip()
             steps = blackboard["steps"]
+            announcement = ""
             if steps and steps[0].get("skill") == "say":
-                say(self.node, steps[0]["args"]["text"])
+                announcement = steps[0]["args"]["text"]
+            if command:
+                say(self.node, f"I heard: {command}.")
+            if announcement and announcement != PLAN_FAILED_TOKEN:
+                say(self.node, announcement)
         except Exception:
             pass
         return "succeeded"
