@@ -4,6 +4,7 @@ from .detect_3d import Detect3D
 from .detect_3d_in_area import Detect3DInArea
 from .detect_all_in_polygon import DetectAllInPolygon
 from .detect_keypoints_3d import DetectKeypoints3D
+from .detect_keypoints_2d import DetectKeypoints2D
 
 from .say import Say
 
