@@ -1,13 +1,14 @@
 gpsr:
   ros__parameters:
-    llm_model: "gemma3"
-    llm_model: "gemma3"
+    llm_model: "gemma3:4b"
     llm_host: "http://localhost:11434"
-    cloud_host: "127.0.0.1"          # server.py;
-    cloud_port: 8765
-    cloud_timeout_sec: 10.0
+    cloud_model: "gemma4-31b"
+    cloud_host: "http://127.0.0.1:8000/v1"
+    cloud_port: 8000
+    cloud_api_key: "sk-WejzGLNMxoxihqRkXbfCWQ"
+    cloud_timeout_sec: 40.0
     simulation: false              # true = use gtts on PC, false = use robot TTS
-    input_mode: "keyboard"        # "keyboard" or "mic"
+    input_mode: "microphone"        # "keyboard" or "mic"
     whisper:
       energy_threshold: 400   
       phrase_duration: 10.0

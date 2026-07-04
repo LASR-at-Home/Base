@@ -8,10 +8,27 @@ from sensor_msgs.msg import Image
 
 from GPSR.world import load_locations
 from GPSR.tts import say
-from lasr_vision_interfaces.srv import BodyPixKeypointDetection, DetectFaces as DetectFacesSrv
-from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait, Detect3D, LookToPoint, Say
+from lasr_vision_interfaces.srv import (
+    BodyPixKeypointDetection,
+    DetectFaces as DetectFacesSrv,
+)
+from lasr_skills import (
+    AskAndListen,
+    DescribePeople,
+    GoToLocation,
+    HandoverObject,
+    ReceiveObject,
+    DetectWave,
+    Rotate,
+    FollowPerson,
+    Wait,
+    Detect3D,
+    LookToPoint,
+    Say,
+)
 
 import time
+
 
 class DispatchSkill(yasmin.State):
     """YASMIN state that executes a skill chosen by the LLM."""
@@ -22,7 +39,7 @@ class DispatchSkill(yasmin.State):
         self.node = node
         self.locations = load_locations(node)
         self._image_topic = "/head_front_camera/rgb/image_raw"
-        self._detect_faces_client = self.node.create_client(    # Replace with ReId
+        self._detect_faces_client = self.node.create_client(  # Replace with ReId
             DetectFacesSrv, "/deepface/detect_faces"
         )
         self._bodypix_client = self.node.create_client(
@@ -87,16 +104,18 @@ class DispatchSkill(yasmin.State):
             self.node.get_logger().error(f"Failed to get camera image: {exc}")
             return None
 
-    def _detect_faces(self):    # Redundent as is replaced by REiD and spin breaks code. 
+    def _detect_faces(self):  # Redundent as is replaced by REiD and spin breaks code.
         try:
             outcome = DetectWave()(yasmin.Blackboard())
             if outcome == "waving":
                 return True
-            
+
         except Exception as exc:
-            self.node.get_logger().error(f"Detect faces (placeholder with detect_wave) failed: {exc}")
+            self.node.get_logger().error(
+                f"Detect faces (placeholder with detect_wave) failed: {exc}"
+            )
             return False
-        
+
         return False
         # if not self._detect_faces_client.wait_for_service(timeout_sec=2.0):
         #     self.node.get_logger().warning("Face detection service is not available.")
@@ -120,11 +139,11 @@ class DispatchSkill(yasmin.State):
             outcome = DetectWave()(yasmin.Blackboard())
             if outcome == "waving":
                 return True
-            
+
         except Exception as exc:
             self.node.get_logger().error(f"Ask/listen failed: {exc}")
             return False
-        
+
         return False
 
     def _describe_person(self):
@@ -188,7 +207,9 @@ class DispatchSkill(yasmin.State):
             self._say(f"Please follow me to the {end}.")
         return self._go_to_location(end)
 
-    def _find_person(self, args: dict[str, Any]):   #TODO:  Update with a 'search in area' which scans and rotates to find an object/person in the room
+    def _find_person(
+        self, args: dict[str, Any]
+    ):  # TODO:  Update with a 'search in area' which scans and rotates to find an object/person in the room
         location = self._first_arg(args, "location")
         name = self._first_arg(args, "name")
         gesture = self._first_arg(args, "gesture")
@@ -224,12 +245,12 @@ class DispatchSkill(yasmin.State):
                 if shirt_color and clothes.lower() in shirt_color:
                     self._say(f"I found a person wearing a {clothes} shirt.")
                     return "succeeded"
-                
-        #TODO:  Ask for person to move infront of you. then wait
+
+        # TODO:  Ask for person to move infront of you. then wait
         self._say("I cannot see you. Can you please step infront of me. ")
         time.sleep(2)
 
-        # detections = self._detect_faces() 
+        # detections = self._detect_faces()
         # if detections:
         #     if name:
         #         self._say(f"I found a person who may be {name}.")
@@ -282,7 +303,7 @@ class DispatchSkill(yasmin.State):
             self._say(f"Please take the {obj} from my hand.")
             return "failed"
         return outcome
-    
+
     def _follow_person(self):
         try:
             outcome = FollowPerson().execute()
@@ -291,7 +312,7 @@ class DispatchSkill(yasmin.State):
             self._say(f"I'm sorry. I am unable to follow you.")
             return "failed"
         return outcome
-    
+
     def _find_object(self, object):
         try:
             sm = yasmin.StateMachine(outcomes=["succeeded", "failed"])
@@ -320,33 +341,41 @@ class DispatchSkill(yasmin.State):
     def _execute_step(self, skill, args):
         if skill == "say":  # CHECKED
             return self._say(args.get("text", ""))
-        if skill == "go_to_location":   #CHECKED
+        if skill == "go_to_location":  # CHECKED
             return self._go_to_location(args.get("location", ""))
-        if skill == "guide_person":     # SOMEWHAT WORKS
+        if skill == "guide_person":  # SOMEWHAT WORKS
             return self._guide_person(args)
-        if skill == "find_person":      # OUTDATED / BROKEN BACKEND - Disabled use of face detector
+        if (
+            skill == "find_person"
+        ):  # OUTDATED / BROKEN BACKEND - Disabled use of face detector
             return self._find_person(args)
         if skill == "get_person_info":  # SHOULD WORK
             return self._get_person_info(args)
-        if skill == "pick_up":          # SHOULD WORK
+        if skill == "pick_up":  # SHOULD WORK
             return self._pick_up(args)
-        if skill == "place_object":     # SHOULD WORK
+        if skill == "place_object":  # SHOULD WORK
             return self._place_object(args)
-        if skill == "give_to_person":   # SHOULD WORK
+        if skill == "give_to_person":  # SHOULD WORK
             return self._give_to_person(args)
-        if skill == "follow_person":   # SHOULD WORK
+        if skill == "follow_person":  # SHOULD WORK
             return self._follow_person()
-        if skill == "find_object":   # SHOULD WORK
+        if skill == "find_object":  # SHOULD WORK
             return self._find_object(args.get("object", ""))
-        
+
         # CAN ADD follow_person, find_object
         self.node.get_logger().info(f"Skipping skill '{skill}' (not yet actuated)")
         return "succeeded"
 
     def execute(self, blackboard):
+        print(blackboard["steps"])
         for step in blackboard["steps"]:
             outcome = self._execute_step(step["skill"], step.get("args", {}))
             if outcome == "failed":
-                self._execute_step(skill="say", args={"text": "I couldn't complete that step. Moving to the next part of the plan."})
+                self._execute_step(
+                    skill="say",
+                    args={
+                        "text": "I couldn't complete that step. Moving to the next part of the plan."
+                    },
+                )
             time.sleep(0.5)
         return "succeeded"
