@@ -13,7 +13,7 @@ class QueryLLM(yasmin.State):
 
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
-        self.add_input_key("sequence")
+        self.add_input_key("transcribed_speech")
         self.add_output_key("steps")
         self.node = node
         self.world = build_world(node)
@@ -24,7 +24,7 @@ class QueryLLM(yasmin.State):
 
     def execute(self, blackboard):
         t0 = time.perf_counter()
-        raw_command = blackboard["sequence"].strip()
+        raw_command = blackboard["transcribed_speech"].strip()
         if self.agent.cloud_enabled:
             command = raw_command
         else:

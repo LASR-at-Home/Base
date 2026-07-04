@@ -8,6 +8,7 @@ from GPSR.planner import run_planner, run_cloud_planner, run_announce
 
 
 def _normalize_url(host: str, port: int | None = None) -> str:
+    port = None
     host = (host or "").strip()
     if not host:
         return ""

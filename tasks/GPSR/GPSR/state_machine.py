@@ -55,46 +55,46 @@ class GPSR(yasmin.StateMachine):
         self.plans = []
         self.exec_index = 0
 
-        # self.add_state(
-        #     "WAIT_START",
-        #     yasmin_ros.MonitorState(
-        #         topic_name="/gpsr/start",
-        #         outcomes=["succeeded", "failed"],
-        #         monitor_handler=self.start_cb,
-        #         msg_type=Empty,
-        #     ),
-        #     transitions={
-        #         "succeeded": "START_CON",
-        #         "failed": "WAIT_START",
-        #         "canceled": "failed",
-        #     },
-        # )
+        self.add_state(
+            "WAIT_START",
+            yasmin_ros.MonitorState(
+                topic_name="/gpsr/start",
+                outcomes=["succeeded", "failed"],
+                monitor_handler=self.start_cb,
+                msg_type=Empty,
+            ),
+            transitions={
+                "succeeded": "START_CON",
+                "failed": "WAIT_START",
+                "canceled": "failed",
+            },
+        )
 
-        # self.add_state(
-        #     "START_CON",
-        #     self.setup(),
-        #     transitions={"succeeded": "WAIT_3", "failed": "START_CON"},
-        # )
-        # self.add_state(
-        #     "WAIT_3",
-        #     Wait(3),
-        #     transitions={
-        #         "succeeded": "ENTER_DOOR",
-        #         "failed": "ENTER_DOOR",
-        #     },
-        # )
+        self.add_state(
+            "START_CON",
+            self.setup(),
+            transitions={"succeeded": "WAIT_3", "failed": "START_CON"},
+        )
+        self.add_state(
+            "WAIT_3",
+            Wait(3),
+            transitions={
+                "succeeded": "ENTER_DOOR",
+                "failed": "ENTER_DOOR",
+            },
+        )
 
-        # self.add_state(
-        #     "ENTER_DOOR",
-        #     GoToLocation(location_param="entrance_point"),
-        #     transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "ENTER_DOOR"},
-        # )
+        self.add_state(
+            "ENTER_DOOR",
+            GoToLocation(location_param="entrance_point"),
+            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "ENTER_DOOR"},
+        )
 
-        # self.add_state(
-        #     "GO_TO_INSTRUCT_POINT",
-        #     GoToLocation(location_param="instruction_point"),
-        #     transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "GO_TO_INSTRUCT_POINT"},
-        # )
+        self.add_state(
+            "GO_TO_INSTRUCT_POINT",
+            GoToLocation(location_param="instruction_point"),
+            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "GO_TO_INSTRUCT_POINT"},
+        )
 
         self.add_state(
             "CHECK_INSTRUCTION",
@@ -221,19 +221,19 @@ class GPSR(yasmin.StateMachine):
             ),
             transitions={
                 "collect_next": "CHECK_INSTRUCTION",
-                "execute": "ANNOUNCE_ALL",
+                "execute": "NEXT_PLAN",
             },
         )
 
-        # Announce all collected plans before starting execution.
-        self.add_state(
-            "ANNOUNCE_ALL",
-            yasmin.CbState(
-                outcomes=["succeeded"],
-                callback=self.announceAll,
-            ),
-            transitions={"succeeded": "NEXT_PLAN"},
-        )
+        # # Announce all collected plans before starting execution.
+        # self.add_state(
+        #     "ANNOUNCE_ALL",
+        #     yasmin.CbState(
+        #         outcomes=["succeeded"],
+        #         callback=self.announceAll,
+        #     ),
+        #     transitions={"succeeded": "NEXT_PLAN"},
+        # )
 
         # Execution phase: load one stored plan at a time into the blackboard
         # and run it via PRE_NAV -> DISPATCH_SKILL.
@@ -529,75 +529,75 @@ def main(args=None):
         f"Starting GPSR state machine (input_mode={input_mode}, simulation={simulation})..."
     )
 
-    if input_mode == "keyboard":
-        wait_for_command = KeyboardInputState(node)
-    elif input_mode in ("mic", "microphone"):
-        wait_for_command = ListenState(node)
-
-    yasmin_ros.set_ros_loggers(node)
-
-    sm = yasmin.StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
-
-    sm.add_state(
-        "WAIT_FOR_COMMAND",
-        wait_for_command,
-        transitions={
-            "succeeded": "SET_PLACEHOLDERS",
-            "aborted": "WAIT_FOR_COMMAND",
-        },
-    )
-
-    def _set_placeholders(blackboard):
-        blackboard["placeholders"] = blackboard["sequence"].strip()
-        return "succeeded"
-
-    set_placeholders_state = yasmin.CbState(
-        outcomes=["succeeded"], callback=_set_placeholders
-    )
-    set_placeholders_state.add_input_key("sequence")
-    set_placeholders_state.add_output_key("placeholders")
-
-    sm.add_state(
-        "SET_PLACEHOLDERS",
-        set_placeholders_state,
-        transitions={"succeeded": "QUERY_LLM"},
-    )
-
-    plan_con = yasmin.Concurrence(
-        states={
-            "QUERY_LLM": QueryLLM(node),
-            "SAY_PLANNING": Say(
-                format_str="I heard {}. Give me a moment, I am planning."
-            ),
-        },
-        default_outcome="failed",
-        outcome_map={
-            "succeeded": {"QUERY_LLM": "succeeded"},
-            "failed": {"QUERY_LLM": "failed"},
-        },
-    )
-
-    sm.add_state(
-        "QUERY_LLM",
-        plan_con,
-        transitions={
-            "succeeded": "DISPATCH_SKILL",
-            "failed": "WAIT_FOR_COMMAND",
-        },
-    )
-    sm.add_state(
-        "DISPATCH_SKILL",
-        DispatchSkill(node),
-        transitions={
-            "succeeded": "WAIT_FOR_COMMAND",
-            "failed": "WAIT_FOR_COMMAND",
-        },
-    )
+    # if input_mode == "keyboard":
+    #     wait_for_command = KeyboardInputState(node)
+    # elif input_mode in ("mic", "microphone"):
+    #     wait_for_command = ListenState(node)
 
     # yasmin_ros.set_ros_loggers(node)
 
-    # sm = GPSR(node)
-    # sm.set_sigint_handler(True)
+    # sm = yasmin.StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+    # sm.add_state(
+    #     "WAIT_FOR_COMMAND",
+    #     wait_for_command,
+    #     transitions={
+    #         "succeeded": "SET_PLACEHOLDERS",
+    #         "aborted": "WAIT_FOR_COMMAND",
+    #     },
+    # )
+
+    # def _set_placeholders(blackboard):
+    #     blackboard["placeholders"] = blackboard["sequence"].strip()
+    #     return "succeeded"
+
+    # set_placeholders_state = yasmin.CbState(
+    #     outcomes=["succeeded"], callback=_set_placeholders
+    # )
+    # set_placeholders_state.add_input_key("sequence")
+    # set_placeholders_state.add_output_key("placeholders")
+
+    # sm.add_state(
+    #     "SET_PLACEHOLDERS",
+    #     set_placeholders_state,
+    #     transitions={"succeeded": "QUERY_LLM"},
+    # )
+
+    # plan_con = yasmin.Concurrence(
+    #     states={
+    #         "QUERY_LLM": QueryLLM(node),
+    #         "SAY_PLANNING": Say(
+    #             format_str="I heard {}. Give me a moment, I am planning."
+    #         ),
+    #     },
+    #     default_outcome="failed",
+    #     outcome_map={
+    #         "succeeded": {"QUERY_LLM": "succeeded"},
+    #         "failed": {"QUERY_LLM": "failed"},
+    #     },
+    # )
+
+    # sm.add_state(
+    #     "QUERY_LLM",
+    #     plan_con,
+    #     transitions={
+    #         "succeeded": "DISPATCH_SKILL",
+    #         "failed": "WAIT_FOR_COMMAND",
+    #     },
+    # )
+    # sm.add_state(
+    #     "DISPATCH_SKILL",
+    #     DispatchSkill(node),
+    #     transitions={
+    #         "succeeded": "WAIT_FOR_COMMAND",
+    #         "failed": "WAIT_FOR_COMMAND",
+    #     },
+    # )
+
+    yasmin_ros.set_ros_loggers(node)
+
+    sm = GPSR(node)
+    sm.set_sigint_handler(True)
 
     try:
         outcome = sm()
