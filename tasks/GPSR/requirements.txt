@@ -3,3 +3,4 @@ jellyfish
 PyYAML
 gtts
 pydub
+openai

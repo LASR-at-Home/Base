@@ -31,7 +31,7 @@ class TranscribeSpeechAction(Node):
 
         self.declare_parameter("model", "small.en")
         self.declare_parameter("device", "cuda" if torch.cuda.is_available() else "cpu")
-        self.declare_parameter("mic_device", "")
+        self.declare_parameter("mic_device", "default")
         self.declare_parameter("start_timeout", 5.0)
         self.declare_parameter("pause_threshold", 2.0)
 

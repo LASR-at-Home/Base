@@ -5,6 +5,7 @@ import time
 
 from GPSR.prompts import (
     ANNOUNCE_PLAN_PROMPT,
+    CLOUD_PLANNER_PROMPT,
     PLANNER_PROMPT,
     SKILL_REFINER_PROMPT,
     SKILL_SELECTOR_PROMPT,
@@ -18,10 +19,10 @@ class SkillSelectorError(Exception):
     """Stage 1 failed — no plan available."""
 
 
-def _inject_sublocations(steps: list, objects: dict) -> list:
-    """For every go_to_location that targets a known sub-location, prepend its parent room."""
+def _inject_sublocations(steps: list, objects: dict = None) -> list:
+    """For every go_to_location that targets a sub-location, prepend a go_to_location for its room."""
+
     def _prev_loc(result):
-        """Return the location arg of the last go_to_location step, or None."""
         for step in reversed(result):
             if step.get("skill") == "go_to_location":
                 return step.get("args", {}).get("location")
@@ -62,12 +63,15 @@ def _inject_give_to_operator(steps: list) -> list:
     return steps
 
 
-def _fail_safe(text: str = "I could not generate a plan for that command.") -> dict:
+PLAN_FAILED_TOKEN = "PLAN_FAILED"
+
+
+def _fail_safe(reason: str = "") -> dict:
     return {
         "skill": "say",
-        "skill_args": {"text": text},
-        "plan_description": text,
-        "steps": [{"skill": "say", "args": {"text": text}}],
+        "skill_args": {"text": PLAN_FAILED_TOKEN},
+        "plan_description": reason or "planning failed",
+        "steps": [{"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}],
     }
 
 
@@ -107,7 +111,7 @@ def run_planner(backend, world: dict, command: str) -> dict:
 
     # If the command cannot be done, return a fail safe USE LLM TO DECIDE IF THE COMMAND CAN BE DONE
     if not can_do:
-        result = _fail_safe(reason or "I'm sorry, I don't know how to do that.")
+        result = _fail_safe(reason)
         result["elapsed_sec"] = round(time.perf_counter() - t0, 2)
         return result
     # Correct the skills using the LLM making sure that the skills respect the rules and respect the style
@@ -153,6 +157,55 @@ def run_planner(backend, world: dict, command: str) -> dict:
         "skill": steps[0]["skill"],
         "skill_args": steps[0].get("args", {}),
         "plan_description": plan_description,
+        "steps": steps,
+        "elapsed_sec": round(time.perf_counter() - t0, 2),
+    }
+
+
+def run_cloud_planner(backend, world: dict, command: str) -> dict:
+    """Single-call cloud planner: selector + refiner + planner + announce in one LLM call."""
+    t0 = time.perf_counter()
+    command = command.strip()
+    placement = world.get("placement_locations") or placeable_locations(world["locations"])
+    try:
+        raw = backend.query_json(
+            CLOUD_PLANNER_PROMPT.format(
+                general_knowledge=world["general_knowledge"],
+                skill_lines=world["skill_lines"],
+                locations=", ".join(world["locations"].keys()) or "none",
+                placement_locations=", ".join(placement) or "none",
+                objects=format_objects(world["objects"]),
+                people=format_people(world["people"]),
+                command=command,
+            )
+        )
+        parsed = _parse_json(raw)
+    except Exception as e:
+        raise SkillSelectorError(str(e)) from e
+
+    if not parsed.get("can_do", True):
+        result = _fail_safe(parsed.get("reason", ""))
+        result["elapsed_sec"] = round(time.perf_counter() - t0, 2)
+        return result
+
+    steps = parsed.get("steps", [])
+    announcement = parsed.get("announcement", "")
+
+    if not steps:
+        result = _fail_safe()
+        result["elapsed_sec"] = round(time.perf_counter() - t0, 2)
+        return result
+
+    steps = _inject_sublocations(steps, world["objects"])
+    steps = _inject_give_to_operator(steps)
+
+    if announcement:
+        steps = [{"skill": "say", "args": {"text": announcement}}] + steps
+
+    return {
+        "skill": steps[0]["skill"],
+        "skill_args": steps[0].get("args", {}),
+        "plan_description": announcement,
         "steps": steps,
         "elapsed_sec": round(time.perf_counter() - t0, 2),
     }

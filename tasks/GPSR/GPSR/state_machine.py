@@ -21,6 +21,8 @@ from GPSR.tts import say
 
 from std_msgs.msg import Empty
 
+from GPSR.planner import PLAN_FAILED_TOKEN
+
 from lasr_skills import (
     Say,
     GoToLocation,
@@ -219,19 +221,19 @@ class GPSR(yasmin.StateMachine):
             ),
             transitions={
                 "collect_next": "CHECK_INSTRUCTION",
-                "execute": "ANNOUNCE_ALL",
+                "execute": "NEXT_PLAN",
             },
         )
 
-        # Announce all collected plans before starting execution.
-        self.add_state(
-            "ANNOUNCE_ALL",
-            yasmin.CbState(
-                outcomes=["succeeded"],
-                callback=self.announceAll,
-            ),
-            transitions={"succeeded": "NEXT_PLAN"},
-        )
+        # # Announce all collected plans before starting execution.
+        # self.add_state(
+        #     "ANNOUNCE_ALL",
+        #     yasmin.CbState(
+        #         outcomes=["succeeded"],
+        #         callback=self.announceAll,
+        #     ),
+        #     transitions={"succeeded": "NEXT_PLAN"},
+        # )
 
         # Execution phase: load one stored plan at a time into the blackboard
         # and run it via PRE_NAV -> DISPATCH_SKILL.
@@ -390,19 +392,7 @@ class GPSR(yasmin.StateMachine):
             if say_text in ("no command given", "."):
                 return "no_command"
 
-            # If the say text looks like a refusal/apology it's a planning failure
-            refusal_phrases = {
-                "sorry",
-                "cannot",
-                "can't",
-                "unable",
-                "not on my map",
-                "don't know",
-                "i don't",
-                "don't have that information",
-                "do not have that information",
-            }
-            if any(p in say_text.lower() for p in refusal_phrases):
+            if say_text == PLAN_FAILED_TOKEN:
                 self.understand_attempts += 1
                 if self.understand_attempts <= 3:
                     return "request_rephrase"
@@ -525,7 +515,7 @@ def main(args=None):
     # if input_mode == "keyboard":
     #     wait_for_command = KeyboardInputState(node)
     # elif input_mode in ("mic", "microphone"):
-    #     wait_for_command = ListenState()
+    #     wait_for_command = ListenState(node)
 
     # yasmin_ros.set_ros_loggers(node)
 
@@ -535,13 +525,44 @@ def main(args=None):
     #     "WAIT_FOR_COMMAND",
     #     wait_for_command,
     #     transitions={
-    #         "succeeded": "QUERY_LLM",
+    #         "succeeded": "SET_PLACEHOLDERS",
     #         "aborted": "WAIT_FOR_COMMAND",
     #     },
     # )
+
+    # def _set_placeholders(blackboard):
+    #     blackboard["placeholders"] = blackboard["sequence"].strip()
+    #     return "succeeded"
+
+    # set_placeholders_state = yasmin.CbState(
+    #     outcomes=["succeeded"], callback=_set_placeholders
+    # )
+    # set_placeholders_state.add_input_key("sequence")
+    # set_placeholders_state.add_output_key("placeholders")
+
+    # sm.add_state(
+    #     "SET_PLACEHOLDERS",
+    #     set_placeholders_state,
+    #     transitions={"succeeded": "QUERY_LLM"},
+    # )
+
+    # plan_con = yasmin.Concurrence(
+    #     states={
+    #         "QUERY_LLM": QueryLLM(node),
+    #         "SAY_PLANNING": Say(
+    #             format_str="I heard {}. Give me a moment, I am planning."
+    #         ),
+    #     },
+    #     default_outcome="failed",
+    #     outcome_map={
+    #         "succeeded": {"QUERY_LLM": "succeeded"},
+    #         "failed": {"QUERY_LLM": "failed"},
+    #     },
+    # )
+
     # sm.add_state(
     #     "QUERY_LLM",
-    #     QueryLLM(node),
+    #     plan_con,
     #     transitions={
     #         "succeeded": "DISPATCH_SKILL",
     #         "failed": "WAIT_FOR_COMMAND",
