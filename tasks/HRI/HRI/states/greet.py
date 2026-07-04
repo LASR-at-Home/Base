@@ -90,7 +90,7 @@ class GreetGuest(yasmin.StateMachine):
         conc_face_attribute = yasmin.Concurrence(
             states={
                 "GET_ATTRIBUTES": GetGuestAttributes(guest_id=guest_id),
-                "LEARN_FACE": HRILearnFaces(guest_id=guest_id, dataset_size=3),
+                "LEARN_FACE": HRILearnFaces(guest_id=guest_id, dataset_size=5),
             },
             default_outcome="failed",
             outcome_map={

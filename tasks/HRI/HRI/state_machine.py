@@ -280,7 +280,9 @@ def main():
     bb["person_index"] = 0
 
     bb['z_min'] = -10
-    bb['z_max'] = 10
+    bb["z_sweep_min"] = -10
+    bb["z_sweep_max"] = 50
+    bb['z_max'] = 50
 
     outcome = sm(bb)
 

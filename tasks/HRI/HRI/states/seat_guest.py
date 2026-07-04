@@ -96,19 +96,19 @@ class ProcessDetections(State):
                 
         if not left_sofa_occupied and not right_sofa_occupied and not middle_sofa_occupied:
             blackboard["seating_string"] = (
-                "The sofa that I'm looking at is empty. Please take a seat in the middle of the sofa."
+                "The sofa that I'm looking at is empty. Please take a seat anywhere on the sofa."
             )
         elif not left_sofa_occupied and not right_sofa_occupied and middle_sofa_occupied:
             blackboard["seating_string"] = (
-                'The sofa is currently occupied by one person. Please take a seat on the left side of the sofa.'
+                'The sofa is currently occupied by one person. Please take a seat on the left side or on the right side of the sofa.'
             )
         elif not left_sofa_occupied and not middle_sofa_occupied and right_sofa_occupied:
             blackboard["seating_string"] = (
-                'The sofa is currently occupied by one person. Please take a seat in the middle of the sofa.'
+                'The sofa is currently occupied by one person. Please take a seat in the middle or on the left side of the sofa.'
             )
         elif not right_sofa_occupied and not middle_sofa_occupied and left_sofa_occupied:
             blackboard["seating_string"] = (
-                'The sofa is currently occupied by one person. Please take a seat in the middle of the sofa.'
+                'The sofa is currently occupied by one person. Please take a seat in the middle or on the right side of the sofa.'
             )
         elif not left_sofa_occupied and right_sofa_occupied and middle_sofa_occupied:
             blackboard["seating_string"] = (
@@ -124,7 +124,7 @@ class ProcessDetections(State):
             )
         else:
             blackboard["seating_string"] = (
-                "The sofa that I'm looking at appears to be full. I cannot find a free seat."
+                "The sofa that I'm looking at appears to be full. Please take a seat in the free chair next to the sofa."
             )
 
         return "succeeded"

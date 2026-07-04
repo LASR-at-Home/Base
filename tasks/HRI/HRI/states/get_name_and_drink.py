@@ -13,6 +13,8 @@ import rclpy
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
 
+from lasr_skills import AskAndListen
+
 
 class GetNameAndDrink(yasmin.StateMachine):
     class ParseNameAndDrink(yasmin_ros.ServiceState):
@@ -103,6 +105,8 @@ class GetNameAndDrink(yasmin.StateMachine):
         super().__init__(
             outcomes=["succeeded", "failed"]
         )
+        
+        self.flag = True
 
         self.add_input_key("guest_transcription")
         self.add_input_key("guest_data")
@@ -133,15 +137,44 @@ class GetNameAndDrink(yasmin.StateMachine):
         #         "failed": "POST_RECOVERY_DECISION",
         #     },
         # )
+        
         self.add_state(
             "SPEECH_RECOVERY",
             self.PostRecoveryDecision(guest_id=guest_id),
             transitions={
-                "failed": "failed",
-                "failed_name": "failed",
-                "failed_drink": "failed",
+                "failed": "CHECK_REPEAT",
+                "failed_name": "CHECK_REPEAT",
+                "failed_drink": "CHECK_REPEAT",
             },
         )
+        
+        self.add_state(
+            'CHECK_REPEAT',
+            yasmin.CbState(outcomes=['succeeded', 'continue'], callback=self.check),
+            transitions={
+                'succeeded': 'succeeded',
+                'continue': 'REPEAT_ASK_GUEST'
+            }
+        )
+               
+        self.add_state(
+            "REPEAT_ASK_GUEST",
+            AskAndListen(
+                tts_phrase="I am sorry, I did not understand. Please say 'Hi Tiago' for me to begin listening. What is your name and drink?",
+            ),
+            transitions={
+                "succeeded": "GET_NAME_DRINK",
+                "failed": "SAY_WELCOME",
+            },
+            remappings={"transcribed_speech": "guest_transcription"},
+        )
+    
+    def check(self, blackboard):
+        if self.flag:
+            self.flag = False
+            return 'continue'
+        else:
+            return 'succeeded'
 
 
 def main():
