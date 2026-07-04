@@ -27,7 +27,6 @@ locations: # REAL - ARENA 2
       y: 0.0
       z: 0.2968446801703838
       w: 0.9549257750498426
-
     polygon:
       top_left:     [1.7839890718460083, 25.49281883239746]
       top_right:    [6.815243244171143, 26.161056518554688]
@@ -60,7 +59,6 @@ locations: # REAL - ARENA 2
       y: 0.0
       z: -0.1787881978216498
       w: 0.9838875852045733
-
     polygon:
       top_left:     [2.4881060123443604, 20.96300506591797]
       top_right:    [7.404314994812012, 21.57996940612793]
@@ -70,14 +68,14 @@ locations: # REAL - ARENA 2
   instruction point: # The intruction point
     placeable: false
     position:
-      x: 0.25070810317993164
-      y: 22.6954288482666
+      x: 0.11800265312194824
+      y: 22.62601089477539
       z: 0.0
     orientation:
       x: 0.0
       y: 0.0
-      z: -0.9988087795075956
-      w: 0.04879571680534052
+      z: -0.9968338902074738
+      w: 0.0795122338626833
 
 
   # --- Sub-Locations (laundry) ---
@@ -92,8 +90,6 @@ locations: # REAL - ARENA 2
       y: 0.0
       z: -0.9981687113922101
       w: 0.06049151674090062
-
-
 
   washing machine:
     placeable: true
@@ -192,7 +188,7 @@ locations: # REAL - ARENA 2
     position:
       x: 5.284623146057129
       y: 19.294403076171875
-     z: 0.0
+      z: 0.0
     orientation:
       x: 0.0
       y: 0.0
