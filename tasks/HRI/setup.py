@@ -53,6 +53,7 @@ setup(
             "start_sm = HRI.states.start_door_sm:main",
             "recognise = HRI.states.recognise:main",
             "place_bag = HRI.states.place_bag:main",
+            "detect_doorbell = HRI.states.detect_doorbell:main",
         ],
     },
 )

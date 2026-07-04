@@ -3,3 +3,8 @@ jellyfish
 pybind11>=2.12
 numpy<2
 jellyfish==1.0.4
+numpy
+tensorflow
+kagglehub
+pyaudio
+scipy

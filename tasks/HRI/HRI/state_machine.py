@@ -21,7 +21,7 @@ except ImportError:
     from rclpy.executors import MultiThreadedExecutor as Executor
 
 
-class HRI(yasmin.StateMachine):
+class HRI(yasmin.State):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
 
