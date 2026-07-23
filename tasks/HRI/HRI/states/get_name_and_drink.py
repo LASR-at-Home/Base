@@ -163,8 +163,8 @@ class GetNameAndDrink(yasmin.StateMachine):
                 tts_phrase="I am sorry, I did not understand. Please say 'Hi Tiago' for me to begin listening. What is your name and drink?",
             ),
             transitions={
-                "succeeded": "GET_NAME_DRINK",
-                "failed": "SAY_WELCOME",
+                "succeeded": "PARSE_NAME",
+                "failed": "failed",
             },
             remappings={"transcribed_speech": "guest_transcription"},
         )

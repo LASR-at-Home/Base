@@ -180,30 +180,9 @@ class GreetGuest(yasmin.StateMachine):
                 "succeeded": transition,
                 "failed": "failed",
                 "failed_vision": "failed",
-                "failed_speech": "REPEAT_ASK_GUEST",
+                "failed_speech": transition,
                 "failed_face": "failed",
                 "failed_attributes": "failed",
-            },
-        )
-
-        self.add_state(
-            "REPEAT_ASK_GUEST",
-            AskAndListen(
-                tts_phrase="I am sorry, I did not understand. Please say 'Hi Tiago' for me to begin listening. What is your name and drink?",
-            ),
-            transitions={
-                "succeeded": "GET_NAME_DRINK",
-                "failed": "SAY_WELCOME",
-            },
-            remappings={"transcribed_speech": "guest_transcription"},
-        )
-
-        self.add_state(
-            "GET_NAME_DRINK",
-            GetNameAndDrink(guest_id=guest_id, last_resort=last_resort),
-            transitions={
-                "succeeded": transition,
-                "failed": transition,
             },
         )
 

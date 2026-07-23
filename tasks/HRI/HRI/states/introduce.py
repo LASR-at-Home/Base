@@ -101,11 +101,21 @@ class Introduce(yasmin.StateMachine):
                 z_max=10
             ),
             transitions={
-                'succeeded': 'LOOP_PERSON_STATE',
+                'succeeded': 'SAY_LOOK_AT_ME',
                 'failed': 'failed'
             },
             remappings={
                 'detections_3d': 'introduce_detections'
+            }
+        )
+
+        self.add_state(
+            'SAY_LOOK_AT_ME',
+            Say(text='Please look at me, for the introduction.'),
+            transitions={
+                'succeeded': 'LOOP_PERSON_STATE',
+                'aborted': 'LOOP_PERSON_STATE',
+                'canceled': 'LOOP_PERSON_STATE'
             }
         )
 
