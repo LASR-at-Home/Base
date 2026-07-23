@@ -30,7 +30,7 @@ class VlmDescribePeopleService(Node):
             self.describe_people_callback,
         )
 
-        model_config = ModelConfig(model_name="moondream")
+        model_config = ModelConfig(model_name="gemma3:4b")
         self.vlm = VLMInference(model_config, new_model=False)
         self.get_logger().info("VLM Describe People service started")
 

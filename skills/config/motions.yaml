@@ -25,7 +25,7 @@
         times_from_start: [ 2.0 ]
       post_navigation:
         joints: [ torso_lift_joint, head_1_joint, head_2_joint ]
-        positions: [ 0.25, 0.0, 0.0 ]
+        positions: [ 0.34, 0.0, 0.0 ]
         times_from_start: [ 2.0 ]
       look_left:
         joints: [ head_1_joint, head_2_joint ]

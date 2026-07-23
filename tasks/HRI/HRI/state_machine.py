@@ -7,8 +7,16 @@ import yasmin
 import yasmin_ros
 
 from geometry_msgs.msg import PointStamped
+from std_msgs.msg import String
 
-from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson
+from lasr_skills import (
+    Say,
+    SafeGoToLocation,
+    StartDoorSM,
+    Rotate,
+    FollowPerson,
+    ReceiveObject,
+)
 
 from HRI.states import *
 
@@ -31,10 +39,23 @@ class HRI(yasmin.StateMachine):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
             return "succeeded"
 
+        def create_msg(blackboard):
+            return String(data="ready")
+
+        self.add_state(
+            "START_TABLET",
+            yasmin_ros.PublisherState(
+                msg_type=String,
+                topic_name="/tablet/screen",
+                create_message_handler=create_msg,
+            ),
+            transitions={"succeeded": "WAIT_START"},
+        )
+
         self.add_state(
             "WAIT_START",  # Awaits start Signal for the task
             yasmin_ros.MonitorState(
-                topic_name="/hri/start",
+                topic_name="/tablet/ready",
                 outcomes=["succeeded", "failed"],
                 monitor_handler=wait_cb,
                 msg_type=Empty,
@@ -49,13 +70,17 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "START_TIMER",
             StartTimer(),
-            transitions={"succeeded": "START_CON", "failed": "START_TIMER"},
+            transitions={"succeeded": "SAY_START", "failed": "START_TIMER"},
         )
 
         self.add_state(
-            "START_CON",  # SM1: Waits for Door to open, then goes to start
-            self.setup(),
-            transitions={"succeeded": "GO_TO_DOOR", "failed": "START_CON"},
+            "SAY_START",  # SM1: Waits for Door to open, then goes to start
+            Say(text="Start of H R I task."),
+            transitions={
+                "succeeded": "GO_TO_DOOR",
+                "canceled": "failed",
+                "aborted": "failed",
+            },
         )
 
         self.add_state(
@@ -78,7 +103,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(guest_id="guest1"),
+            SeatGuest(id="guest1"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -108,20 +133,36 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
-            SeatGuest(guest_id="guest2"),
+            SeatGuest(id="guest2"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
         self.add_state(
             "INTRODUCE",
             Introduce(),
-            transitions={"succeeded": "ROTATE", "failed": "ROTATE"},
+            transitions={"succeeded": "GRAB_BAG", "failed": "GRAB_BAG"},
+        )
+
+        self.add_state(
+            "GRAB_BAG",
+            ReceiveObject(object_name="bag"),
+            transitions={"succeeded": "ROTATE", "failed": "failed"},
         )
 
         self.add_state(
             "ROTATE",
             Rotate(angle=180),
-            transitions={"succeeded": "FOLLOW_HOST", "failed": "failed"},
+            transitions={"succeeded": "ASK_FOR_HOST", "failed": "failed"},
+        )
+
+        self.add_state(
+            "ASK_FOR_HOST",
+            Say(text="Can the host please stand in front of me to lead the way."),
+            transitions={
+                "succeeded": "FOLLOW_HOST",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
@@ -137,18 +178,22 @@ class HRI(yasmin.StateMachine):
             "PLACE_BAG",
             PlaceBag(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "STOP_TIMER",
                 "failed": "failed",
             },
         )
 
-        self.add_state("STOP_TIMER", StopTimer(), transitions={"succeeded": "SAY_STOP"})
+        self.add_state(
+            "STOP_TIMER",
+            StopTimer(),
+            transitions={"succeeded": "SAY_STOP", "failed": "failed"},
+        )
 
         self.add_state(
             "SAY_STOP",
             Say(),
             transitions={
-                "succeeded": "succeeded",
+                "succeeded": "SAY_END",
                 "aborted": "failed",
                 "canceled": "failed",
             },
@@ -156,9 +201,13 @@ class HRI(yasmin.StateMachine):
         )
 
         self.add_state(
-            "INTRODUCE",
-            Introduce(),
-            transitions={"succeeded": "succeeded", "failed": "failed"},
+            "SAY_END",
+            Say(text="End of h r i task."),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
     def check(self, blackboard):
@@ -183,27 +232,6 @@ class HRI(yasmin.StateMachine):
 
         self.guest_id += 1
         return "continue" if self.guest_id == 2 else "succeeded"
-
-    def setup(self):
-        start_con_sm = yasmin.Concurrence(
-            states={
-                "SAY_START": Say(text="Start of H R I task."),
-                "DOOR_START": StartDoorSM(),
-            },
-            default_outcome="failed",
-            outcome_map={
-                "succeeded": {
-                    "SAY_START": "succeeded",
-                    "DOOR_START": "succeeded",
-                },
-                "failed": {
-                    "SAY_START": "aborted",
-                    "DOOR_START": "failed",
-                },
-            },
-        )
-
-        return start_con_sm
 
 
 class HRI_node(Node):
@@ -259,6 +287,11 @@ def main():
     bb["dataset"] = "hri"
     bb["drink_position"] = PointStamped()
     bb["person_index"] = 0
+
+    bb["z_min"] = -10
+    bb["z_sweep_min"] = -10
+    bb["z_sweep_max"] = 50
+    bb["z_max"] = 50
 
     outcome = sm(bb)
 
