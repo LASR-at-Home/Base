@@ -56,9 +56,7 @@ class ReceiveObject(StateMachine):
 
         self.add_state(
             "SAY_REACH_ARM",
-            Say(
-                text="I see you have a bag. I am going to reach my arm out."
-            ),
+            Say(text="I see you have a bag. I am going to reach my arm out."),
             transitions={
                 "succeeded": "REACH_ARM",
                 "aborted": "REACH_ARM",
@@ -154,24 +152,23 @@ class ReceiveObject(StateMachine):
                 "canceled": "failed",
             },
         )
-        
+
         self.add_state(
-            'WARN_ARM',
-            Say(text='I will put my arm away in 5 seconds. Please give me a lot of space to my left.'),
+            "WARN_ARM",
+            Say(
+                text="I will put my arm away in 5 seconds. Please give me a lot of space to my left."
+            ),
             transitions={
-                'succeeded': 'WAIT_PUT_ARM_AWAY',
-                'aborted': 'WAIT_PUT_ARM_AWAY',
-                'canceled': 'WAIT_PUT_ARM_AWAY'
-            }
+                "succeeded": "WAIT_PUT_ARM_AWAY",
+                "aborted": "WAIT_PUT_ARM_AWAY",
+                "canceled": "WAIT_PUT_ARM_AWAY",
+            },
         )
 
         self.add_state(
             "WAIT_PUT_ARM_AWAY",
             Wait(5),
-            transitions={
-                'succeeded': 'FOLD_ARM',
-                'failed': 'FOLD_ARM'
-            }
+            transitions={"succeeded": "FOLD_ARM", "failed": "FOLD_ARM"},
         )
 
         self.add_state(

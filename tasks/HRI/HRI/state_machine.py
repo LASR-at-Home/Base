@@ -9,7 +9,14 @@ import yasmin_ros
 from geometry_msgs.msg import PointStamped
 from std_msgs.msg import String
 
-from lasr_skills import Say, SafeGoToLocation, StartDoorSM, Rotate, FollowPerson, ReceiveObject
+from lasr_skills import (
+    Say,
+    SafeGoToLocation,
+    StartDoorSM,
+    Rotate,
+    FollowPerson,
+    ReceiveObject,
+)
 
 from HRI.states import *
 
@@ -31,20 +38,18 @@ class HRI(yasmin.StateMachine):
         def wait_cb(blackboard, msg):
             yasmin.YASMIN_LOG_INFO("RECEIVED START SIGNAL")
             return "succeeded"
-        
+
         def create_msg(blackboard):
-            return String(data='ready')
-        
+            return String(data="ready")
+
         self.add_state(
-            'START_TABLET',
+            "START_TABLET",
             yasmin_ros.PublisherState(
                 msg_type=String,
-                topic_name='/tablet/screen',
-                create_message_handler=create_msg
+                topic_name="/tablet/screen",
+                create_message_handler=create_msg,
             ),
-            transitions={
-                'succeeded': 'WAIT_START'
-            }
+            transitions={"succeeded": "WAIT_START"},
         )
 
         self.add_state(
@@ -70,8 +75,12 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SAY_START",  # SM1: Waits for Door to open, then goes to start
-            Say(text='Start of H R I task.'),
-            transitions={"succeeded": "GO_TO_DOOR", "canceled": "failed", 'aborted': 'failed'},
+            Say(text="Start of H R I task."),
+            transitions={
+                "succeeded": "GO_TO_DOOR",
+                "canceled": "failed",
+                "aborted": "failed",
+            },
         )
 
         self.add_state(
@@ -94,7 +103,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST",  # SM3: Locates and seats guest in free seat
-            SeatGuest(id='guest1'),
+            SeatGuest(id="guest1"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -115,7 +124,7 @@ class HRI(yasmin.StateMachine):
             LookAndGreetGuest(guest_id="guest2"),
             transitions={"succeeded": "GUIDE_TO_SEAT_2", "failed": "failed"},
         )
-        
+
         self.add_state(
             "GUIDE_TO_SEAT_2",  # GUIDES GUEST TO SEATING AREA
             SafeGoToLocation(location_param="seat_pose"),
@@ -124,7 +133,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SEAT_GUEST_2",  # SM3: Locates and seats guest in free seat
-            SeatGuest(id='guest2'),
+            SeatGuest(id="guest2"),
             transitions={"succeeded": "CHECK", "failed": "failed"},
         )
 
@@ -133,7 +142,7 @@ class HRI(yasmin.StateMachine):
             Introduce(),
             transitions={"succeeded": "GRAB_BAG", "failed": "GRAB_BAG"},
         )
-        
+
         self.add_state(
             "GRAB_BAG",
             ReceiveObject(object_name="bag"),
@@ -145,15 +154,15 @@ class HRI(yasmin.StateMachine):
             Rotate(angle=180),
             transitions={"succeeded": "ASK_FOR_HOST", "failed": "failed"},
         )
-        
+
         self.add_state(
-            'ASK_FOR_HOST',
-            Say(text='Can the host please stand in front of me to lead the way.'),
+            "ASK_FOR_HOST",
+            Say(text="Can the host please stand in front of me to lead the way."),
             transitions={
-                'succeeded': 'FOLLOW_HOST',
-                'aborted': 'failed',
-                'canceled': 'failed'
-            }
+                "succeeded": "FOLLOW_HOST",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(
@@ -190,15 +199,15 @@ class HRI(yasmin.StateMachine):
             },
             remappings={"text": "time_text"},
         )
-        
+
         self.add_state(
             "SAY_END",
-            Say(text='End of h r i task.'),
+            Say(text="End of h r i task."),
             transitions={
                 "succeeded": "succeeded",
                 "aborted": "failed",
                 "canceled": "failed",
-            }
+            },
         )
 
     def check(self, blackboard):
@@ -279,10 +288,10 @@ def main():
     bb["drink_position"] = PointStamped()
     bb["person_index"] = 0
 
-    bb['z_min'] = -10
+    bb["z_min"] = -10
     bb["z_sweep_min"] = -10
     bb["z_sweep_max"] = 50
-    bb['z_max'] = 50
+    bb["z_max"] = 50
 
     outcome = sm(bb)
 

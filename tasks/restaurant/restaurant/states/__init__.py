@@ -1,3 +1,4 @@
-#from .detect_wave import DetectWave
+# from .detect_wave import DetectWave
 from .detect_waving_person_rgb import DetectWavingPersonRGB
-#from .survey import Survey
+
+# from .survey import Survey

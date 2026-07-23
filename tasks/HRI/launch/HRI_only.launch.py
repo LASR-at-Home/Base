@@ -12,13 +12,11 @@ def generate_launch_description():
         executable="sm",
         name="hri",
         parameters=[
-            os.path.join(get_package_share_directory("HRI"), "config", "lab_arena2.yaml")
+            os.path.join(
+                get_package_share_directory("HRI"), "config", "lab_arena2.yaml"
+            )
         ],
         output="screen",
     )
 
-    return LaunchDescription(
-        [
-            state_machine
-        ]
-    )
+    return LaunchDescription([state_machine])

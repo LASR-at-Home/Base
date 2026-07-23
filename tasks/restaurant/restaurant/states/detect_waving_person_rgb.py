@@ -211,7 +211,9 @@ class DetectWavingPersonRGB(ServiceState):
                 else:
                     yasmin.YASMIN_LOG_DEBUG(f"  Distance {dist:.2f}m out of range")
             else:
-                yasmin.YASMIN_LOG_DEBUG(f"  Angle index {angle_index} out of bounds [0, {len(scan.ranges)})")
+                yasmin.YASMIN_LOG_DEBUG(
+                    f"  Angle index {angle_index} out of bounds [0, {len(scan.ranges)})"
+                )
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"Failed to get laser distance: {e}")
         return None
@@ -325,7 +327,9 @@ class DetectWavingPersonRGB(ServiceState):
             # Calculate center of person from all keypoints
             person_center = self._calculate_person_center(kp)
             if person_center is None:
-                yasmin.YASMIN_LOG_INFO(f"  ✗ Could not calculate person center (no valid keypoints), skipping")
+                yasmin.YASMIN_LOG_INFO(
+                    f"  ✗ Could not calculate person center (no valid keypoints), skipping"
+                )
                 continue
 
             yasmin.YASMIN_LOG_INFO(
@@ -361,7 +365,9 @@ class DetectWavingPersonRGB(ServiceState):
 
                 # Transform person center from map frame to base_footprint frame for laser query
                 yasmin.YASMIN_LOG_DEBUG("  Attempting TF: map -> base_footprint")
-                tf_success, point_in_base = self._transform_to_base_footprint(person_center, self._request_timestamp)
+                tf_success, point_in_base = self._transform_to_base_footprint(
+                    person_center, self._request_timestamp
+                )
 
                 if not tf_success:
                     yasmin.YASMIN_LOG_WARN(
@@ -381,16 +387,22 @@ class DetectWavingPersonRGB(ServiceState):
                     )
 
                     if self._request_scan is None:
-                        yasmin.YASMIN_LOG_WARN("  No laser scan available, cannot use fallback")
+                        yasmin.YASMIN_LOG_WARN(
+                            "  No laser scan available, cannot use fallback"
+                        )
                     else:
                         laser_dist = self._get_laser_distance_at_angle(
                             self._request_scan, angle_rad
                         )
 
                         if laser_dist is not None:
-                            yasmin.YASMIN_LOG_INFO(f"  Laser distance: {laser_dist:.2f}m")
+                            yasmin.YASMIN_LOG_INFO(
+                                f"  Laser distance: {laser_dist:.2f}m"
+                            )
                             # Use laser distance but keep XY from depth (direction is reliable)
-                            magnitude = math.sqrt(person_center.x**2 + person_center.y**2)
+                            magnitude = math.sqrt(
+                                person_center.x**2 + person_center.y**2
+                            )
                             if magnitude > 0:
                                 # Scale the depth estimate to match laser distance
                                 scale = laser_dist / magnitude
@@ -406,9 +418,13 @@ class DetectWavingPersonRGB(ServiceState):
                                     f"  Using laser fallback: scaled to ({point_to_use.x:.2f}, {point_to_use.y:.2f}, {point_to_use.z:.2f})"
                                 )
                             else:
-                                yasmin.YASMIN_LOG_WARN("  Magnitude is zero, cannot scale")
+                                yasmin.YASMIN_LOG_WARN(
+                                    "  Magnitude is zero, cannot scale"
+                                )
                         else:
-                            yasmin.YASMIN_LOG_WARN("  No laser distance found at that angle")
+                            yasmin.YASMIN_LOG_WARN(
+                                "  No laser distance found at that angle"
+                            )
 
             # Select closest waving person
             if best_dist is None or dist < best_dist:

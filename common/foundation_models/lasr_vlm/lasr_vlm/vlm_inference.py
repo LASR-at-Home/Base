@@ -166,6 +166,7 @@ def build_prompt(attributes):
 
     return prompt
 
+
 def parse_vlm_response(response: str, attributes: list[str]) -> dict[str, list]:
     """
     Parse the VLM response string into a dictionary of attribute values.

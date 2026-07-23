@@ -8,7 +8,7 @@ from lasr_skills import (
     ReceiveObject,
     StopEyeTracker,
     Wait,
-    SafeGoToLocation
+    SafeGoToLocation,
 )
 from HRI.states import (
     GetNameAndDrink,
@@ -165,12 +165,14 @@ class GreetGuest(yasmin.StateMachine):
 
         self.add_state(
             "SAY_WAIT",
-            Say(text='Give me some time to learn your face and attributes. Please wait here.'),
+            Say(
+                text="Give me some time to learn your face and attributes. Please wait here."
+            ),
             transitions={
-                'succeeded': 'GET_NAME_DRINK_FACE',
-                'aborted': 'failed',
-                'canceled': 'failed'
-            }
+                "succeeded": "GET_NAME_DRINK_FACE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
         )
 
         self.add_state(

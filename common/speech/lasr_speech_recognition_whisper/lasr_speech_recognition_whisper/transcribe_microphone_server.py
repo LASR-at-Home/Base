@@ -66,6 +66,7 @@ class TranscribeSpeechAction(Node):
         )
 
         from silero_vad import load_silero_vad
+
         self._vad_model = load_silero_vad()
 
         self._audio_queue: queue.Queue = queue.Queue()
@@ -191,9 +192,9 @@ class TranscribeSpeechAction(Node):
         try:
             float_data = np.concatenate(collected_chunks)
             start = timer()
-            phrase = self._model.transcribe(
-                float_data, fp16=self._device == "cuda"
-            )["text"].strip()
+            phrase = self._model.transcribe(float_data, fp16=self._device == "cuda")[
+                "text"
+            ].strip()
             self.get_logger().info(f"Transcribed in {timer() - start:.2f}s: '{phrase}'")
         except Exception as e:
             self.get_logger().error(f"Whisper error: {e}")

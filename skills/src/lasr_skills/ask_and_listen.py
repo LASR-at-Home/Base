@@ -8,7 +8,10 @@ from lasr_skills import Say
 from typing import Union
 
 RETRY_PHRASE_1 = "Sorry, I didn't catch that, could you please repeat?"
-RETRY_PHRASE_2 = "Sorry, I still couldn't hear you, could you please repeat more loudly?"
+RETRY_PHRASE_2 = (
+    "Sorry, I still couldn't hear you, could you please repeat more loudly?"
+)
+
 
 class CheckSpeechState(State):
     def __init__(self):
@@ -19,6 +22,7 @@ class CheckSpeechState(State):
         if transcribed_speech and transcribed_speech.strip():
             return "succeeded"
         return "empty"
+
 
 class AskAndListen(yasmin.StateMachine):
     def __init__(
@@ -121,6 +125,7 @@ class AskAndListen(yasmin.StateMachine):
                         hard_failure_outcome: "failed",
                     },
                 )
+
 
 def main():
     rclpy.init()

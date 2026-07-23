@@ -12,12 +12,27 @@ DURATION = 10.0  # seconds
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Test microphone recording")
-    parser.add_argument("-m", "--microphone", type=str, default=None,
-                        help="Microphone name substring or index (default: system default)")
-    parser.add_argument("-o", "--output", type=str, default="/tmp/microphone_test.wav",
-                        help="Output WAV file path")
-    parser.add_argument("-d", "--duration", type=float, default=DURATION,
-                        help="Recording duration in seconds")
+    parser.add_argument(
+        "-m",
+        "--microphone",
+        type=str,
+        default=None,
+        help="Microphone name substring or index (default: system default)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        default="/tmp/microphone_test.wav",
+        help="Output WAV file path",
+    )
+    parser.add_argument(
+        "-d",
+        "--duration",
+        type=float,
+        default=DURATION,
+        help="Recording duration in seconds",
+    )
     args, _ = parser.parse_known_args()
     return args
 

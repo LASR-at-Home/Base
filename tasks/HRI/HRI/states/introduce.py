@@ -46,7 +46,7 @@ class Introduce(yasmin.StateMachine):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
-        
+
         self._node = yasmin_ros.logger_node
         self.flag = True
 
@@ -55,7 +55,7 @@ class Introduce(yasmin.StateMachine):
                 np.array(self._node.get_parameter("sofa_area.top_left").value),
                 np.array(self._node.get_parameter("sofa_area.top_right").value),
                 np.array(self._node.get_parameter("sofa_area.bottom_right").value),
-                np.array(self._node.get_parameter("sofa_area.bottom_left").value)
+                np.array(self._node.get_parameter("sofa_area.bottom_left").value),
             ]
         )
 
@@ -77,46 +77,38 @@ class Introduce(yasmin.StateMachine):
         guest_loop.add_output_key("guest_point_stamped")
         guest_loop.add_output_key("introduce_to")
         guest_loop.add_output_key("relevant_guest_data")
-        
+
         fallback_loop = yasmin.CbState(
-            outcomes=['succeeded', 'continue'], callback=self._loop_str
+            outcomes=["succeeded", "continue"], callback=self._loop_str
         )
-        
-        fallback_loop.add_input_key('guest_data')
-        fallback_loop.add_output_key('introduce_to')
-        fallback_loop.add_output_key('relevant_guest_data')
+
+        fallback_loop.add_input_key("guest_data")
+        fallback_loop.add_output_key("introduce_to")
+        fallback_loop.add_output_key("relevant_guest_data")
 
         self.add_state(
             "RESET_SEATING_DETECTIONS",
             ClearSeatingDetections(),
             transitions={"succeeded": "DETECT_PEOPLE", "failed": "failed"},
         )
-        
+
         self.add_state(
-            'DETECT_PEOPLE',
+            "DETECT_PEOPLE",
             Detect3DInArea(
-                area_polygon=self.sofa_area,
-                filter=['person'],
-                z_min=-10,
-                z_max=10
+                area_polygon=self.sofa_area, filter=["person"], z_min=-10, z_max=10
             ),
-            transitions={
-                'succeeded': 'SAY_LOOK_AT_ME',
-                'failed': 'failed'
-            },
-            remappings={
-                'detections_3d': 'introduce_detections'
-            }
+            transitions={"succeeded": "SAY_LOOK_AT_ME", "failed": "failed"},
+            remappings={"detections_3d": "introduce_detections"},
         )
 
         self.add_state(
-            'SAY_LOOK_AT_ME',
-            Say(text='Please look at me, for the introduction.'),
+            "SAY_LOOK_AT_ME",
+            Say(text="Please look at me, for the introduction."),
             transitions={
-                'succeeded': 'LOOP_PERSON_STATE',
-                'aborted': 'LOOP_PERSON_STATE',
-                'canceled': 'LOOP_PERSON_STATE'
-            }
+                "succeeded": "LOOP_PERSON_STATE",
+                "aborted": "LOOP_PERSON_STATE",
+                "canceled": "LOOP_PERSON_STATE",
+            },
         )
 
         self.add_state(
@@ -164,33 +156,27 @@ class Introduce(yasmin.StateMachine):
                 "canceled": "failed",
             },
         )
-        
+
         self.add_state(
-            'FALLBACK_SPEECH',
+            "FALLBACK_SPEECH",
             fallback_loop,
-            transitions={
-                'succeeded': 'succeeded',
-                'continue': 'GET_FALLBACK_STR'
-            }
+            transitions={"succeeded": "succeeded", "continue": "GET_FALLBACK_STR"},
         )
-        
+
         self.add_state(
-            'GET_FALLBACK_STR',
+            "GET_FALLBACK_STR",
             GetIntroductionStr(),
-            transitions={
-                'succeeded': 'SAY_FALLBACK',
-                'failed': 'failed'
-            }
+            transitions={"succeeded": "SAY_FALLBACK", "failed": "failed"},
         )
-        
+
         self.add_state(
-            'SAY_FALLBACK',
+            "SAY_FALLBACK",
             Say(),
             transitions={
-                'succeeded': 'FALLBACK_SPEECH',
-                'aborted': 'FALLBACK_SPEECH',
-                'canceled': 'FALLBACK_SPEECH'
-            }
+                "succeeded": "FALLBACK_SPEECH",
+                "aborted": "FALLBACK_SPEECH",
+                "canceled": "FALLBACK_SPEECH",
+            },
         )
 
         self.add_state(
@@ -249,7 +235,6 @@ class Introduce(yasmin.StateMachine):
             yasmin.YASMIN_LOG_INFO("Guest2 point: " + str(guest2point))
             yasmin.YASMIN_LOG_INFO("Total people: " + str(people_det))
 
-            
             if guest1point is not None and guest2point is not None:
                 return "succeeded"
             elif index < people_det:
@@ -262,28 +247,24 @@ class Introduce(yasmin.StateMachine):
 
             return "failed"
         except Exception as e:
-            yasmin.YASMIN_LOG_INFO(f'An error has occured with loop_person_index: {e}')
-            return 'failed'
+            yasmin.YASMIN_LOG_INFO(f"An error has occured with loop_person_index: {e}")
+            return "failed"
 
     def _loop_str(self, blackboard):
-        yasmin.YASMIN_LOG_INFO('Flag is: ' + str(self.flag))
+        yasmin.YASMIN_LOG_INFO("Flag is: " + str(self.flag))
         if self.flag and isinstance(self.flag, bool):
-            blackboard["introduce_to"] = blackboard["guest_data"]['guest1']["name"]
-            blackboard["relevant_guest_data"] = (
-                blackboard["guest_data"]["guest2"]
-            )
+            blackboard["introduce_to"] = blackboard["guest_data"]["guest1"]["name"]
+            blackboard["relevant_guest_data"] = blackboard["guest_data"]["guest2"]
             self.flag = False
-            return 'continue'
+            return "continue"
         elif not self.flag and isinstance(self.flag, bool):
-            blackboard["introduce_to"] = blackboard["guest_data"]['guest2']["name"]
-            blackboard["relevant_guest_data"] = (
-                blackboard["guest_data"]["guest1"]
-            )
+            blackboard["introduce_to"] = blackboard["guest_data"]["guest2"]["name"]
+            blackboard["relevant_guest_data"] = blackboard["guest_data"]["guest1"]
             self.flag = None
-            return 'continue'
+            return "continue"
         else:
-            yasmin.YASMIN_LOG_INFO('Introduction finished')
-            return 'succeeded'
+            yasmin.YASMIN_LOG_INFO("Introduction finished")
+            return "succeeded"
 
     def _loop_guest(self, blackboard):
         if (

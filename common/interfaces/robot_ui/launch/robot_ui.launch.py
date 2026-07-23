@@ -43,7 +43,11 @@ def generate_launch_description():
         period=2.0,
         actions=[
             ExecuteProcess(
-                cmd=["bash", "-c", "npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next build && node_modules/.bin/next start"],
+                cmd=[
+                    "bash",
+                    "-c",
+                    "npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next build && node_modules/.bin/next start",
+                ],
                 cwd=ui_dir,
                 additional_env={"ROS_IP": ros_ip},
                 output="screen",
