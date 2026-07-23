@@ -425,9 +425,9 @@ class GPSR(yasmin.StateMachine):
             if steps and steps[0].get("skill") == "say":
                 announcement = steps[0]["args"]["text"]
             if command:
-                say(self.node, f"I heard: {command}.")
+                say(self.node, f"I heard: {command}.", blackboard )
             if announcement and announcement != PLAN_FAILED_TOKEN:
-                say(self.node, announcement)
+                say(self.node, announcement, blackboard)
         except Exception:
             pass
         return "succeeded"
@@ -440,7 +440,7 @@ class GPSR(yasmin.StateMachine):
 
         self.operator_attempts += 1
 
-        if self.operator_attempts <= 3:
+        if self.operator_attempts < 1:
             return "request_operator"
 
         self.instruction_count += 1
@@ -473,7 +473,7 @@ class GPSR(yasmin.StateMachine):
         if steps and steps[0].get("skill") == "say" and len(steps) > 1:
             steps = steps[1:]
         blackboard["steps"] = steps
-        say(self.node, f"Executing command {idx + 1}.")
+        say(self.node, f"Executing command {idx + 1}.", blackboard)
         yasmin.YASMIN_LOG_INFO(f"Executing plan {idx + 1} of {len(self.plans)}.")
         self.exec_index += 1
         return "execute"

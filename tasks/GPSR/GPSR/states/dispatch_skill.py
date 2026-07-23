@@ -208,16 +208,17 @@ class DispatchSkill(yasmin.State):
             if self._go_to_location(location) == "failed":
                 return "failed"
 
-        if gesture == "waving":
-            if self._detect_waving_person():
-                self._say("I found someone waving.")
-                return "succeeded"
-            self._say("Please wave so I can find you.")
-            if self._detect_waving_person():
-                self._say("I found someone waving.")
-                return "succeeded"
-            self._say("I could not confirm a waving person.")
-            return "failed"
+        if gesture:
+            if gesture == "waving":
+                if self._detect_waving_person():
+                    self._say("I found someone waving.")
+                    return "succeeded"
+                self._say("Please wave so I can find you.")
+                if self._detect_waving_person():
+                    self._say("I found someone waving.")
+                    return "succeeded"
+                self._say("I could not confirm a waving person.")
+                return "failed"
 
         if name:
             self._say(f"{name}, please wave so I can find you.")
@@ -360,9 +361,9 @@ class DispatchSkill(yasmin.State):
                 "CONFIRM",
                 Say(text=f"I can see the {object}."),
                 transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "canceled": "failed",
+                    "succeeded": "PRE_NAV",
+                    "aborted": "PRE_NAV",
+                    "canceled": "PRE_NAV",
                 },
             )
 
@@ -370,18 +371,18 @@ class DispatchSkill(yasmin.State):
                 "NO_OBJECT",
                 Say(text=f"I cannot see the {object}."),
                 transitions={
-                    "succeeded": "succeeded",
-                    "aborted": "failed",
-                    "canceled": "failed",
+                    "succeeded": "PRE_NAV",
+                    "aborted": "PRE_NAV",
+                    "canceled": "PRE_NAV",
                 },
             )
             sm.add_state(
                 "PRE_NAV",
                 PlayMotion("look_centre"),
                 transitions={
-                    "succeeded": "DETECT3D",
-                    "aborted": "failed",
-                    "canceled": "failed",
+                    "succeeded": "succeeded",
+                    "aborted": "succeeded",
+                    "canceled": "succeeded",
                 },
             )
             outcome = sm(self.task_bb)
