@@ -137,29 +137,34 @@ def visually_describe_people(input_image, inference: VLMInference) -> dict[str, 
     """
     attributes = ["hair_color", "hair_length", "glasses", "hat", "shirt color"]
 
-    user_query = (
-        f"Visually describe the person in the image, using the following attributes:"
-    )
-    for attr in attributes:
-        user_query += f"\n- {attr}"
-    # user_query_example = (
-    #     "\n\n The structure of the response should be a comma separated list of attribute: value pairs. For example, "
-    #     "'hair_color: _, hair_length: _, glasses: _, hat: _, shirt color: _', where the _ is replaced with the model's answer for that attribute. "
-    #     "For true or false attributes, the value should be simply true or false. For example, 'glasses: true' if the model thinks the person is wearing glasses, and 'hat: false' if the model thinks the person is not wearing a hat."
-    # )
-    user_query_example = (
-        "\n\n The structure of the response should be a comma separated list of attribute: value pairs. For example, "
-        "'hair_color: _, hair_length: _, glasses: _, hat: _, shirt color: _', where the _ is replaced with the model's answer for that attribute. "
-        "For glasses and hat, only answer true if they are clearly and visibly present in the image. "
-        "If you are not sure, answer false. For example, 'glasses: false' means the person is definitely not wearing glasses."
-    )
-    user_query += user_query_example
+    user_query = build_prompt(attributes)
 
     print("Running VLM inference query")
     response = inference.query_vision(prompt=user_query, image_path=input_image)
     print(f"Raw VLM response: {response}")
 
     return parse_vlm_response(response, attributes)
+
+
+def build_prompt(attributes):
+    template = ", ".join(f"{attr}: _" for attr in attributes)
+
+    boolean_attrs = {"glasses", "hat"}  # extend as needed
+    has_boolean = any(a.lower() in boolean_attrs for a in attributes)
+
+    prompt = (
+        "Describe the person in the image using ONLY this exact format, "
+        "replacing each underscore with your answer. Do not add any other text.\n\n"
+        f"{template}\n"
+    )
+
+    if has_boolean:
+        prompt += (
+            "\nFor glasses and hat: answer true only if clearly visible, "
+            "otherwise answer false.\n"
+        )
+
+    return prompt
 
 
 def parse_vlm_response(response: str, attributes: list[str]) -> dict[str, list]:
@@ -211,18 +216,18 @@ def postprocess_value(value: str):
 
 
 def test_vlm_vision_query():
-    model_name = "moondream"  # "gemma3:4b", "qwen2.5vl:3b", "llama3.2"
+    model_name = "gemma3:4b"  # "gemma3:4b", "qwen2.5vl:3b", "llama3.2"
     model_config = ModelConfig(model_name=model_name)
     ensure_model(model_name)
     inference = VLMInference(model_config, new_model=False)
 
-    image_dir = f"{os.getcwd()}/test_images"
-    image_path = f"{image_dir}/person1.jpg"
-
-    response: dict[str, list] = visually_describe_people(
-        input_image=image_path, inference=inference
-    )
-    print(f"Vision response: {response}")
+    image_dir = f"{os.getcwd()}/test_images/more"
+    for image_file in os.listdir(image_dir):
+        image_path = f"{image_dir}/{image_file}"
+        response: dict[str, list] = visually_describe_people(
+            input_image=image_path, inference=inference
+        )
+        print(f"Vision response for {image_file}: {response}")
 
 
 if __name__ == "__main__":

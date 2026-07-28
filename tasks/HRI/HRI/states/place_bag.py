@@ -338,17 +338,7 @@ class PlaceBag(StateMachine):
         self.add_state(
             "PLACE_BAG_MOTION",
             PlacingMotion(),
-            transitions={"succeeded": "FINISH", "failed": "failed"},
-        )
-
-        self.add_state(
-            "FINISH",
-            Say(text="I have finished the task. "),
-            transitions={
-                "succeeded": "succeeded",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
+            transitions={"succeeded": "succeeded", "failed": "failed"},
         )
 
 

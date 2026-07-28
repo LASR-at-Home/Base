@@ -53,6 +53,7 @@ setup(
             "start_sm = HRI.states.start_door_sm:main",
             "recognise = HRI.states.recognise:main",
             "place_bag = HRI.states.place_bag:main",
+            "n_and_d = HRI.states.get_name_and_drink:main",
         ],
     },
 )

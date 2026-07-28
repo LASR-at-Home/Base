@@ -21,8 +21,8 @@ class SafeGoToLocation(yasmin.StateMachine):
             PlayMotion("pre_navigation"),
             transitions={
                 "succeeded": state_name,
-                "aborted": "failed",
-                "canceled": "failed",
+                "aborted": state_name,
+                "canceled": state_name,
             },
         )
         
@@ -31,8 +31,8 @@ class SafeGoToLocation(yasmin.StateMachine):
 
         self.add_state(
             state_name,
-            GoToLocation(location_param=location_param, location=location_pose),
-            transitions={"succeeded": "POST_NAV", "failed": "failed"},
+            GoToLocation(location_param=location_param.lower()),
+            transitions={"succeeded": "POST_NAV", "failed": state_name},
         )
 
         self.add_state(
@@ -40,7 +40,7 @@ class SafeGoToLocation(yasmin.StateMachine):
             PlayMotion("post_navigation"),
             transitions={
                 "succeeded": "succeeded",
-                "aborted": "failed",
-                "canceled": "failed",
+                "aborted": "succeeded",
+                "canceled": "succeeded",
             },
         )

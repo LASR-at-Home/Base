@@ -11,4 +11,4 @@ if not os.path.exists(os.path.join(ui_dir, ".next", "BUILD_ID")):
     print("Run the build script first!")
     exit(1)
 
-subprocess.call("npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next start", shell=True)
+subprocess.call("npm install && chmod +x node_modules/.bin/next && node_modules/.bin/next start -p 3002", shell=True)
