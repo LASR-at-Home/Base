@@ -9,10 +9,12 @@ class SafeGoToLocation(yasmin.StateMachine):
 
         self.add_input_key("location")
         self.add_input_key("motion_name")
-
-        location_param = location_param.upper()
-
-        state_name = f"GO_TO_{location_param}"
+        
+        if location_param:
+            location_param = location_param.upper()
+            state_name = f"GO_TO_{location_param}"
+        else:
+            state_name = "SAFE_GO_TO_POINT"
 
         self.add_state(
             "PRE_NAV",
@@ -23,6 +25,9 @@ class SafeGoToLocation(yasmin.StateMachine):
                 "canceled": state_name,
             },
         )
+        
+        if location_param:
+            location_param = location_param.lower()
 
         self.add_state(
             state_name,
