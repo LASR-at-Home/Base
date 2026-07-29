@@ -2,11 +2,12 @@ import yasmin
 
 from lasr_skills import AskAndListen
 
+
 class VerbalConfirm(yasmin.StateMachine):
-    def __init__(self, pretext: str= "Please confirm the following"):
-        
+    def __init__(self, pretext: str = "Please confirm the following"):
+
         super().__init__(self, outcomes=["yes", "no"])
-        
+
         self.add_state(
             "ASK_CONFIRMATION",
             AskAndListen(
@@ -21,14 +22,10 @@ class VerbalConfirm(yasmin.StateMachine):
         self.add_state(
             "CHECK_RESPONSE",
             yasmin.CbState(
-                outcomes=["yes", "no", "unknown"], 
-                callback=self.parseResponse),
-            transitions={
-                "yes":"yes",
-                "no": "no",
-                "unknown": "ASK_CONFIRMATION"
-            }
-        )   
+                outcomes=["yes", "no", "unknown"], callback=self.parseResponse
+            ),
+            transitions={"yes": "yes", "no": "no", "unknown": "ASK_CONFIRMATION"},
+        )
 
     def parse_arrival_confirmation(self, blackboard):
         response = str(blackboard["transcribed_speech"]).lower()

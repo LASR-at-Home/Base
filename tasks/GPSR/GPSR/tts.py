@@ -6,7 +6,8 @@ from lasr_skills import Say
 
 from yasmin import Blackboard
 
-def say(node: rclpy.node.Node, text: str, bb:Blackboard):
+
+def say(node: rclpy.node.Node, text: str, bb: Blackboard):
     """Speak text using gtts in simulation, or robot TTS action otherwise."""
     if not text:
         return

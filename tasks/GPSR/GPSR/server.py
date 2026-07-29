@@ -6,9 +6,7 @@ import httpx
 app = FastAPI(title="OpenAI-Compatible Proxy Server")
 
 # Target configurations (Change this to whatever online model/endpoint you want to route to)
-TARGET_API_URL = (
-    "https://api.regolo.ai/v1/chat/completions"
-)
+TARGET_API_URL = "https://api.regolo.ai/v1/chat/completions"
 # Example alternatives:
 # "https://api.deepseek.com/v1/chat/completions"
 # "https://openrouter.ai/api/v1/chat/completions"

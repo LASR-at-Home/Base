@@ -30,22 +30,28 @@ class ClearOctomap(ServiceState):
     def _create_request(self, blackboard):
         return Empty.Request()
 
+
 # Update to take new param which dictates if the object is to be held (placed in gripper) or place in basket
 class ReceiveObject(StateMachine):
-    def __init__(self, object_name: Union[str, None] = None, vertical: bool = True, can_hold: bool=False):
+    def __init__(
+        self,
+        object_name: Union[str, None] = None,
+        vertical: bool = True,
+        can_hold: bool = False,
+    ):
 
         super().__init__(outcomes=["succeeded", "failed"])
         if object_name is None:
             self.add_input_key("object_name")
 
         self.object_name = object_name
-        self.vertical = vertical 
+        self.vertical = vertical
 
         if can_hold:
             self.createHoldable()
         else:
-            self.requestPlaceInBasket()       
-    
+            self.requestPlaceInBasket()
+
     def requestPlaceInBasket(self):
         if self.object_name is not None:
             self.add_state(
@@ -72,7 +78,7 @@ class ReceiveObject(StateMachine):
                 },
                 remapping={"placeholders": "object_name"},
             )
-        
+
         self.add_state(
             "OPEN_GRIPPER",
             PlayMotion(motion_name="open"),
@@ -111,8 +117,6 @@ class ReceiveObject(StateMachine):
             },
         )
 
-
-    
     def createHoldable(self):
         self.add_state(
             "CLEAR_OCTOMAP",
@@ -132,9 +136,7 @@ class ReceiveObject(StateMachine):
 
         self.add_state(
             "REQUEST",
-            Say(
-                text="Please step back, I am going to reach my arm out."
-            ),
+            Say(text="Please step back, I am going to reach my arm out."),
             transitions={
                 "succeeded": "REACH_ARM",
                 "aborted": "REACH_ARM",

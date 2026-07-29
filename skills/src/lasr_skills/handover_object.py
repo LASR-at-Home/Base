@@ -33,21 +33,25 @@ class ClearOctomap(ServiceState):
 
 # PORT BACK TO YASMIN AND COPY SAME PREMISE AS RECIEVE AND ADD isheld
 class HandoverObject(StateMachine):
-    def __init__(self, object_name: Union[str, None] = None, vertical: bool = True, can_hold: bool=False):
+    def __init__(
+        self,
+        object_name: Union[str, None] = None,
+        vertical: bool = True,
+        can_hold: bool = False,
+    ):
 
         super().__init__(outcomes=["succeeded", "failed"])
         if object_name is None:
             self.add_input_key("object_name")
 
         self.object_name = object_name
-        self.vertical = vertical 
+        self.vertical = vertical
 
         if can_hold:
             self.createHoldable()
         else:
             self.requestPlaceInBasket()
 
-    
     def requestPlaceInBasket(self):
         if self.object_name is not None:
             self.add_state(
@@ -74,7 +78,7 @@ class HandoverObject(StateMachine):
                 },
                 remapping={"placeholders": "object_name"},
             )
-        
+
         self.add_state(
             "WAIT_3",
             Wait(3),
@@ -83,7 +87,7 @@ class HandoverObject(StateMachine):
                 "failed": "OPEN_GRIPPER",
             },
         )
-        
+
         self.add_state(
             "OPEN_GRIPPER",
             PlayMotion(motion_name="open"),
@@ -142,9 +146,7 @@ class HandoverObject(StateMachine):
 
         self.add_state(
             "SAY_REACH_ARM",
-            Say(
-                text="Please step back, I am going to reach my arm out."
-            ),
+            Say(text="Please step back, I am going to reach my arm out."),
             transitions={
                 "succeeded": "REACH_ARM",
                 "aborted": "REACH_ARM",
@@ -207,7 +209,6 @@ class HandoverObject(StateMachine):
             },
         )
 
-    
         self.add_state(
             "OPEN_GRIPPER",
             PlayMotion(motion_name="open"),
@@ -220,9 +221,7 @@ class HandoverObject(StateMachine):
 
         self.add_state(
             "ASK_TO_STEP_AWAY",
-            Say(
-                text="Please step back. I will put my arm away."
-            ),
+            Say(text="Please step back. I will put my arm away."),
             transitions={
                 "succeeded": "HOME",
                 "aborted": "HOME",

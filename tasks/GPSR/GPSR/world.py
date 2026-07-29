@@ -157,6 +157,7 @@ def load_people(node):
 def load_general_knowledge(node):
     """Load general_knowledge.yaml and append live date/time."""
     import datetime
+
     path = _pkg_config(node, "general_knowledge.yaml")
     if not os.path.exists(path):
         base = ""

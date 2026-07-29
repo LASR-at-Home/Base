@@ -66,7 +66,9 @@ def generate_launch_description():
             whisper_server,
             load_motions,
             yolo_service,
-            #robot_ui,
+            # robot_ui,
         ]
     )
- #ros2 run GPSR sm --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml
+
+
+# ros2 run GPSR sm --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml

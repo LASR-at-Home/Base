@@ -219,7 +219,9 @@ class GreetGuest(yasmin.StateMachine):
         )
 
         self.add_state(
-            "WAIT", Wait(2), transitions={"succeeded": "ACKNOWLEDGE_BAG", "failed": "failed"}
+            "WAIT",
+            Wait(2),
+            transitions={"succeeded": "ACKNOWLEDGE_BAG", "failed": "failed"},
         )
 
         self.add_state(

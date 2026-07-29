@@ -14,6 +14,7 @@ from cv2_pcl import pcl_to_img_msg
 
 import time
 
+
 # Redundent state and Service due to REiD
 class DetectFaces(ServiceState):
     def __init__(
@@ -36,18 +37,18 @@ class DetectFaces(ServiceState):
 
         self.image = None
         self.image_sub = self.node.create_subscriber(
-            Image, 
-            self._image_topic, 
+            Image,
+            self._image_topic,
             self.getImage,
             QoSProfile(
                 depth=10,
                 reliability=ReliabilityPolicy.BEST_EFFORT,
                 history=HistoryPolicy.KEEP_LAST,
-            )
+            ),
         )
 
-    def getImage(self, msg:Image):
-        self.image=msg
+    def getImage(self, msg: Image):
+        self.image = msg
 
     def _create_req(self, blackboard):
         img_msg = pcl_to_img_msg(blackboard["pcl_msg"])
@@ -81,4 +82,3 @@ class DetectFaces(ServiceState):
         except:
             self.node.get_logger().error("Detect faces service call failed.")
             return "failed"
-        

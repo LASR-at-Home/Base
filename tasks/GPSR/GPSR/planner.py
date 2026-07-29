@@ -12,7 +12,13 @@ from GPSR.prompts import (
     TRANSCRIPTION_CLEANER_PROMPT,
     parse_json as _parse_json,
 )
-from GPSR.world import format_objects, format_people, selected_skill_lines, SUBLOCATION_ROOM, placeable_locations
+from GPSR.world import (
+    format_objects,
+    format_people,
+    selected_skill_lines,
+    SUBLOCATION_ROOM,
+    placeable_locations,
+)
 
 
 class SkillSelectorError(Exception):
@@ -31,7 +37,7 @@ def _inject_sublocations(steps: list, objects: dict = None) -> list:
     result = []
     for step in steps:
         skill = step.get("skill")
-        args  = step.get("args", {})
+        args = step.get("args", {})
 
         # For any go_to_location pointing at a known sub-location,
         # ensure the parent room is visited first.
@@ -41,7 +47,9 @@ def _inject_sublocations(steps: list, objects: dict = None) -> list:
             if room:
                 prev = _prev_loc(result)
                 if prev != room and prev != target:
-                    result.append({"skill": "go_to_location", "args": {"location": room}})
+                    result.append(
+                        {"skill": "go_to_location", "args": {"location": room}}
+                    )
 
         result.append(step)
     return result
@@ -56,9 +64,15 @@ def _inject_give_to_operator(steps: list) -> list:
         return steps
     # Missing the delivery — append return to instruction point and give to operator
     steps = list(steps)
-    last_loc = steps[-1].get("args", {}).get("location") if steps[-1].get("skill") == "go_to_location" else None
+    last_loc = (
+        steps[-1].get("args", {}).get("location")
+        if steps[-1].get("skill") == "go_to_location"
+        else None
+    )
     if last_loc != "instruction point":
-        steps.append({"skill": "go_to_location", "args": {"location": "instruction point"}})
+        steps.append(
+            {"skill": "go_to_location", "args": {"location": "instruction point"}}
+        )
     steps.append({"skill": "give_to_person", "args": {"person": "operator"}})
     return steps
 
@@ -128,7 +142,9 @@ def run_planner(backend, world: dict, command: str) -> dict:
         pass
 
     try:
-        placement = world.get("placement_locations") or placeable_locations(world["locations"])
+        placement = world.get("placement_locations") or placeable_locations(
+            world["locations"]
+        )
         raw = backend.query_json(
             PLANNER_PROMPT.format(
                 general_knowledge=world["general_knowledge"],
@@ -166,7 +182,9 @@ def run_cloud_planner(backend, world: dict, command: str) -> dict:
     """Single-call cloud planner: selector + refiner + planner + announce in one LLM call."""
     t0 = time.perf_counter()
     command = command.strip()
-    placement = world.get("placement_locations") or placeable_locations(world["locations"])
+    placement = world.get("placement_locations") or placeable_locations(
+        world["locations"]
+    )
     try:
         raw = backend.query_json(
             CLOUD_PLANNER_PROMPT.format(

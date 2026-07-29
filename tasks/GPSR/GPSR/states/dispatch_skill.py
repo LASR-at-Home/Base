@@ -13,8 +13,25 @@ from sensor_msgs.msg import Image
 
 from GPSR.world import load_locations
 from GPSR.tts import say
-from lasr_vision_interfaces.srv import BodyPixKeypointDetection, DetectFaces as DetectFacesSrv
-from lasr_skills import AskAndListen, DescribePeople, GoToLocation, HandoverObject, ReceiveObject, DetectWave, Rotate, FollowPerson, Wait, Detect3D, LookToPoint, Say, PlayMotion
+from lasr_vision_interfaces.srv import (
+    BodyPixKeypointDetection,
+    DetectFaces as DetectFacesSrv,
+)
+from lasr_skills import (
+    AskAndListen,
+    DescribePeople,
+    GoToLocation,
+    HandoverObject,
+    ReceiveObject,
+    DetectWave,
+    Rotate,
+    FollowPerson,
+    Wait,
+    Detect3D,
+    LookToPoint,
+    Say,
+    PlayMotion,
+)
 
 import time
 from typing import List, Union, Optional
@@ -45,7 +62,7 @@ class DispatchSkill(yasmin.State):
             if isinstance(value, str) and value.strip():
                 return value.strip()
         return ""
-    
+
     def _latest_image(self):
         try:
             return wait_for_message(
@@ -57,7 +74,7 @@ class DispatchSkill(yasmin.State):
         except Exception as exc:
             self.node.get_logger().error(f"Failed to get camera image: {exc}")
             return None
-        
+
     def _format_person_description(self, attributes: dict[str, Any] | None) -> str:
         if not attributes:
             return "I see a person."
@@ -84,7 +101,7 @@ class DispatchSkill(yasmin.State):
         if not parts:
             return "I see a person."
         return f"I see a person with {', '.join(parts)}."
-    
+
     def _get_person_info(self, args: dict[str, Any]):
         location = self._first_arg(args, "location")
         if location:
@@ -98,7 +115,7 @@ class DispatchSkill(yasmin.State):
         return "succeeded"
 
     # --- LASR SKILLS
-    def _say(self, text): # NEED Blackboard?
+    def _say(self, text):  # NEED Blackboard?
         if not text:
             return "succeeded"
         self.node.get_logger().info(f"Saying: {text}")
@@ -136,7 +153,9 @@ class DispatchSkill(yasmin.State):
             return "failed"
         return outcome
 
-    def _detect_faces(self): #TODO: Use Yolo to detect people then choose closest --- Update to find people faces   # Redundent as is replaced by REiD and spin breaks code. 
+    def _detect_faces(
+        self,
+    ):  # TODO: Use Yolo to detect people then choose closest --- Update to find people faces   # Redundent as is replaced by REiD and spin breaks code.
         try:
             outcome = Detect3D(model="best.pt", filter=["person"])
 
@@ -144,9 +163,11 @@ class DispatchSkill(yasmin.State):
                 return True
 
         except Exception as exc:
-            self.node.get_logger().error(f"Detect faces (placeholder with detect_wave) failed: {exc}")
+            self.node.get_logger().error(
+                f"Detect faces (placeholder with detect_wave) failed: {exc}"
+            )
             return False
-        
+
         return False
 
     def _detect_waving_person(self) -> bool:
@@ -154,11 +175,11 @@ class DispatchSkill(yasmin.State):
             outcome = DetectWave()(self.task_bb)
             if outcome == "waving":
                 return True
-            
+
         except Exception as exc:
             self.node.get_logger().error(f"Ask/listen failed: {exc}")
             return False
-        
+
         return False
 
     def _describe_person(self):
@@ -233,9 +254,11 @@ class DispatchSkill(yasmin.State):
                 if shirt_color and clothes.lower() in shirt_color:
                     self._say(f"I found a person wearing a {clothes} shirt.")
                     return "succeeded"
-                
-        #TODO:  Ask for person to move infront of you. then wait
-        self._say("I cannot see you so can you please step infront of me. I will wait a few seconds")
+
+        # TODO:  Ask for person to move infront of you. then wait
+        self._say(
+            "I cannot see you so can you please step infront of me. I will wait a few seconds"
+        )
         time.sleep(3)
 
         detections = self._detect_faces()
@@ -290,18 +313,19 @@ class DispatchSkill(yasmin.State):
         def getPoint(blackboard):
             detections = blackboard.get("detections_3d").detected_objects
             if detections:
-                blackboard['object_point'] = PointStamped(
-                header=Header(
-                    frame_id="map",
-                    stamp=Time().to_msg(),
-                ),
-                point=detections[0].point,
-            )
-                
+                blackboard["object_point"] = PointStamped(
+                    header=Header(
+                        frame_id="map",
+                        stamp=Time().to_msg(),
+                    ),
+                    point=detections[0].point,
+                )
+
                 yasmin.YASMIN_LOG_INFO(f" An object is at {blackboard['object_point']}")
                 return "succeeded"
-            
+
             return "failed"
+
         try:
             yasmin.YASMIN_LOG_INFO(f"object to detect: {object}")
             filter_list = []
@@ -352,10 +376,11 @@ class DispatchSkill(yasmin.State):
                 "LOOK_AT_OBJECT",
                 LookToPoint(),
                 transitions={
-                      "succeeded": "CONFIRM", 
+                    "succeeded": "CONFIRM",
                     "aborted": "failed",
-                    "canceled": "failed"},
-                remappings={"pointstamped": "object_point"}
+                    "canceled": "failed",
+                },
+                remappings={"pointstamped": "object_point"},
             )
             sm.add_state(
                 "CONFIRM",
@@ -435,10 +460,11 @@ class DispatchSkill(yasmin.State):
         return "succeeded"
 
 
-
 from rclpy.node import Node
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor as Executor
+
+
 class GPSRNode(Node):
     def __init__(self):
         super().__init__(
@@ -450,6 +476,7 @@ class GPSRNode(Node):
         self._executor.add_node(self)
         self._spin_thread = Thread(target=self._executor.spin)
         self._spin_thread.start()
+
 
 def main():
     rclpy.init()
@@ -464,16 +491,18 @@ def main():
     try:
         bb = Blackboard()
         bb["steps"] = [
-            #{"skill": "go_to_location", "args": {"location": "laundry"}}, 
-            #{"skill": "go_to_location", "args": {"location": "shelf"}}, 
-            {"skill": "find_object", "args": {"object": "red_bull", "location": "shelf"}}, 
-            {"skill": "pick_up", "args": {"object": "red_bull"}}, 
-            #{"skill": "go_to_location", "args": {"location": "living room"}}, 
-            #{"skill": "go_to_location", "args": {"location": "coffee table"}}, 
-            {"skill": "place_object", "args": {"location": "coffee table"}}
+            # {"skill": "go_to_location", "args": {"location": "laundry"}},
+            # {"skill": "go_to_location", "args": {"location": "shelf"}},
+            {
+                "skill": "find_object",
+                "args": {"object": "red_bull", "location": "shelf"},
+            },
+            {"skill": "pick_up", "args": {"object": "red_bull"}},
+            # {"skill": "go_to_location", "args": {"location": "living room"}},
+            # {"skill": "go_to_location", "args": {"location": "coffee table"}},
+            {"skill": "place_object", "args": {"location": "coffee table"}},
         ]
-        
-        
+
         outcome = DispatchSkill(node)(bb)
 
         yasmin.YASMIN_LOG_INFO(outcome)

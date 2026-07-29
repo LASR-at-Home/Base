@@ -93,7 +93,10 @@ class GPSR(yasmin.StateMachine):
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
             GoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "CHECK_INSTRUCTION", "failed": "GO_TO_INSTRUCT_POINT"},
+            transitions={
+                "succeeded": "CHECK_INSTRUCTION",
+                "failed": "GO_TO_INSTRUCT_POINT",
+            },
         )
 
         self.add_state(
@@ -425,7 +428,7 @@ class GPSR(yasmin.StateMachine):
             if steps and steps[0].get("skill") == "say":
                 announcement = steps[0]["args"]["text"]
             if command:
-                say(self.node, f"I heard: {command}.", blackboard )
+                say(self.node, f"I heard: {command}.", blackboard)
             if announcement and announcement != PLAN_FAILED_TOKEN:
                 say(self.node, announcement, blackboard)
         except Exception:
