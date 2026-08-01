@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Message, Ros, Topic } from "roslib";
 
+import { CreateOrder } from "./screens/CreateOrder";
 import { Done } from "./screens/Done";
 import { Ready } from "./screens/Ready";
 import { YesNo } from "./screens/YesNo";
 
-type Screen = "home" | "done" | "ready" | "yes_no" | "debug";
+type Screen = "home" | "order" | "done" | "ready" | "yes_no" | "debug";
+type ProductTopic = { products: string[] };
 type ConfirmTopic = { value: boolean };
 
 export default function App({ rosIp }: { rosIp: string }) {
@@ -16,6 +18,7 @@ export default function App({ rosIp }: { rosIp: string }) {
 
   const doneTopicRef = useRef<Topic>();
   const readyTopicRef = useRef<Topic>();
+  const orderTopicRef = useRef<Topic<ProductTopic>>();
   const confirmTopicRef = useRef<Topic<ConfirmTopic>>();
 
   useEffect(() => {
@@ -47,6 +50,13 @@ export default function App({ rosIp }: { rosIp: string }) {
       });
       readyTopicRef.current.advertise();
 
+      orderTopicRef.current = new Topic<ProductTopic>({
+        ros,
+        name: "/tablet/order",
+        messageType: "robot_ui/msg/Order",
+      });
+      orderTopicRef.current.advertise();
+
       confirmTopicRef.current = new Topic<ConfirmTopic>({
         ros,
         name: "/tablet/confirm",
@@ -56,7 +66,16 @@ export default function App({ rosIp }: { rosIp: string }) {
     });
   }, []);
 
-  if (screen === "done") {
+  if (screen === "order") {
+    return (
+      <CreateOrder
+        finish={(products) => {
+          orderTopicRef.current!.publish(new Message({ products }) as ProductTopic);
+          setScreen("home");
+        }}
+      />
+    );
+  } else if (screen === "done") {
     return (
       <Done
         done={() => {

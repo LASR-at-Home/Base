@@ -86,7 +86,7 @@ class AskAndListen(yasmin.StateMachine):
         which checks transcribed_speech for emptiness and asks the user to
         repeat themselves, with an escalating phrase, if nothing was heard.
 
-        hard_failure_outcome: "canceled" or "canceled" outcomes from Say or Listen
+        hard_failure_outcome: "canceled" or "preempted" outcomes from Say or Listen
         """
         retry_phrases = [RETRY_PHRASE_1, RETRY_PHRASE_2]
         num_attempts = len(retry_phrases) + 1

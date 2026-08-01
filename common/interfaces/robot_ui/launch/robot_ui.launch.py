@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     ros_ip_arg = DeclareLaunchArgument(
         "ros_ip",
-        default_value="127.0.0.1",
+        default_value="10.68.0.139",
         description="IP address rosbridge will bind to (also passed to the Next.js UI as ROS_IP)",
     )
 

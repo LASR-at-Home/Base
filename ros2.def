@@ -4,7 +4,7 @@
 ##
 
 Bootstrap: localimage
-From: ./tiago_humble_os.sif
+From: /home/rexy/tiago_humble_os.sif
 
 %post -c /bin/bash
 export ROS_DISTRO=humble

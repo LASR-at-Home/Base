@@ -68,6 +68,7 @@ setup(
             "rotate = lasr_skills.rotate:main",
             "detect_keypoints_3d = lasr_skills.detect_keypoints_3d:main",
             "detect_wave = lasr_skills.detect_wave:main",
+            "safety = lasr_skills.safety:main"
         ],
     },
 )

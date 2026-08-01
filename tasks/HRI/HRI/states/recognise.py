@@ -30,7 +30,10 @@ class Recognise(yasmin_ros.ServiceState):
             outcomes=["no_detections"],
         )
 
+        self.add_input_key("guest_data")
+        self.add_input_key("seat_indexes")
         self.add_output_key("guest_data")
+        self.add_output_key("seat_indexes")
 
         self.image_pub = self._node.create_publisher(Image, "recognise/image", 10)
 

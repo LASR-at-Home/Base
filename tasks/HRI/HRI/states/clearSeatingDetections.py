@@ -12,6 +12,7 @@ class ClearSeatingDetections(yasmin.State):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_input_key("guest_data")
         self.add_output_key("guest_data")
+        self.add_output_key("seat_indexes")
 
     def execute(self, blackboard: Blackboard) -> str:
         blackboard["seat_indexes"] = {"guest1": None, "guest2": None, "host": None}

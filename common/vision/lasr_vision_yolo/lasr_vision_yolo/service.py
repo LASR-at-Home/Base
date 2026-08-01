@@ -238,6 +238,8 @@ class YOLOServiceNode:
             if transform is None:
                 return response
 
+        # TODO: Make Detection3D response stamped with frame_id so callers can detect
+        # TF failures externally instead of relying on log warnings
         for result in results:
             detection = Detection3D()
             detection.name = result.names[result.boxes.cls.int().item()]
@@ -309,7 +311,6 @@ class YOLOServiceNode:
         self, req: YoloPoseDetection3D.Request, res: YoloPoseDetection3D.Response
     ) -> YoloPoseDetection3D.Response:
         response = YoloPoseDetection3D.Response()
-
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(cv_im, req.model, req.confidence, [])
         depth_im = self._bridge.imgmsg_to_cv2(
@@ -332,6 +333,8 @@ class YOLOServiceNode:
             if transform is None:
                 return response
 
+        # TODO: Make Keypoint3D response stamped with frame_id so callers can detect
+        # TF failures externally instead of relying on log warnings
         for result in results:
             keypoints = Keypoint3DList()
             for idx, name in KEYPOINT_MAPPING.items():
@@ -343,7 +346,12 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-                    z = depth_im[v, u] / 1000.0  # convert mm to meters
+                    z_mm = depth_im[v, u]
+                    z = z_mm / 1000.0  # convert mm to meters
+                    # Skip invalid/near-camera depths (< 100mm)
+                    # Allow up to 20m for distant detections (will use laser fallback if needed)
+                    if z <= 0.1 or z > 20.0:
+                        continue
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
@@ -365,7 +373,6 @@ class YOLOServiceNode:
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)
-
         return response
 
     def _maybe_load_model(self, model_name: str) -> ultralytics.YOLO:

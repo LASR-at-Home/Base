@@ -420,7 +420,7 @@ class TrackPerson(StateMachine):
         )
         self.add_state(
             "DETECT_3D",
-            Detect3DInArea(filter=["person"]),
+            Detect3DInArea(filter=["person"], z_min=-10, z_max=50),
             transitions={
                 "succeeded": "GET_PERSON_POINT",
                 "failed": "failed",

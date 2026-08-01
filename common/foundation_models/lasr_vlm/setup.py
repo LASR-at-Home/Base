@@ -23,6 +23,7 @@ class InstallCommand(setuptools.command.install.install):
 
 setup(
     name=package_name,
+    cmdclass={"install": InstallCommand},
     version="0.0.0",
     packages=find_packages(exclude=["test"]),
     data_files=[

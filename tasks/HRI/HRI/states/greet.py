@@ -8,6 +8,7 @@ from lasr_skills import (
     ReceiveObject,
     StopEyeTracker,
     Wait,
+    SafeGoToLocation,
 )
 from HRI.states import (
     GetNameAndDrink,
@@ -89,7 +90,7 @@ class GreetGuest(yasmin.StateMachine):
         conc_face_attribute = yasmin.Concurrence(
             states={
                 "GET_ATTRIBUTES": GetGuestAttributes(guest_id=guest_id),
-                "LEARN_FACE": HRILearnFaces(guest_id=guest_id, dataset_size=10),
+                "LEARN_FACE": HRILearnFaces(guest_id=guest_id, dataset_size=5),
             },
             default_outcome="failed",
             outcome_map={
@@ -125,9 +126,9 @@ class GreetGuest(yasmin.StateMachine):
                     "GET_NAME_DRINK": "succeeded",
                     "GET_FACE_ATTRIBUTES": "succeeded",
                 },
-                "failed": {
+                "failed_speech": {
                     "GET_NAME_DRINK": "failed",
-                    "GET_FACE_ATTRIBUTES": "failed",
+                    "GET_FACE_ATTRIBUTES": "succeeded",
                 },
                 "failed_vision": {
                     "GET_NAME_DRINK": "succeeded",
@@ -145,7 +146,6 @@ class GreetGuest(yasmin.StateMachine):
         )
 
         conc_name_drink_face.add_input_key("guest_data")
-        conc_name_drink_face.add_input_key("guest_data")
         conc_name_drink_face.add_output_key("guest_data")
 
         self.add_state(
@@ -154,7 +154,7 @@ class GreetGuest(yasmin.StateMachine):
                 tts_phrase="Please say 'Hi Tiago' for me to begin listening. What is your name and drink?",
             ),
             transitions={
-                "succeeded": "GET_NAME_DRINK_FACE",
+                "succeeded": "SAY_WAIT",
                 "failed": "failed",
             },
             remappings={"transcribed_speech": "guest_transcription"},
@@ -163,12 +163,25 @@ class GreetGuest(yasmin.StateMachine):
         transition = "GET_ATTRIBUTE_STR" if guest_id == "guest2" else "SAY_WELCOME"
 
         self.add_state(
+            "SAY_WAIT",
+            Say(
+                text="Give me some time to learn your face and attributes. Please wait here."
+            ),
+            transitions={
+                "succeeded": "GET_NAME_DRINK_FACE",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
             "GET_NAME_DRINK_FACE",
             conc_name_drink_face,
             transitions={
                 "succeeded": transition,
                 "failed": "failed",
                 "failed_vision": "failed",
+                "failed_speech": transition,
                 "failed_face": "failed",
                 "failed_attributes": "failed",
             },
@@ -213,7 +226,7 @@ class GreetGuest(yasmin.StateMachine):
             "STOP_EYE_TRACKING_2",
             StopEyeTracker(),
             transitions={
-                "succeeded": "WAIT",
+                "succeeded": "SAY_WELCOME_2",
                 "failed": "failed",
             },
         )
@@ -267,9 +280,10 @@ class GreetGuest(yasmin.StateMachine):
                     " are wearing glasses." if value else " are not wearing glasses."
                 )
             elif attribute == "hat":
-                attribute_str += (
-                    " are wearing a hat." if value else " are not wearing a hat."
-                )
+                # attribute_str += (
+                #     " are wearing a hat." if value else " are not wearing a hat."
+                # )
+                pass
             elif attribute == "shirt_color":
                 attribute_str += f" are wearing a {value} coloured shirt."
             else:

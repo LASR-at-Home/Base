@@ -178,7 +178,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "SAY_PLACE",
                 Say(
-                    text=f"I am ready to recieve the {self.object_name} in my hand. I will wait for a few seconds.",
+                    text=f"I am ready to recieve the {self.object_name} in my hand. Please place the bag on my gripper. I will wait for a few seconds.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -190,7 +190,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "SAY_PLACE",
                 Say(
-                    format_str="I am ready to recieve the {} in my hand. I will wait for a few seconds.",
+                    format_str="I am ready to recieve the {} in my hand. I will wait for a few seconds. Please give me space to my left to put my arm away after.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -227,10 +227,28 @@ class ReceiveObject(StateMachine):
             "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT
             PlayMotion(motion_name="close"),
             transitions={
-                "succeeded": "FOLD_ARM",
+                "succeeded": "WARN_ARM",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+        )
+
+        self.add_state(
+            "WARN_ARM",
+            Say(
+                text="I will put my arm away in 5 seconds. Please give me a lot of space to my left."
+            ),
+            transitions={
+                "succeeded": "WAIT_PUT_ARM_AWAY",
+                "aborted": "WAIT_PUT_ARM_AWAY",
+                "canceled": "WAIT_PUT_ARM_AWAY",
+            },
+        )
+
+        self.add_state(
+            "WAIT_PUT_ARM_AWAY",
+            Wait(5),
+            transitions={"succeeded": "FOLD_ARM", "failed": "FOLD_ARM"},
         )
 
         self.add_state(

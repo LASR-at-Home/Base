@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import queue
+import datetime
+from collections import deque
 from pathlib import Path
 from timeit import default_timer as timer
 from typing import Optional
@@ -9,6 +11,7 @@ import numpy as np
 import torch
 import whisper
 import sounddevice as sd
+import soundfile as sf
 
 import rclpy
 from rclpy.node import Node
@@ -18,9 +21,10 @@ from rclpy.executors import ExternalShutdownException
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech
 from std_msgs.msg import String
 
-CHUNK_SIZE = 512
 SAMPLE_RATE = 16000
+CHUNK_SIZE = 512
 MAX_PHRASE_CHUNKS = int(15.0 * SAMPLE_RATE / CHUNK_SIZE)
+PRE_ROLL_CHUNKS = 16  # ~512 ms
 
 
 class TranscribeSpeechAction(Node):
@@ -34,12 +38,19 @@ class TranscribeSpeechAction(Node):
         self.declare_parameter("mic_device", "default")
         self.declare_parameter("start_timeout", 5.0)
         self.declare_parameter("pause_threshold", 2.0)
+        self.declare_parameter("save_audio", True)
+        self.declare_parameter("save_audio_dir", "/tmp/whisper_recordings")
 
         self._model_name = self.get_parameter("model").value
         self._device = self.get_parameter("device").value
         self._mic_device = self.get_parameter("mic_device").value or None
         self._start_timeout = self.get_parameter("start_timeout").value
         self._pause_threshold = self.get_parameter("pause_threshold").value
+        self._save_audio = self.get_parameter("save_audio").value
+        self._save_audio_dir = Path(self.get_parameter("save_audio_dir").value)
+        if self._save_audio:
+            self._save_audio_dir.mkdir(parents=True, exist_ok=True)
+            self.get_logger().info(f"Saving audio to {self._save_audio_dir}")
 
         self._transcription_pub = self.create_publisher(
             String, "/live_speech_transcription", 10
@@ -59,6 +70,7 @@ class TranscribeSpeechAction(Node):
         self._vad_model = load_silero_vad()
 
         self._audio_queue: queue.Queue = queue.Queue()
+        self._pre_roll: deque = deque(maxlen=PRE_ROLL_CHUNKS)
         self._collecting = False
 
         self._stream = sd.InputStream(
@@ -98,6 +110,10 @@ class TranscribeSpeechAction(Node):
     ) -> None:
         if self._collecting:
             self._audio_queue.put_nowait(indata[:, 0].copy())
+        chunk = indata[:, 0].copy()
+        self._pre_roll.append(chunk)
+        if self._collecting:
+            self._audio_queue.put_nowait(chunk)
 
     def cancel_cb(self, goal_handle) -> CancelResponse:
         self.get_logger().info("Goal cancelled")
@@ -153,7 +169,7 @@ class TranscribeSpeechAction(Node):
                         return self._result
                     if is_speech:
                         speech_started = True
-                        collected_chunks.append(chunk)
+                        collected_chunks = list(self._pre_roll) + [chunk]
                 else:
                     collected_chunks.append(chunk)
                     if is_speech:
@@ -192,10 +208,29 @@ class TranscribeSpeechAction(Node):
             self.get_logger().warn(f"Hallucination filtered: '{phrase}'")
             phrase = ""
 
+        if self._save_audio and len(float_data) > 0:
+            self._save_recording(float_data, phrase)
+
         self._transcription_pub.publish(String(data=phrase))
         self._result.sequence = phrase
         goal_handle.succeed()
         return self._result
+
+    def _save_recording(self, float_data: np.ndarray, transcript: str) -> None:
+        stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        wav_path = self._save_audio_dir / f"{stamp}.wav"
+        txt_path = self._save_audio_dir / f"{stamp}.txt"
+        try:
+            sf.write(str(wav_path), float_data, SAMPLE_RATE, subtype="PCM_16")
+            txt_path.write_text(transcript)
+            self.get_logger().info(f"Saved recording: {wav_path.name}")
+        except Exception as e:
+            self.get_logger().warn(f"Failed to save recording: {e}")
+
+    def destroy_node(self):
+        self._stream.stop()
+        self._stream.close()
+        super().destroy_node()
 
     def destroy_node(self):
         self._stream.stop()
