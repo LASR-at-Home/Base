@@ -8,13 +8,13 @@ from launch.launch_description_sources import AnyLaunchDescriptionSource
 
 def generate_launch_description():
     state_machine = Node(
-        package='skills',
-        executable='safety',
-        name='safety',
+        package="skills",
+        executable="safety",
+        name="safety",
         parameters=[
-            os.path.join(get_package_share_directory('skills'), 'config', 'safety.yaml')
+            os.path.join(get_package_share_directory("skills"), "config", "safety.yaml")
         ],
-        output='screen'
+        output="screen",
     )
-    
+
     return LaunchDescription([state_machine])

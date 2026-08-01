@@ -513,7 +513,7 @@ class YOLOServiceNode:
         self, img, model: str, conf: float, filter: List[str]
     ) -> ultralytics.engine.results.Results:
         yolo = self._maybe_load_model(model)
-        try:    #TODO: handle incorrect filters properly
+        try:  # TODO: handle incorrect filters properly
             filter_idx = (
                 [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
                 if filter
