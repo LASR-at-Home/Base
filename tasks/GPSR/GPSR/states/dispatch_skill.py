@@ -157,7 +157,7 @@ class DispatchSkill(yasmin.State):
         self,
     ):  # TODO: Use Yolo to detect people then choose closest --- Update to find people faces   # Redundent as is replaced by REiD and spin breaks code.
         try:
-            outcome = Detect3D(model="best.pt", filter=["person"])
+            outcome = Detect3D(model="yolo11n.pt", filter=["person"])
 
             if outcome == "succeeded" and self.task_bb.get("detections_3d"):
                 return True
@@ -344,7 +344,7 @@ class DispatchSkill(yasmin.State):
             )
             sm.add_state(
                 "DETECT3D_UP",
-                Detect3D(model="best.pt", filter=filter_list),
+                Detect3D(filter=filter_list),
                 transitions={"succeeded": "GET_POINT_UP", "failed": "failed"},
             )
             sm.add_state(
@@ -363,7 +363,7 @@ class DispatchSkill(yasmin.State):
             )
             sm.add_state(
                 "DETECT3D_DOWN",
-                Detect3D(model="best.pt", filter=filter_list),
+                Detect3D(filter=filter_list),
                 transitions={"succeeded": "GET_POINT_DOWN", "failed": "failed"},
             )
             sm.add_state(

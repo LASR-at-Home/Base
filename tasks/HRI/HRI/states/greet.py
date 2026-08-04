@@ -232,28 +232,6 @@ class GreetGuest(yasmin.StateMachine):
         )
 
         self.add_state(
-            "WAIT",
-            Wait(2),
-            transitions={"succeeded": "ACKNOWLEDGE_BAG", "failed": "failed"},
-        )
-
-        self.add_state(
-            "ACKNOWLEDGE_BAG",
-            Say(text="I can see you have a bag."),
-            transitions={
-                "succeeded": "GRAB_BAG",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "GRAB_BAG",
-            ReceiveObject(object_name="bag", can_hold=True),
-            transitions={"succeeded": "SAY_WELCOME_2", "failed": "failed"},
-        )
-
-        self.add_state(
             "SAY_WELCOME_2",
             Say(text="Please follow me to be seated."),
             transitions={
