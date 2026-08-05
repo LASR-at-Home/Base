@@ -54,12 +54,12 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
                 remappings={"placeholders": "tts_phrase_placeholders"},
             )
             self._add_listen_with_retries(
-                hard_failure_outcome="preempted",
+                hard_failure_outcome="canceled",
             )
         else:
             self.add_input_key("tts_phrase")
@@ -69,12 +69,12 @@ class AskAndListen(yasmin.StateMachine):
                 transitions={
                     "succeeded": "LISTEN",
                     "aborted": "failed",
-                    "preempted": "failed",
+                    "canceled": "failed",
                 },
-                remapping={"text": "tts_phrase"},
+                remappings={"text": "tts_phrase"},
             )
             self._add_listen_with_retries(
-                hard_failure_outcome="preempted",
+                hard_failure_outcome="canceled",
             )
 
     def _add_listen_with_retries(

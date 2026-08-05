@@ -1,9 +1,10 @@
+import re
 import time
 
 import yasmin
 
 from GPSR.agent import Agent
-from GPSR.planner import SkillSelectorError
+from GPSR.planner import PLAN_FAILED_TOKEN, SkillSelectorError, clean_transcription
 from GPSR.world import build_world
 
 
@@ -12,7 +13,7 @@ class QueryLLM(yasmin.State):
 
     def __init__(self, node):
         super().__init__(outcomes=["succeeded", "failed"])
-        self.add_input_key("sequence")
+        self.add_input_key("transcribed_speech")
         self.add_output_key("steps")
         self.node = node
         self.world = build_world(node)
@@ -23,13 +24,17 @@ class QueryLLM(yasmin.State):
 
     def execute(self, blackboard):
         t0 = time.perf_counter()
-        command = blackboard["sequence"].strip()
+        raw_command = blackboard["transcribed_speech"].strip()
+        if self.agent.cloud_enabled:
+            command = raw_command
+        else:
+            command, original = clean_transcription(self.agent, self.world, raw_command)
+            if command != original:
+                self.node.get_logger().info(
+                    f"Transcription cleaned: '{original}' → '{command}'"
+                )
         self.node.get_logger().info(f"Query: '{command}'")
 
-        # Stage 1 — skill selector
-        # Stage 2 — skill refiner
-        # Stage 3 — planner
-        # (agent.plan runs all three; cloud + local in parallel)
         try:
             plan = self.agent.plan(
                 self.world,
@@ -43,8 +48,8 @@ class QueryLLM(yasmin.State):
         source = plan.get("source", "local")
         steps = plan["steps"]
 
-        # Announce plan: LLM generates spoken summary as first say step
-        if not (len(steps) == 1 and steps[0].get("skill") == "say"):
+        # For local: separate announce call. For cloud: announcement already in steps.
+        if source != "cloud":
             announcement = self.agent.announce(
                 command,
                 plan["plan_description"],
@@ -53,13 +58,30 @@ class QueryLLM(yasmin.State):
                 log=lambda msg: self.node.get_logger().info(msg),
             )
             if announcement:
+                announcement = re.sub(r'[{}\[\]"]', "", announcement).strip()
+                matches = list(re.finditer(r"Step \d+:[^.]+\.", announcement))
+                if matches:
+                    announcement = announcement[: matches[-1].end()].strip()
                 steps = [{"skill": "say", "args": {"text": announcement}}] + steps
 
         blackboard["steps"] = steps
 
+        elapsed = time.perf_counter() - t0
         label = "CLOUD" if source == "cloud" else "LOCAL"
-        self.node.get_logger().info(
-            f"=== PLAN SOURCE: {label} === | {plan['plan_description']} | "
-            f"{len(steps)} steps | {time.perf_counter() - t0:.1f}s"
+        is_failed = (
+            len(steps) == 1
+            and steps[0].get("skill") == "say"
+            and steps[0].get("args", {}).get("text") == PLAN_FAILED_TOKEN
         )
+        if is_failed:
+            self.node.get_logger().warn(
+                f"=== PLAN FAILED [{label}] {elapsed:.1f}s === {plan['plan_description']}"
+            )
+        else:
+            self.node.get_logger().info(
+                f"=== PLAN [{label}] {elapsed:.1f}s === {plan['plan_description']}"
+            )
+            for i, step in enumerate(steps, 1):
+                args = ", ".join(f"{k}={v}" for k, v in step.get("args", {}).items())
+                self.node.get_logger().info(f"  [{i}] {step['skill']}({args})")
         return "succeeded"

@@ -9,6 +9,7 @@ from .vision.get_image import GetImage
 from typing import Union
 
 
+# OUTDATED AND NEEDS TO BE UPDATED WITH KEYPOINTS
 class DetectGesture(RosState):
     """
     State for detecting gestures.

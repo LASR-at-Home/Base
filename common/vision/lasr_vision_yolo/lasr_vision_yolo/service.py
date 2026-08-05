@@ -513,11 +513,14 @@ class YOLOServiceNode:
         self, img, model: str, conf: float, filter: List[str]
     ) -> ultralytics.engine.results.Results:
         yolo = self._maybe_load_model(model)
-        filter_idx = (
-            [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
-            if filter
-            else None
-        )
+        try:  # TODO: handle incorrect filters properly
+            filter_idx = (
+                [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
+                if filter
+                else None
+            )
+        except KeyError:
+            filter_idx = None
         results = yolo(img, conf=conf, classes=filter_idx, verbose=False)[0]
         return results
 

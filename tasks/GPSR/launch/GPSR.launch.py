@@ -10,7 +10,10 @@ from launch.actions import (
     TimerAction,
 )
 from launch.conditions import IfCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.launch_description_sources import (
+    AnyLaunchDescriptionSource,
+    PythonLaunchDescriptionSource,
+)
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
@@ -101,6 +104,16 @@ def generate_launch_description():
         ],
     )
 
+    robot_ui = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("robot_ui"),
+                "launch",
+                "robot_ui.launch.py",
+            )
+        )
+    )
+
     whisper_server = ExecuteProcess(
         cmd=[
             "ros2",
@@ -151,6 +164,7 @@ def generate_launch_description():
             map_server_configure,
             map_server_activate,
             initial_pose,
+            robot_ui,
             whisper_server,
             state_machine,
         ]

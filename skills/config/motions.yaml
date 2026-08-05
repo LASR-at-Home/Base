@@ -53,7 +53,7 @@
         times_from_start: [ 1.5 ]
       raise_torso:
         joints: [ torso_lift_joint ]
-        positions: [ 0.5 ]
+        positions: [ 0.3 ]
         times_from_start: [  2.0  ]
       pointing_to_the_right:
         joints: [ arm_1_joint, arm_2_joint, arm_3_joint, arm_4_joint, arm_5_joint, arm_6_joint, arm_7_joint ]

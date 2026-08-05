@@ -1,14 +1,14 @@
 go_to_location: Navigate the robot to a named location in the map. Args: location (string).
 say: Make the robot speak a sentence aloud. Use this for greetings, answers, announcements, and any informational reply. Args: text (string).
 find_object: Search for an object by name or category in a room using the robot camera. Args: object (string), location (string).
-pick_up: Grasp and lift the target object with the robot arm. The object must have been found first. Args: object (string).
-place_object: Place the currently held object on a named surface. Args: location (string).
-give_to_person: Hand the currently held object to a nearby person. Args: object (string).
-find_person: Locate a person identified by name, pose (standing/sitting/lying), gesture (waving/raising arm/pointing), or clothing color. Args: name (optional), pose (optional), gesture (optional), clothes (optional), location (optional).
-guide_person: Escort a person from a start location to a destination. Args: name (optional), start (string), end (string).
-follow_person: Follow a person as they move until told to stop. Args: destination (optional).
+pick_up: Human-assisted pickup. Ask a person to place the object in the robot hand, then run the receive-object sequence. Args: object (string).
+place_object: Human-assisted placement. Navigate to the target location and ask a person to place the object on the surface. Args: object (optional), location (string).
+give_to_person: Human-assisted handover. Use the handover sequence to offer the object to a nearby person. Args: object (string).
+find_person: Locate a person using face detection, optional wave detection, and an optional spoken prompt if a name is given. Args: name (optional), gesture (optional), location (optional), clothes (optional).
+guide_person: Escort a person by speaking a follow-me instruction and navigating to the destination. Args: name (optional), start (string), end (string).
+follow_person: Follow a person as they move until they say they have arrived. Args: none.
 count_objects: Count objects of a given name or category at a placement location. Args: object (string), location (string).
 count_people: Count people with a given pose, gesture, or clothing in a room. Args: pose (optional), gesture (optional), clothes (optional), location (string).
-get_person_info: Detect and report information about a person (name, pose, or gesture). Args: info (name|pose|gesture), location (string).
+get_person_info: Report visible appearance attributes about a person using the vision service. Args: location (string), info (optional).
 find_object_by_property: Find the object on a surface matching a comparative property (biggest/smallest/heaviest/lightest/thinnest). Args: property (string), object (optional), location (string).
 answer_question: Listen to and answer a general knowledge question asked by a person. Use say to speak the answer. Args: none.

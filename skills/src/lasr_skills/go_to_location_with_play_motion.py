@@ -9,7 +9,7 @@ class SafeGoToLocation(yasmin.StateMachine):
 
         self.add_input_key("location")
         self.add_input_key("motion_name")
-        
+
         if location_param:
             location_param = location_param.upper()
             state_name = f"GO_TO_{location_param}"
@@ -25,7 +25,7 @@ class SafeGoToLocation(yasmin.StateMachine):
                 "canceled": state_name,
             },
         )
-        
+
         if location_param:
             location_param = location_param.lower()
 

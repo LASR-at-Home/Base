@@ -1,13 +1,40 @@
 gpsr:
   ros__parameters:
-    llm_model: "gemma3"
+    llm_model: "gemma3:4b"
     llm_host: "http://localhost:11434"
-    cloud_host: "127.0.0.1"          # server.py;
-    cloud_port: 8765
-    cloud_timeout_sec: 10.0
-    simulation: true              # true = use gtts on PC, false = use robot TTS
-    input_mode: "keyboard"        # "keyboard" or "mic"
+    cloud_model: "gemma4-31b"
+    cloud_host: "https://api.regolo.ai/v1"
+    cloud_port: 8000
+    cloud_api_key: "XXX"
+    cloud_timeout_sec: 40.0
+    simulation: false              # true = use gtts on PC, false = use robot TTS
+    input_mode: "microphone"        # "keyboard" or "mic"
     whisper:
       energy_threshold: 400   
       phrase_duration: 10.0
       device: "cuda"
+
+    entrance_point: # An intermediate pose beyond the door
+      position:
+        x: 4.672576427459717
+        y: 17.97470474243164
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.7666738860169032
+        w: 0.6420367220803966
+
+
+
+    instruction_point: # The intruction point
+      position:
+        x: 0.11800265312194824
+        y: 22.62601089477539
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.9968338902074738
+        w: 0.0795122338626833
+

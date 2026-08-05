@@ -1,9 +1,14 @@
 """Load robot world config from yaml and format it for the LLM planner."""
 
 import os
+from pathlib import Path
 
 import yaml
-from ament_index_python.packages import get_package_share_directory
+
+try:
+    from ament_index_python.packages import get_package_share_directory
+except ImportError:  # pragma: no cover - non-ROS/macOS fallback
+    get_package_share_directory = None
 
 __all__ = [
     "build_world",
@@ -11,6 +16,7 @@ __all__ = [
     "format_objects",
     "format_people",
     "load_locations",
+    "placeable_locations",
     "selected_skill_lines",
 ]
 
@@ -39,15 +45,36 @@ def compact_skill_lines(skills_text: str) -> str:
     return "\n".join(lines)
 
 
+SUBLOCATION_ROOM = {
+    "laundry table": "laundry",
+    "washing machine": "laundry",
+    "shelf": "laundry",
+    "laundry trash bin": "laundry",
+    "bed": "bedroom",
+    "bedside table": "bedroom",
+    "coat rack": "bedroom",
+    "tv stand": "living room",
+    "sofa": "living room",
+    "coffee table": "living room",
+    "cabinet": "kitchen",
+    "refrigerator": "kitchen",
+    "counter": "kitchen",
+    "sink": "kitchen",
+    "cooking table": "kitchen",
+    "dishwasher": "kitchen",
+    "kitchen trash bin": "kitchen",
+    "dinner table": "kitchen",
+}
+
+
 def format_objects(objects: dict) -> str:
     """Format the objects dict as a single line for the planner prompt."""
-    return (
-        ", ".join(
-            f"{name} ({obj.get('category', '?')} in {obj.get('location', '?')})"
-            for name, obj in objects.items()
-        )
-        or "none"
-    )
+    parts = []
+    for name, obj in objects.items():
+        subloc = obj.get("location", "?")
+        room = SUBLOCATION_ROOM.get(subloc, "?")
+        parts.append(f"{name} ({obj.get('category', '?')} at {subloc} in {room})")
+    return ", ".join(parts) or "none"
 
 
 def format_people(people: dict) -> str:
@@ -74,7 +101,12 @@ def selected_skill_lines(selected_skills: list, all_skill_lines: str) -> str:
 
 def _pkg_config(node, filename):
     """Absolute path to a file under share/GPSR/config/."""
-    return os.path.join(get_package_share_directory("GPSR"), "config", filename)
+    if get_package_share_directory is not None:
+        try:
+            return os.path.join(get_package_share_directory("GPSR"), "config", filename)
+        except Exception:
+            pass
+    return str(Path(__file__).resolve().parents[1] / "config" / filename)
 
 
 def load_skills_text(node):
@@ -88,13 +120,18 @@ def load_skills_text(node):
 
 
 def load_locations(node):
-    """Load locations.yaml → {name: {position, orientation}}."""
+    """Load locations.yaml → {name: {position, orientation, placeable, ...}}."""
     path = _pkg_config(node, "locations.yaml")
     if not os.path.exists(path):
         return {}
     with open(path) as f:
         data = yaml.safe_load(f) or {}
     return data.get("locations", {})
+
+
+def placeable_locations(locations: dict) -> list:
+    """Return names of locations where place_object is allowed (placeable: true)."""
+    return [name for name, info in locations.items() if info.get("placeable", False)]
 
 
 def load_objects(node):
@@ -118,20 +155,39 @@ def load_people(node):
 
 
 def load_general_knowledge(node):
-    """Load general_knowledge.yaml → free-text string for the planner."""
+    """Load general_knowledge.yaml and append live date/time."""
+    import datetime
+
     path = _pkg_config(node, "general_knowledge.yaml")
     if not os.path.exists(path):
-        return ""
-    with open(path) as f:
-        data = yaml.safe_load(f) or {}
-    return data.get("info", "")
+        base = ""
+    else:
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+        base = data.get("info", "")
+
+    now = datetime.datetime.now()
+    date_str = now.strftime("%-d %B %Y")
+    day_of_week = now.strftime("%A")
+    day_of_month = now.strftime("%-d")
+    time_str = now.strftime("%H:%M")
+    dynamic = (
+        f" The current date is {date_str}."
+        f" The day of the week is {day_of_week}."
+        f" The day of the month is {day_of_month}."
+        f" The current time is {time_str}."
+        f" Tomorrow is {(now + datetime.timedelta(days=1)).strftime('%A')}."
+    )
+    return base + dynamic
 
 
 def build_world(node) -> dict:
     """Load all config yaml and return the world dict passed to the planner."""
     skills_text = load_skills_text(node)
+    locations = load_locations(node)
     return {
-        "locations": load_locations(node),
+        "locations": locations,
+        "placement_locations": placeable_locations(locations),
         "objects": load_objects(node),
         "people": load_people(node),
         "general_knowledge": load_general_knowledge(node),

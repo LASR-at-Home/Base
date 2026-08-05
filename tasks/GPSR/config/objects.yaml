@@ -1,152 +1,200 @@
 objects:
-  # --- drinks (cabinet in kitchen) ---
-  cola:
-    category: drink
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: [coke, soda]
-  milk:
-    category: drink
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: []
-  orange juice:
-    category: drink
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: [oj]
-  juice pack:
-    category: drink
-    location: kitchen
+  # --- fabric (laundry table in laundry) ---
+  white_shirt:
+    category: fabric
+    location: laundry table
     grabbable: true
     size: small
     aliases: []
 
-  # --- fruits (desk in office) ---
-  apple:
-    category: fruit
-    location: office
-    grabbable: true
-    size: small
-    aliases: []
-  banana:
-    category: fruit
-    location: office
-    grabbable: true
-    size: small
-    aliases: []
-  orange:
-    category: fruit
-    location: office
-    grabbable: true
-    size: small
-    aliases: []
-  pear:
-    category: fruit
-    location: office
+  grey_shirt:
+    category: fabric
+    location: laundry table
     grabbable: true
     size: small
     aliases: []
 
-  # --- food (pantry in kitchen) ---
-  mustard:
-    category: food
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: []
-  tuna:
-    category: food
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: []
-  sugar:
-    category: food
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: []
-  spam:
-    category: food
-    location: kitchen
+  blue_shirt:
+    category: fabric
+    location: laundry table
     grabbable: true
     size: small
     aliases: []
 
-  # --- snacks (side tables in living room) ---
+  black_shirt:
+    category: fabric
+    location: laundry table
+    grabbable: true
+    size: small
+    aliases: []
+  
+  hand_towel:
+    category: fabric
+    location: laundry table
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- toy (bed in bedroom) ---
+  rubiks_cube:
+    category: toy
+    location: bed
+    grabbable: true
+    size: small
+    aliases: [cube, rubiks]
+
+  # --- snack (shelf in laundry) ---
   pringles:
     category: snack
-    location: living room
+    location: shelf
+    grabbable: true
+    size: small
+    aliases: []
+  seaweed:
+    category: snack
+    location: shelf
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- fruit (dinner table in kitchen) ---
+  apple:
+    category: fruit
+    location: dinner table
+    grabbable: true
+    size: small
+    aliases: []
+  peach:
+    category: fruit
+    location: dinner table
+    grabbable: true
+    size: small
+    aliases: []
+  mangostane:
+    category: fruit
+    location: dinner table
+    grabbable: true
+    size: small
+    aliases: []
+  lemon:
+    category: fruit
+    location: dinner table
+    grabbable: true
+    size: small
+    aliases: []
+  yellow_bellpepper:
+    category: fruit
+    location: dinner table
+    grabbable: true
+    size: small
+    aliases: []
+  red_bellpepper:
+    category: fruit
+    location: dinner table
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- food (coffee table in living room) ---
+  instant_noodles:
+    category: food
+    location: coffee table 
     grabbable: true
     size: small
     aliases: []
   cornflakes:
-    category: snack
-    location: living room
-    grabbable: true
-    size: small
-    aliases: []
-  cheezit:
-    category: snack
-    location: living room
-    grabbable: true
-    size: small
-    aliases: [cheez-it]
-
-  # --- dishes (kitchen table) ---
-  cup:
-    category: dish
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: []
-  bowl:
-    category: dish
-    location: kitchen
-    grabbable: true
-    size: small
-    aliases: []
-  plate:
-    category: dish
-    location: kitchen
+    category: food
+    location: coffee table 
     grabbable: true
     size: small
     aliases: []
 
-  # --- toys (bookshelf in living room) ---
-  tennis ball:
-    category: toy
-    location: living room
+  # --- drinks (cabinet in kitchen) ---
+  coke:
+    category: drink
+    location: cabinet     # Sub-location
+    grabbable: true
+    size: small
+    aliases: [coke, soda]
+  red_bull:
+    category: drink
+    location: cabinet
     grabbable: true
     size: small
     aliases: []
-  rubiks cube:
-    category: toy
-    location: living room
+  milk:
+    category: drink
+    location: cabinet
     grabbable: true
     size: small
-    aliases: [rubik cube]
-  dice:
-    category: toy
-    location: living room
+    aliases: [oj]
+  soju:
+    category: drink
+    location: cabinet
+    grabbable: true
+    size: small
+    aliases: []
+  pepsi:
+    category: drink
+    location: cabinet
     grabbable: true
     size: small
     aliases: []
 
-  # --- cleaning supplies (shelf in bedroom) ---
-  cleanser:
+  # --- cleaning supplies (cooking table in kitchen) ---
+  dishwasher_tab:
     category: cleaning supply
-    location: bedroom
+    location: cooking table
     grabbable: true
     size: small
     aliases: []
   sponge:
     category: cleaning supply
-    location: bedroom
+    location: cooking table
+    grabbable: true
+    size: small
+    aliases: []
+  toothpaste:
+    category: cleaning supply
+    location: cooking table
+    grabbable: true
+    size: small
+    aliases: []
+
+  # --- dishes (kitchen table) ---
+  cup:
+    category: dish
+    location: dishwasher
+    grabbable: true
+    size: small
+    aliases: []
+  spoon:
+    category: dish
+    location: dishwasher
+    grabbable: true
+    size: small
+    aliases: []
+  plate:
+    category: dish
+    location: dishwasher
+    grabbable: true
+    size: small
+    aliases: []
+  knife:
+    category: dish
+    location: dishwasher
+    grabbable: true
+    size: small
+    aliases: []
+  fork:
+    category: dish
+    location: dishwasher
+    grabbable: true
+    size: small
+    aliases: []
+  bowl:
+    category: dish
+    location: dishwasher
     grabbable: true
     size: small
     aliases: []

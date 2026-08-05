@@ -25,7 +25,10 @@ setup(
         (share("launch"), glob(os.path.join("launch", "*.launch.py"))),
         (share("worlds"), glob(os.path.join("worlds", "*"))),
         (share("maps"), glob(os.path.join("maps", "*"))),
-        (share("config"), glob(os.path.join("config", "*"))),
+        (
+            share("config"),
+            [f for f in glob(os.path.join("config", "*")) if os.path.isfile(f)],
+        ),
         # Register as pal_gazebo_worlds_private so tiago_gazebo finds our worlds
         (
             os.path.join("share", "pal_gazebo_worlds_private", "worlds"),

@@ -33,7 +33,7 @@ class TranscribeSpeechAction(Node):
     def __init__(self) -> None:
         super().__init__("transcribe_speech_action")
 
-        self.declare_parameter("model", "base.en")
+        self.declare_parameter("model", "medium.en")
         self.declare_parameter("device", "cuda" if torch.cuda.is_available() else "cpu")
         self.declare_parameter("mic_device", "default")
         self.declare_parameter("start_timeout", 5.0)
@@ -108,6 +108,8 @@ class TranscribeSpeechAction(Node):
     def _audio_callback(
         self, indata: np.ndarray, frames: int, time_info, status
     ) -> None:
+        if self._collecting:
+            self._audio_queue.put_nowait(indata[:, 0].copy())
         chunk = indata[:, 0].copy()
         self._pre_roll.append(chunk)
         if self._collecting:
@@ -224,6 +226,11 @@ class TranscribeSpeechAction(Node):
             self.get_logger().info(f"Saved recording: {wav_path.name}")
         except Exception as e:
             self.get_logger().warn(f"Failed to save recording: {e}")
+
+    def destroy_node(self):
+        self._stream.stop()
+        self._stream.close()
+        super().destroy_node()
 
     def destroy_node(self):
         self._stream.stop()

@@ -146,7 +146,6 @@ class GreetGuest(yasmin.StateMachine):
         )
 
         conc_name_drink_face.add_input_key("guest_data")
-        conc_name_drink_face.add_input_key("guest_data")
         conc_name_drink_face.add_output_key("guest_data")
 
         self.add_state(

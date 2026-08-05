@@ -1,47 +1,64 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.wait_for_message import wait_for_message
-import smach
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
+
+import yasmin
+import yasmin_ros
+from yasmin_ros import ServiceState
 
 from lasr_vision_interfaces.srv import DetectFaces as DetectFacesSrv
 from sensor_msgs.msg import Image
 from cv2_pcl import pcl_to_img_msg
 
+import time
 
-class DetectFaces(smach.State):
+
+# Redundent state and Service due to REiD
+class DetectFaces(ServiceState):
     def __init__(
         self,
-        node: Node,
         image_topic: str = "/head_front_camera/rgb/image_raw",
     ):
-        smach.State.__init__(
-            self,
-            outcomes=["succeeded", "failed"],
-            input_keys=["pcl"],
-            output_keys=["detections"],
+        super().__init__(
+            srv_type=DetectFacesSrv,
+            srv_name="/deepface/detect_faces",
+            create_request_handler=self._create_req,
+            outcomes=["succeeded", "no_faces", "failed"],
+            response_handler=self._response_handler,
         )
-        self.node = node
+
+        self.add_input_key("pcl")
+        self.add_output_key("detections")
+
+        self.node = yasmin_ros.logger_node
         self._image_topic = image_topic
-        self._detect_faces = self.node.create_client(
-            DetectFacesSrv, "/deepface/detect_faces"
+
+        self.image = None
+        self.image_sub = self.node.create_subscriber(
+            Image,
+            self._image_topic,
+            self.getImage,
+            QoSProfile(
+                depth=10,
+                reliability=ReliabilityPolicy.BEST_EFFORT,
+                history=HistoryPolicy.KEEP_LAST,
+            ),
         )
 
-        while not self._detect_faces.wait_for_service(timeout_sec=1.0):
-            self.node.get_logger().info("Waiting for /deepface/detect_faces service...")
+    def getImage(self, msg: Image):
+        self.image = msg
 
-    def execute(self, userdata):
-        img_msg = pcl_to_img_msg(userdata.pcl_msg)
+    def _create_req(self, blackboard):
+        img_msg = pcl_to_img_msg(blackboard["pcl_msg"])
         if img_msg is None:
             self.node.get_logger().info(
                 f"No image from point cloud, waiting on topic: {self._image_topic}"
             )
             try:
-                img_msg = wait_for_message(
-                    node=self.node,
-                    topic=self._image_topic,
-                    msg_type=Image,
-                    timeout_sec=5.0,
-                )
+                while rclpy.ok() and self.image == None:
+                    time.sleep(1)
 
             except Exception as e:
                 self.node.get_logger().error(
@@ -52,12 +69,16 @@ class DetectFaces(smach.State):
         request = DetectFacesSrv.Request()
         request.image_raw = img_msg
 
-        future = self._detect_faces.call_async(request)
-        rclpy.spin_until_future_complete(self.node, future)
+        return request
 
-        if future.result():
-            userdata.detections = future.result().detections
-            return "succeeded"
-        else:
+    def _response_handler(self, blackboard, response):
+        try:
+            detections = response.detections
+            if len(detections) > 0:
+                blackboard["detections"] = detections
+                return "succeeded"
+            else:
+                return "no_faces"
+        except:
             self.node.get_logger().error("Detect faces service call failed.")
             return "failed"
