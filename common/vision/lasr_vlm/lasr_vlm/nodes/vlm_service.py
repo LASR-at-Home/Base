@@ -7,7 +7,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 
-from lasr_vlm_interfaces.srv import VlmDescribePeople
+from lasr_vision_interfaces.srv import VlmDescribePeople
 from lasr_vlm.vlm_inference import (
     ModelConfig,
     VLMInference,

@@ -1,5 +1,0 @@
-# Task name - receptionist, carry my luggage, etc
-string task_name
----
-# Known people names
-string[] known_people

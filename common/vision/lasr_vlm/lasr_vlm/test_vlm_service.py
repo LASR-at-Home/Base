@@ -96,7 +96,7 @@ def test_service(image_path: str):
     import rclpy
     from rclpy.node import Node
     from sensor_msgs.msg import Image
-    from lasr_vlm_interfaces.srv import VlmDescribePeople
+    from lasr_vision_interfaces.srv import VlmDescribePeople
 
     class VlmTestClient(Node):
         def __init__(self):

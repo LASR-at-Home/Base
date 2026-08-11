@@ -1,7 +1,7 @@
 import rclpy
 import yasmin
 import yasmin_ros
-from lasr_vlm_interfaces.srv import VlmDescribePeople
+from lasr_vision_interfaces.srv import VlmDescribePeople
 from .vision import GetImage
 
 
