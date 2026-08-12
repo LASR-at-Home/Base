@@ -1,9 +1,15 @@
+# LASR BASE development guide
 
-# ROS2 Porting Documentation
+## Supporting Documentation
+- [YASMIN](YASMIN_PORT.md)
+- [Virtual Environment](ament_virtualenv_guide.md)
 
-- [Interfaces](INTERFACES.md)
-- Setup.py
-- [Preemption](PREEMPTION.md)
-- Service
-- [SMACH](SMACH.md)
-- [Miscellaneous](MISC.md)
+## Key Do's and Don't
+
+### Do's
+ - For state machine (YASMIN) 
+    - set sigint_handler true only for top level SM. 
+    - Always use dedicated states for service clients, subscriber states and so on. This is becuase spins and threading is handled under the hood hence is more reliable.
+
+### Dont's
+ - Prevent using rclpy.spin() as can cause issues with callbacks

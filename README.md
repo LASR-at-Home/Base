@@ -13,18 +13,17 @@ The packages in this repository are organized into distinct layers to separate i
 
 | Folder | Sub-package | Description |
 | :--- | :--- | :--- |
-| **`common/`** | `foundation_models` | Visual-Language Model (VLM) service for multimodal inference. |
-| | `helpers` | Common Python and ROS helper utilities and services. |
-| | `interfaces` | Web-based and touch user interfaces for robot control/monitoring. |
-| | `language` | LLM inference services for information extraction. |
-| | `manipulation` | Grasping and motion control developed for the TIAGo gripper. |
-| | `navigation` | Augmentations, planners, and controllers for mobile navigation. |
-| | [`simulation`](common/simulation/README.md) | Gazebo simulation environments for testing and development. |
-| | `speech` | Whisper based speach recognition and Speech-To-Text (STT). |
-| | `vision` | YOLO based services for object detection, segmentation, keypoint estimation and so on. |
-| [**`documentation/`**](documentation/README.md) | — | General documenation and Guides. |
+| **`common/`** | [`helpers`](common/helpers/README.md) | Common Python and ROS helper utilities and services. |
+|               | [`interfaces`](common/interfaces/README.md) | Web-based and touch user interfaces for robot control/monitoring. |
+|               | [`language`](common/language/README.md) | LLM inference services for information extraction. |
+|               | [`manipulation`](common/manipulation/README.md) | Grasping and motion control developed for the TIAGo gripper. |
+|               | [`navigation`](common/navigation/README.md) | Augmentations, planners, and controllers for mobile navigation. |
+|               | [`simulation`](common/simulation/README.md) | Gazebo simulation environments for testing and development. |
+|               | [`speech`](common/speech/README.md) | Whisper based speach recognition and Speech-To-Text (STT). |
+|               | [`vision`](common/vision/README.md) | YOLO based services for object detection, segmentation, keypoint estimation and so on. |
+|               [**`documentation/`**](documentation/README.md) | — | General documenation and Guides. |
 | **`skills/`** | — | Fully modular states and state machines providing sub-behaviors (e.g., detection, speak, follow person). |
-| **`tasks/`** | — | Full task-level implementations for RoboCup@Home Tasks and complex scenarios. |
+| **`tasks/`**  | — | Full task-level implementations for RoboCup@Home Tasks and complex scenarios. |
 ---
 **sub-packages contain multiple additional packages*
 
