@@ -54,6 +54,11 @@ def generate_launch_description():
         executable="transcribe_microphone_server",
         name="whisper_mic_server",
         output="screen",
+        parameters=[
+            {
+                "initial_prompt": "adel, Angel, axel, charlie, jane, jules, morgan, paris, robin, simone, white_shirt, grey_shirt, blue_shirt, black_shirt, hand_towel, rubiks_cube, pringles, seaweed, apple, peach, mangostane, lemon, yellow_bellpepper, red_bellpepper, instant_noodles, cornflakes, coke, red_bull, milk, soju, pepsi, dishwasher_tab, sponge, toothpaste, cup, spoon, plate, knife, fork, bowl, bedroom, kitchen, laundry, living room, instruction point, laundry table, washing machine, shelf, laundry trash bin, bed, bedside table, coat rack, tv stand, sofa, coffee table, cabinet, refrigerator, counter, sink, cooking table, dishwasher, kitchen trash bin, dinner table, entrance, exit"
+            }  # Update the initial prompt with the list of objects and locations
+        ],
     )
 
     return LaunchDescription(
@@ -66,7 +71,6 @@ def generate_launch_description():
             whisper_server,
             load_motions,
             yolo_service,
-            # robot_ui,
         ]
     )
 

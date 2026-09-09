@@ -56,14 +56,18 @@ class TranscribeSpeechAction(Node):
         self._start_timeout = self.get_parameter("start_timeout").value
         self._pause_threshold = self.get_parameter("pause_threshold").value
 
-        self._condition_on_previous_text = self.get_parameter("condition_on_previous_text").value
+        self._condition_on_previous_text = self.get_parameter(
+            "condition_on_previous_text"
+        ).value
         self._initial_prompt = self.get_parameter("initial_prompt").value
         self._no_speech_threshold = self.get_parameter("no_speech_threshold").value
         self._logprob_threshold = self.get_parameter("logprob_threshold").value
         self._temperature = self.get_parameter("temperature").value
         self._word_timestamps = self.get_parameter("word_timestamps").value
-        self._hallucination_silence_threshold = self.get_parameter("hallucination_silence_threshold").value
-        
+        self._hallucination_silence_threshold = self.get_parameter(
+            "hallucination_silence_threshold"
+        ).value
+
         self._save_audio = self.get_parameter("save_audio").value
         self._save_audio_dir = Path(self.get_parameter("save_audio_dir").value)
         if self._save_audio:
@@ -214,11 +218,13 @@ class TranscribeSpeechAction(Node):
                 float_data,
                 fp16=(self._device == "cuda"),
                 condition_on_previous_text=self._condition_on_previous_text,
-                initial_prompt=self._initial_prompt,                        # Context bias - Keyword that may be said
-                no_speech_threshold=self._no_speech_threshold,              # Drops noise-only segments
-                logprob_threshold=self._logprob_threshold,                  # Filters low-confidence guesses
-                temperature=tuple(self._temperature),                       # Tuple of different thresholds to retry at
-                word_timestamps=self._word_timestamps,                      
+                initial_prompt=self._initial_prompt,  # Context bias - Keyword that may be said
+                no_speech_threshold=self._no_speech_threshold,  # Drops noise-only segments
+                logprob_threshold=self._logprob_threshold,  # Filters low-confidence guesses
+                temperature=tuple(
+                    self._temperature
+                ),  # Tuple of different thresholds to retry at
+                word_timestamps=self._word_timestamps,
                 hallucination_silence_threshold=self._hallucination_silence_threshold,  # Skips silent periods longer than this threshold
             )
             phrase = result.get("text", "").strip()

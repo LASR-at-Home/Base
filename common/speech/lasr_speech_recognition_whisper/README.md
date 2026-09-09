@@ -118,9 +118,9 @@ To launch the transcription server run:
         executable="transcribe_microphone_server",
         name="whisper_mic_server",
         output="screen",  # or "log"
-        params={
-          "model"="medium.en" # Optional custom parameters
-        }
+        parameters=[
+          {"model"="medium.en"} # Optional custom parameters
+        ],
     )
     ```
 
