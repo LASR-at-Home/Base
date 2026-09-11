@@ -26,11 +26,10 @@ def generate_launch_description():
         executable="service",
         name="gpsr_service",
         output="screen",
-        parameters=[params]
+        parameters=[params],
     )
     delayed_gpsr_service = TimerAction(
-        period=5.0,  # Delay in seconds (adjust as needed)
-        actions=[gpsr_service_node]
+        period=5.0, actions=[gpsr_service_node]  # Delay in seconds (adjust as needed)
     )
 
     yolo_service = IncludeLaunchDescription(
@@ -53,11 +52,7 @@ def generate_launch_description():
         )
     )
 
-    ollama = ExecuteProcess(
-        cmd=['ollama', 'serve'],
-        output="log"
-
-    )
+    ollama = ExecuteProcess(cmd=["ollama", "serve"], output="log")
 
     whisper_server = Node(
         package="lasr_speech_recognition_whisper",

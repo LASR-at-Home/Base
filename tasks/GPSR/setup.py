@@ -50,7 +50,7 @@ setup(
         "console_scripts": [
             "sm = GPSR.state_machine:main",
             "dispatch_skill = GPSR.states.dispatch_skill:main",
-            "service = GPSR.service:main"
+            "service = GPSR.service:main",
         ],
     },
 )

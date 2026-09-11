@@ -233,9 +233,7 @@ class GPSR_sm(yasmin.StateMachine):
         )
 
     def setPrompt(self, blackboard):
-        blackboard["instruction_text"] = (
-            "I am ready for your command. Please state it."
-        )
+        blackboard["instruction_text"] = "I am ready for your command. Please state it."
         return "succeeded"
 
     def checkDispatch(self, blackboard):
@@ -317,17 +315,17 @@ class GPSR_sm(yasmin.StateMachine):
 class GPSR_service(Node):
 
     def __init__(self, node):
-        super().__init__('gpsr_service')
+        super().__init__("gpsr_service")
         self.node = node
-        self.srv = self.create_service(SetBool, '/gpsr/single_query', self.callback)
+        self.srv = self.create_service(SetBool, "/gpsr/single_query", self.callback)
 
     def callback(self, request: SetBool.Request, response: SetBool.Response):
-        self.get_logger().info(f'Incoming request: data={request.data}')
+        self.get_logger().info(f"Incoming request: data={request.data}")
 
         sm = GPSR_sm(self.node, dispatch=request.data)
         outcome = sm()
 
-        response.success = (outcome == "succeeded")
+        response.success = outcome == "succeeded"
         response.message = f"GPSR run finished with outcome: {outcome}"
         return response
 
@@ -344,6 +342,7 @@ class GPSRNode(Node):
         self._spin_thread = Thread(target=self._executor.spin)
         self._spin_thread.start()
 
+
 def main():
     _ensure_params_file()
     rclpy.init()
@@ -356,5 +355,5 @@ def main():
     rclpy.shutdown()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

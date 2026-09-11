@@ -34,7 +34,7 @@ body:
     validations:
       required: true
   - type: textarea
-    id: screenshots / logs
+    id: additional_info
     attributes:
-      label: Screenshots or Logs
-      description: If applicable, drag and drop screenshots or paste log outputs here.
+      label: Additional Info
+      description: Additional Information. If applicable, drag and drop screenshots or paste log outputs here.
