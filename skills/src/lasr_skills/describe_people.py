@@ -1,7 +1,7 @@
 import rclpy
 import yasmin
 import yasmin_ros
-from lasr_vlm_interfaces.srv import VlmDescribePeople
+from lasr_vision_interfaces.srv import VlmDescribePeople
 from .vision import GetImage
 
 
@@ -11,7 +11,7 @@ class DescribePeople(yasmin.StateMachine):
             outcomes=["succeeded", "failed"],
         )
 
-        self.add_output_key("clip_detection_dict")
+        self.add_output_key("attributes")
 
         self.add_state(
             "GET_IMAGE",
@@ -21,12 +21,12 @@ class DescribePeople(yasmin.StateMachine):
 
         self.add_state(
             "GET_ATTRIBUTES",
-            GetClipAttributes(),
+            GetVlmAttributes(),
             transitions={"succeeded": "succeeded", "aborted": "failed"},
         )
 
 
-class GetClipAttributes(yasmin_ros.ServiceState):
+class GetVlmAttributes(yasmin_ros.ServiceState):
     def __init__(self):
         super().__init__(
             srv_name="/vlm/describe_people",
@@ -36,7 +36,7 @@ class GetClipAttributes(yasmin_ros.ServiceState):
         )
 
         self.add_input_key("image_raw")
-        self.add_output_key("clip_detection_dict")
+        self.add_output_key("attributes")
 
     def _create_request(self, blackboard):
         request = VlmDescribePeople.Request()

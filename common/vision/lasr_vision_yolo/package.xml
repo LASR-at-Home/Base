@@ -7,12 +7,6 @@
     <maintainer email="maayan.armony@gmail.com">maayan</maintainer>
     <license>MIT</license>
 
-    
-    <!-- <exec_depend>ros2launch</exec_depend>
-    <exec_depend>cv2_img</exec_depend>
-    <exec_depend>cv2_pcl</exec_depend>
-    <exec_depend>markers</exec_depend> -->
-
     <depend>lasr_vision_interfaces</depend>
 
     <test_depend>ament_copyright</test_depend>

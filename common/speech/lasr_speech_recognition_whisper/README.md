@@ -28,6 +28,8 @@ This package requires that [ffmpeg](https://ffmpeg.org/) is available during run
 ## Usage
 
 > **Warning**: this package is not complete, this is subject to change.
+> **Warning**: The below example may be outdated and requires review.
+
 
 List available microphones:
 
@@ -95,14 +97,37 @@ The package can output transcriptions to:
 
 This package has no launch files.
 
-### Messages
-
-This package has no messages.
-
 ### Services
 
 This package has no services.
 
 ### Actions
 
-This package has no actions.
+To launch the transcription server run:
+
+- In terminal
+    ```bash
+    ros2 run lasr_speech_recognition_whisper transcribe_microphone_server
+    ```
+
+- Using the launch file (.launch.py)
+
+    ```bash
+    whisper_server = Node(
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_microphone_server",
+        name="whisper_mic_server",
+        output="screen",  # or "log"
+        parameters=[
+          {"model"="medium.en"} # Optional custom parameters
+        ],
+    )
+    ```
+
+To make an action call:
+- In terminal <br>
+    ```bash
+    ros2 action send_goal /transcribe_speech lasr_speech_recognition_interfaces/action/TranscribeSpeech "{max_phrase_limit: 0.0}"
+    ```
+
+- Alternatively use the `listen` / `ask_and_listen` skills

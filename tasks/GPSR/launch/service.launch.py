@@ -7,6 +7,7 @@ from launch.actions import (
     DeclareLaunchArgument,
     IncludeLaunchDescription,
     TimerAction,
+    ExecuteProcess,
 )
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -19,6 +20,17 @@ def generate_launch_description():
     pkg_gpsr = get_package_share_directory("GPSR")
 
     params = os.path.join(pkg_gpsr, "config", "params.yaml")
+
+    gpsr_service_node = Node(
+        package="GPSR",
+        executable="service",
+        name="gpsr_service",
+        output="screen",
+        parameters=[params],
+    )
+    delayed_gpsr_service = TimerAction(
+        period=5.0, actions=[gpsr_service_node]  # Delay in seconds (adjust as needed)
+    )
 
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -39,15 +51,8 @@ def generate_launch_description():
             )
         )
     )
-    robot_ui = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory("robot_ui"),
-                "launch",
-                "robot_ui.launch.py",
-            )
-        )
-    )
+
+    ollama = ExecuteProcess(cmd=["ollama", "serve"], output="log")
 
     whisper_server = Node(
         package="lasr_speech_recognition_whisper",
@@ -71,8 +76,10 @@ def generate_launch_description():
             whisper_server,
             load_motions,
             yolo_service,
+            ollama,
+            delayed_gpsr_service,
         ]
     )
 
 
-# ros2 run GPSR sm --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml
+# ros2 run GPSR service --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml

@@ -22,8 +22,8 @@ from cv_bridge import CvBridge
 import tf2_ros as tf
 from deepface import DeepFace
 
-from lasr_vision_interfaces.srv import Recognise3D, AddFace, Recognise
-from lasr_vision_interfaces.msg import Detection3D, Detection
+from lasr_vision_interfaces.srv import Recognise3D, AddFace
+from lasr_vision_interfaces.msg import Detection3D
 
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession

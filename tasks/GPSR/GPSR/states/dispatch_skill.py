@@ -13,10 +13,6 @@ from sensor_msgs.msg import Image
 
 from GPSR.world import load_locations
 from GPSR.tts import say
-from lasr_vision_interfaces.srv import (
-    BodyPixKeypointDetection,
-    DetectFaces as DetectFacesSrv,
-)
 from lasr_skills import (
     AskAndListen,
     DescribePeople,
@@ -46,12 +42,6 @@ class DispatchSkill(yasmin.State):
         self.node = node
         self.locations = load_locations(node)
         self._image_topic = "/head_front_camera/rgb/image_raw"
-        self._detect_faces_client = self.node.create_client(  # Replace with ReId
-            DetectFacesSrv, "/deepface/detect_faces"
-        )
-        self._bodypix_client = self.node.create_client(
-            BodyPixKeypointDetection, "/bodypix/keypoint_detection"
-        )
 
         self.task_bb = None
 

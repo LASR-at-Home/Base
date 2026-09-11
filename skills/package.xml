@@ -29,7 +29,6 @@
     <depend>yasmin_viewer</depend>
 
     <depend>cv2_img</depend>
-    <depend>cv2_pcl</depend>
 
     <build_depend>ament_virtualenv</build_depend>
     <export>
