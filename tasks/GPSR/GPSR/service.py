@@ -48,13 +48,28 @@ def _ensure_params_file() -> None:
 
 
 class GPSR_sm(yasmin.StateMachine):
-    def __init__(self, node):
+    """Single-shot GPSR flow for the /gpsr/single_query service.
+
+    Runs exactly one ask -> understand -> plan -> readback cycle, then
+    either dispatches the resulting skill (dispatch=True) or just
+    reports that it can't dispatch right now (dispatch=False, the default).
+    Unlike the full multi-command GPSR task in state_machine.py, this does
+    not loop to collect further commands or store plans for later.
+    """
+
+    def __init__(self, node, dispatch: bool = False):
         super().__init__(outcomes=["succeeded", "failed"])
-        
+
         self.node = node
-        self.instruction_count = 1
+        self.dispatch = dispatch
         self.understand_attempts = 0
         self.operator_attempts = 0
+
+        self.add_state(
+            "SET_PROMPT",
+            yasmin.CbState(outcomes=["succeeded"], callback=self.setPrompt),
+            transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
+        )
 
         self.add_state(
             "REQUEST_AND_WAIT_FOR_COMMAND",
@@ -131,7 +146,7 @@ class GPSR_sm(yasmin.StateMachine):
                 "request_rephrase": "REQUEST_REPHRASE",
                 "request_operator": "REQUEST_OPERATOR",
                 "failed": "UNABLE_TO_UNDERSTAND",
-                "no_command": "CHECK_INSTRUCTION",
+                "no_command": "UNABLE_TO_UNDERSTAND",
             },
         )
 
@@ -141,75 +156,53 @@ class GPSR_sm(yasmin.StateMachine):
         self.add_state(
             "READBACK",
             readback_state,
-            transitions={"succeeded": "WAIT_BEFORE_NEXT"},
+            transitions={"succeeded": "CHECK_DISPATCH"},
         )
 
         self.add_state(
-            "WAIT_BEFORE_NEXT",
-            Wait(5),
-            transitions={"succeeded": "STORE_PLAN", "failed": "STORE_PLAN"},
-        )
-
-        # Store the accepted plan; collect the next command until we have
-        # gathered all requested instructions, then move on to execution.
-        self.add_state(
-            "STORE_PLAN",
+            "CHECK_DISPATCH",
             yasmin.CbState(
-                outcomes=["collect_next", "execute"],
-                callback=self.storePlan,
+                outcomes=["dispatch", "no_dispatch"],
+                callback=self.checkDispatch,
             ),
             transitions={
-                "collect_next": "CHECK_INSTRUCTION",
-                "execute": "NEXT_PLAN",
-            },
-        )
-
-        # # Announce all collected plans before starting execution.
-        # self.add_state(
-        #     "ANNOUNCE_ALL",
-        #     yasmin.CbState(
-        #         outcomes=["succeeded"],
-        #         callback=self.announceAll,
-        #     ),
-        #     transitions={"succeeded": "NEXT_PLAN"},
-        # )
-
-        # Execution phase: load one stored plan at a time into the blackboard
-        # and run it via PRE_NAV -> DISPATCH_SKILL.
-        self.add_state(
-            "NEXT_PLAN",
-            yasmin.CbState(
-                outcomes=["execute", "finish"],
-                callback=self.nextPlan,
-            ),
-            transitions={
-                "execute": "PRE_NAV",
-                "finish": "SAY_TASK_OVER",
+                "dispatch": "PRE_NAV",
+                "no_dispatch": "SAY_NO_DISPATCH",
             },
         )
 
         self.add_state(
-            "SAY_COMPLETE",
-            Say(
-                text="I have finished doing the task. I will go back to the instruction point."
-            ),
+            "PRE_NAV",
+            PlayMotion("pre_navigation"),
             transitions={
-                "succeeded": "RETURN_TO_INSTRUCT_POINT",
+                "succeeded": "DISPATCH_SKILL",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
 
-        # Return to the instruction point between executed plans, then load
-        # the next stored plan.
         self.add_state(
-            "RETURN_TO_INSTRUCT_POINT",
-            GoToLocation(location_param="instruction_point"),
-            transitions={"succeeded": "NEXT_PLAN", "failed": "NEXT_PLAN"},
+            "DISPATCH_SKILL",
+            DispatchSkill(node),
+            transitions={
+                "succeeded": "succeeded",
+                "failed": "failed",
+            },
         )
+
+        self.add_state(
+            "SAY_NO_DISPATCH",
+            Say(text="I am unable to dispatch skills right now."),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
         self.add_state(
             "REQUEST_REPHRASE",
-            Say(text="Im sorry could you rephrase the command."),
+            Say(text="I'm sorry, could you rephrase the command."),
             transitions={
                 "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
                 "aborted": "failed",
@@ -231,25 +224,22 @@ class GPSR_sm(yasmin.StateMachine):
 
         self.add_state(
             "UNABLE_TO_UNDERSTAND",
-            Say(
-                text="I cannot understand or do that currently. Please move on to the next command. "
-            ),
+            Say(text="I cannot understand or do that currently."),
             transitions={
-                "succeeded": "CHECK_INSTRUCTION",
+                "succeeded": "failed",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
 
-        self.add_state(
-            "SAY_TASK_OVER",
-            Say(text="I have finished all the tasks. "),
-            transitions={
-                "succeeded": "succeeded",
-                "aborted": "succeeded",
-                "canceled": "succeeded",
-            },
+    def setPrompt(self, blackboard):
+        blackboard["instruction_text"] = (
+            "I am ready for your command. Please state it."
         )
+        return "succeeded"
+
+    def checkDispatch(self, blackboard):
+        return "dispatch" if self.dispatch else "no_dispatch"
 
     def countSpeechFailure(self, blackboard):
         self.understand_attempts += 1
@@ -262,9 +252,6 @@ class GPSR_sm(yasmin.StateMachine):
         if self.operator_attempts <= 3:
             return "request_operator"
 
-        self.instruction_count += 1
-        self.understand_attempts = 0
-        self.operator_attempts = 0
         return "failed"
 
     def checkOutcome(self, blackboard):
@@ -283,16 +270,11 @@ class GPSR_sm(yasmin.StateMachine):
                 self.operator_attempts += 1
                 if self.operator_attempts <= 3:
                     return "request_operator"
-                self.instruction_count += 1
-                self.understand_attempts = 0
-                self.operator_attempts = 0
                 return "failed"
 
             # Legitimate say-only response — treat as a normal plan
             return "succeeded"
 
-        # Valid plan: reset attempt counters. The instruction counter is
-        # advanced in storePlan once the plan has actually been stored.
         self.understand_attempts = 0
         self.operator_attempts = 0
 
@@ -312,22 +294,6 @@ class GPSR_sm(yasmin.StateMachine):
         except Exception:
             pass
         return "succeeded"
-
-    def countSpeechFailure(self, blackboard):
-        self.understand_attempts += 1
-
-        if self.understand_attempts <= 3:
-            return "request_rephrase"
-
-        self.operator_attempts += 1
-
-        if self.operator_attempts < 1:
-            return "request_operator"
-
-        self.instruction_count += 1
-        self.understand_attempts = 0
-        self.operator_attempts = 0
-        return "failed"
 
     def checkTranscript(self, blackboard):
         try:
@@ -350,14 +316,19 @@ class GPSR_sm(yasmin.StateMachine):
 
 class GPSR_service(Node):
 
-    def __init__(self):
+    def __init__(self, node):
         super().__init__('gpsr_service')
+        self.node = node
         self.srv = self.create_service(SetBool, '/gpsr/single_query', self.callback)
 
-    def callback(self, request: SetBool, response):
-        response.sum = request.a + request.b
-        self.get_logger().info('Incoming request\na: %d b: %d' % (request.a, request.b))
+    def callback(self, request: SetBool.Request, response: SetBool.Response):
+        self.get_logger().info(f'Incoming request: data={request.data}')
 
+        sm = GPSR_sm(self.node, dispatch=request.data)
+        outcome = sm()
+
+        response.success = (outcome == "succeeded")
+        response.message = f"GPSR run finished with outcome: {outcome}"
         return response
 
 
