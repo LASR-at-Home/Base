@@ -60,7 +60,7 @@ class Agent:
 
     @property
     def cloud_enabled(self) -> bool:
-        return bool(self._cloud_host)
+        return self._use_cloud
 
     @classmethod
     def from_node(cls, node, log: Optional[Callable[[str], None]] = None) -> "Agent":
@@ -72,6 +72,7 @@ class Agent:
             cloud_port=node.get_parameter("cloud_port").value,
             cloud_api_key=node.get_parameter("cloud_api_key").value,
             cloud_timeout_sec=node.get_parameter("cloud_timeout_sec").value,
+            use_cloud=node.get_parameter("use_cloud").value,
         )
         if log:
             cloud = "off" if not agent.cloud_enabled else agent._cloud_url
