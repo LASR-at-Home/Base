@@ -13,7 +13,7 @@ def generate_launch_description():
         name="hri",
         parameters=[
             os.path.join(
-                get_package_share_directory("HRI"), "config", "lab_arena2.yaml"
+                get_package_share_directory("HRI"), "config", "lab.yaml"
             )
         ],
         output="screen",
