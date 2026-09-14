@@ -12,7 +12,6 @@
     <test_depend>ament_pep257</test_depend>
     <test_depend>python3-pytest</test_depend>
 
-    <depend>lasr_vector_databases_interfaces</depend>
     <depend>lasr_vision_interfaces</depend>
     <depend>sensor_msgs</depend>
     <depend>tf2_ros</depend>
