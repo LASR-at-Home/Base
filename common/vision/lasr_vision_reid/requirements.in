@@ -1,4 +1,4 @@
 deepface
-tensorflow
+tensorflow[and-cuda]
 numpy
 scikit-learn

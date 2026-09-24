@@ -6,6 +6,12 @@ from yasmin import StateMachine, Blackboard
 import yasmin_ros
 from yasmin_ros import ServiceState, ActionState
 
+
+import yasmin
+from yasmin import StateMachine, Blackboard
+import yasmin_ros
+from yasmin_ros import ServiceState, ActionState
+
 from std_srvs.srv import Empty
 
 from lasr_skills import Say, PlayMotion, Wait
@@ -25,82 +31,111 @@ class ClearOctomap(ServiceState):
         return Empty.Request()
 
 
-# TODO: Do we need to detect object or just assume that the second guest is holding a bag.
+# Update to take new param which dictates if the object is to be held (placed in gripper) or place in basket
 class ReceiveObject(StateMachine):
-    def __init__(self, object_name: Union[str, None] = None, vertical: bool = True):
+    def __init__(
+        self,
+        object_name: Union[str, None] = None,
+        vertical: bool = True,
+        can_hold: bool = False,
+    ):
 
         super().__init__(outcomes=["succeeded", "failed"])
         if object_name is None:
             self.add_input_key("object_name")
 
+        self.object_name = object_name
+        self.vertical = vertical
+
+        if can_hold:
+            self.createHoldable()
+        else:
+            self.requestPlaceInBasket()
+
+    def requestPlaceInBasket(self):
+        if self.object_name is not None:
+            self.add_state(
+                "REQUEST",
+                Say(
+                    text=f"Can you please hold the {self.object_name} in my gripper. I will wait a few seconds before closing it.",
+                ),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
+        else:
+            self.add_state(
+                "REQUEST",
+                Say(
+                    format_str="Can you please hold the {} in my gripper. I will wait a few seconds before closing it.",
+                ),
+                transitions={
+                    "succeeded": "OPEN_GRIPPER",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+                remapping={"placeholders": "object_name"},
+            )
+
+        self.add_state(
+            "OPEN_GRIPPER",
+            PlayMotion(motion_name="open"),
+            transitions={
+                "succeeded": "WAIT_5",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        self.add_state(
+            "WAIT_5",
+            Wait(5),
+            transitions={
+                "succeeded": "WARN_CLOSE",
+                "failed": "WARN_CLOSE",
+            },
+        )
+        self.add_state(
+            "WARN_CLOSE",
+            Say(
+                text=f"I will now close my gripper. Please mind your fingers.",
+            ),
+            transitions={
+                "succeeded": "CLOSE_GRIPPER",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+        self.add_state(
+            "CLOSE_GRIPPER",
+            PlayMotion(motion_name="close"),
+            transitions={
+                "succeeded": "succeeded",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+    def createHoldable(self):
         self.add_state(
             "CLEAR_OCTOMAP",
             ClearOctomap(),
-            transitions={"succeeded": "LOOK_LEFT", "aborted": "failed"},
+            transitions={"succeeded": "LOOK_AROUND", "aborted": "failed"},
         )
 
         self.add_state(
-            "LOOK_LEFT",
-            PlayMotion(motion_name="look_left"),
+            "LOOK_AROUND",
+            PlayMotion(motion_name="head_tour"),
             transitions={
-                "succeeded": "LOOK_DOWN_LEFT",
+                "succeeded": "REQUEST",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
 
         self.add_state(
-            "LOOK_DOWN_LEFT",
-            PlayMotion(motion_name="look_down_left"),
-            transitions={
-                "succeeded": "LOOK_RIGHT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_RIGHT",
-            PlayMotion(motion_name="look_right"),
-            transitions={
-                "succeeded": "LOOK_DOWN_RIGHT",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_DOWN_RIGHT",
-            PlayMotion(motion_name="look_down_right"),
-            transitions={
-                "succeeded": "LOOK_DOWN_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_DOWN_CENTRE",
-            PlayMotion(motion_name="look_centre"),
-            transitions={
-                "succeeded": "LOOK_CENTRE",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "LOOK_CENTRE",
-            PlayMotion(motion_name="look_centre"),
-            transitions={
-                "succeeded": "SAY_REACH_ARM",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "SAY_REACH_ARM",
+            "REQUEST",
             Say(text="Please step back, I am going to reach my arm out."),
             transitions={
                 "succeeded": "REACH_ARM",
@@ -109,7 +144,7 @@ class ReceiveObject(StateMachine):
             },
         )
 
-        if vertical:
+        if self.vertical:
             self.add_state(
                 "REACH_ARM",
                 PlayMotion(motion_name="reach_arm_vertical_gripper"),
@@ -132,19 +167,18 @@ class ReceiveObject(StateMachine):
 
         self.add_state(
             "OPEN_GRIPPER",
-            PlayMotion(motion_name="open_gripper"),
+            PlayMotion(motion_name="open"),
             transitions={
                 "succeeded": "SAY_PLACE",
                 "aborted": "failed",
                 "canceled": "failed",
             },
         )
-
-        if object_name is not None:
+        if self.object_name is not None:
             self.add_state(
                 "SAY_PLACE",
                 Say(
-                    text=f"Please place the {object_name} in my hand. I will wait for a few seconds.",
+                    text=f"I am ready to recieve the {self.object_name} in my hand. Please place the bag on my gripper. I will wait for a few seconds.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -156,7 +190,7 @@ class ReceiveObject(StateMachine):
             self.add_state(
                 "SAY_PLACE",
                 Say(
-                    format_str="Please place the {} in my hand. I will wait for a few seconds.",
+                    format_str="I am ready to recieve the {} in my hand. I will wait for a few seconds. Please give me space to my left to put my arm away after.",
                 ),
                 transitions={
                     "succeeded": "WAIT_5",
@@ -165,7 +199,6 @@ class ReceiveObject(StateMachine):
                 },
                 remapping={"placeholders": "object_name"},
             )
-
         self.add_state(
             "WAIT_5",
             Wait(5),
@@ -179,7 +212,7 @@ class ReceiveObject(StateMachine):
         # Alternatively:
         #   1. https://docs.pal-robotics.com/sdk/24.09/actions/advanced_grasping-grasp.html but verify Fruity has the action server
         #   2. /gripper_controller/incrementer service or
-        #   3. /gripper_controller/ action server
+        #   3. /gripper_controller/ action server        - NOT AVAILABLE | use lasr_manipulation
 
         # self.add_state(
         #     "CLOSE_GRIPPER",
@@ -191,13 +224,31 @@ class ReceiveObject(StateMachine):
         #     },
         # )
         self.add_state(
-            "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT - using half to not jam an item between gripper
-            PlayMotion(motion_name="close_half"),
+            "CLOSE_HALF_GRIPPER",  # TEMPORARY REPLACEMENT
+            PlayMotion(motion_name="close"),
             transitions={
-                "succeeded": "FOLD_ARM",
+                "succeeded": "WARN_ARM",
                 "aborted": "failed",
                 "canceled": "failed",
             },
+        )
+
+        self.add_state(
+            "WARN_ARM",
+            Say(
+                text="I will put my arm away in 5 seconds. Please give me a lot of space to my left."
+            ),
+            transitions={
+                "succeeded": "WAIT_PUT_ARM_AWAY",
+                "aborted": "WAIT_PUT_ARM_AWAY",
+                "canceled": "WAIT_PUT_ARM_AWAY",
+            },
+        )
+
+        self.add_state(
+            "WAIT_PUT_ARM_AWAY",
+            Wait(5),
+            transitions={"succeeded": "FOLD_ARM", "failed": "FOLD_ARM"},
         )
 
         self.add_state(
@@ -218,7 +269,7 @@ def main():
     yasmin_ros.set_ros_loggers()
 
     try:
-        sm = ReceiveObject(object_name="bag")
+        sm = ReceiveObject(object_name="bag", can_hold=True)
         bb = Blackboard()
 
         outcome = sm(bb)

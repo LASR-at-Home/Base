@@ -11,6 +11,7 @@ package_name = "lasr_speech_recognition_whisper"
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
+        os.environ["PIP_EXTRA_INDEX_URL"] = "https://download.pytorch.org/whl/cu124"
         ament_virtualenv.install.install_venv(
             install_base=self.install_base,
             scripts_base=self.install_scripts,

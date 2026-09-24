@@ -72,13 +72,13 @@ to:
 ```
 class MyStateMachine(yasmin.StateMachine):
     def __init__(self, args here):
-        super().__init__(outcomes=[], handle_sigint=True)
+        super().__init__(outcomes=[])
         self.add_input_key(input) # DO THIS FOR ALL INPUTS IN input_keys
         self.add_output_key(output) # DO THIS FOR ALL OUTPUTS IN output_keys
         
         # Userdata changed to blackboard, and for state machiens blackboard handled outside of construction of object
 
-        self.add_state('STATE', MyState(args here), transitions={}) # If before there was a remapping parameter, change to remappings
+        self.add_state('STATE', MyState(args here), transitions={}) # If before there was a *remapping* parameter, change to *remappings*
 ```
 
 ## RUNNING
@@ -91,6 +91,7 @@ def main():
     yasmin_ros.set_ros_loggers() # This will create a node with a randomly generated name for the node
     
     sm = MyStateMachine() 
+    sm.set_sigint_handler(True)     # Only set True for top level SM 
     # or if just for a state do:
     # sm = yasmin.StateMachine(outcomes=[], handle_sigint=True)
     # sm.add_state(...)

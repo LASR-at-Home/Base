@@ -1,14 +1,11 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionServer, ActionClient, CancelResponse, GoalResponse
-from rclpy.callback_groups import (
-    MutuallyExclusiveCallbackGroup,
-    ReentrantCallbackGroup,
-)
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 from rclpy.executors import MultiThreadedExecutor
 import message_filters
-import threading
+from threading import RLock, Event
 from typing import Tuple, Optional
 
 # ROS2 message imports (same as ROS1, just rclpy instead of rospy)
@@ -36,6 +33,36 @@ from geometry_msgs.msg import (
 from sensor_msgs.msg import Image, CameraInfo
 from std_msgs.msg import Header
 
+import time
+
+
+class WaitForFuture:
+    def __init__(self):
+        self.event = Event()
+        self.lock = RLock()
+        self.response = None
+        self.result = None
+        self.status = None
+        self.handle = None
+
+    def set(self):
+        self.event.clear()
+
+    def handle_goal(self, future):
+        with self.lock:
+            self.handle = future.result()
+            get_result_future = self.handle.get_result_async()
+            get_result_future.add_done_callback(self.handle_result)
+
+    def handle_result(self, future):
+        self.result = future.result().result
+        self.status = future.result().status
+        self.event.set()
+
+    def handle_resp(self, future):
+        self.response = future.result()
+        self.event.set()
+
 
 class EyeTracker(Node):
     def __init__(self, max_eye_distance: float = 1.5):
@@ -43,15 +70,16 @@ class EyeTracker(Node):
 
         # Humble deadlock avoidance: callbacks that make blocking service/action calls
         # must not share one mutually-exclusive group with their done-callbacks.
-        self._action_cb_group = MutuallyExclusiveCallbackGroup()
-        self._work_cb_group = ReentrantCallbackGroup()
 
         self._done: bool = False
         self._eyes: Optional[Point] = None
         self._robot_point: Optional[Point] = None
         self._max_eye_distance: float = max_eye_distance
-        self._move_up_count: float = 0.0
+        self._move_up_count: int = 0
         self._max_move_up_count: int = 2
+
+        self._action_cb_group = ReentrantCallbackGroup()
+        self._work_cb_group = ReentrantCallbackGroup()
 
         self.camera_qos = QoSProfile(
             depth=10,
@@ -73,21 +101,18 @@ class EyeTracker(Node):
             qos_profile=amcl_qos,
             callback_group=self._work_cb_group,
         )
+
         self._yolo_keypoint_client = self.create_client(
             YoloPoseDetection3D,
             "/yolo/detect3d_pose",
             callback_group=self._work_cb_group,
         )
-        while not self._yolo_keypoint_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("Waiting for YOLO keypoint service...")
 
         self._head_state_client = self.create_client(
             QueryTrajectoryState,
             "/head_controller/query_state",
             callback_group=self._work_cb_group,
         )
-        while not self._head_state_client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info("Waiting for head state service...")
 
         self._head_action_client = ActionClient(
             self,
@@ -95,10 +120,6 @@ class EyeTracker(Node):
             "/head_controller/follow_joint_trajectory",
             callback_group=self._work_cb_group,
         )
-        while not self._head_action_client.wait_for_server(timeout_sec=1.0):
-            self.get_logger().info(
-                "Waiting for follow joint trajectory action server..."
-            )
 
         self._head_point_action_client = ActionClient(
             self,
@@ -106,8 +127,16 @@ class EyeTracker(Node):
             "/head_controller/point_head_action",
             callback_group=self._work_cb_group,
         )
-        while not self._head_point_action_client.wait_for_server(timeout_sec=1.0):
-            self.get_logger().info("Waiting for point head action server...")
+
+        while (
+            not self._head_point_action_client.wait_for_server(timeout_sec=1.0)
+            or not self._head_action_client.wait_for_server(timeout_sec=1.0)
+            or not self._yolo_keypoint_client.wait_for_service(timeout_sec=1.0)
+            or not self._head_action_client.wait_for_server(timeout_sec=1.0)
+        ):
+            self.get_logger().info(
+                "Waiting for point head action server, and head action client and yolo to all be ready..."
+            )
 
         self._action_server = ActionServer(
             self,
@@ -137,32 +166,21 @@ class EyeTracker(Node):
 
     def _get_head_join_values(self) -> Optional[Tuple[float, float]]:
         """Returns the x,y position of the head joints."""
-        try:
-            request = QueryTrajectoryState.Request()
-            request.time = self.get_clock().now().to_msg()
+        request = QueryTrajectoryState.Request()
+        request.time = self.get_clock().now().to_msg()
 
-            response = self._head_state_client.call(request)
-            if response is None or len(response.position) < 2:
-                self.get_logger().warn("Head state response was empty or invalid.")
-                return None
-            return (response.position[0], response.position[1])
-        except Exception as e:
-            self.get_logger().error(f"Service call failed: {e}")
+        wait = WaitForFuture()
+        wait.set()
+
+        future = self._head_state_client.call_async(request)
+        future.add_done_callback(wait.handle_resp)
+        while not wait.event.wait():
+            pass
+
+        if len(wait.response.position) < 2:
+            self.get_logger().warn("Head state response was empty or invalid.")
             return None
-
-    def _wait_for_future_result(self, future, timeout_sec: float, what: str):
-        done_event = threading.Event()
-        future.add_done_callback(lambda _: done_event.set())
-
-        if not done_event.wait(timeout_sec):
-            self.get_logger().error(f"Timed out waiting for {what}.")
-            return None
-
-        try:
-            return future.result()
-        except Exception as e:
-            self.get_logger().error(f"{what} failed: {e}")
-            return None
+        return (wait.response.position[0], wait.response.position[1])
 
     def _look_centre(self) -> None:
         """Moves the head to look at the centre position."""
@@ -172,14 +190,14 @@ class EyeTracker(Node):
         point.positions = [0.0, 0.0]  # Look Center
         point.time_from_start = rclpy.duration.Duration(seconds=1.0).to_msg()
         goal.trajectory.points.append(point)
+
+        wait = WaitForFuture()
+        wait.set()
+
         send_goal_future = self._head_action_client.send_goal_async(goal)
-        goal_handle = self._wait_for_future_result(
-            send_goal_future,
-            timeout_sec=2.0,
-            what="centre head goal response",
-        )
-        if goal_handle is None or not goal_handle.accepted:
-            self.get_logger().warn("Centre head goal was not accepted.")
+        send_goal_future.add_done_callback(wait.handle_goal)
+        while not wait.event.wait(0.5):
+            break
 
     def _move_head_up(
         self, current_head_position: Tuple[float, float], y_delta: float = 0.25
@@ -201,43 +219,121 @@ class EyeTracker(Node):
                 current_head_position[0],
                 current_head_position[1] + y_delta,
             ]
-        point.time_from_start = rclpy.duration.Duration(seconds=1.0).to_msg()
+        point.time_from_start = rclpy.duration.Duration(seconds=2.0).to_msg()
         goal.trajectory.points.append(point)
 
-        send_goal_future = self._head_action_client.send_goal_async(goal)
-        goal_handle = self._wait_for_future_result(
-            send_goal_future,
-            timeout_sec=2.0,
-            what="move head up goal response",
-        )
-        if goal_handle is None or not goal_handle.accepted:
-            self.get_logger().warn("Move-head-up goal was not accepted.")
+        wait = WaitForFuture()
+        wait.set()
 
+        send_goal_future = self._head_action_client.send_goal_async(goal)
+        send_goal_future.add_done_callback(wait.handle_goal)
+        while not wait.event.wait(0.5):
+            break
         self._move_up_count += 1
+
+    def detect_cb(self, image: Image, depth_image: Image):
+        """Callback for detection from synced messages."""
+        req = YoloPoseDetection3D.Request(
+            image_raw=image,
+            depth_image=depth_image,
+            depth_camera_info=self.depth_camera_info_cache.getLast(),
+            model="yolo11n-pose.pt",
+            confidence=0.5,
+            target_frame="map",
+        )
+
+        wait = WaitForFuture()
+        wait.set()
+
+        future = self._yolo_keypoint_client.call_async(req)
+        future.add_done_callback(wait.handle_resp)
+        while not wait.event.wait():
+            pass
+
+        detected_keypoints = wait.response.detections
+        left_eye_point = None
+        right_eye_point = None
+        if not detected_keypoints:
+            self._eyes = None
+            return
+        if not self._robot_point:
+            self._eyes = None
+            return
+        closest_eye_midpoint = None
+        closest_distance = self._max_eye_distance
+        for det in detected_keypoints:
+            eye_midpoint = None
+            for keypoint in det.keypoints:
+                if keypoint.keypoint_name == "left_eye":
+                    left_eye_point = keypoint.point
+                elif keypoint.keypoint_name == "right_eye":
+                    right_eye_point = keypoint.point
+
+                if left_eye_point and right_eye_point:
+                    # Calculate the midpoint of the two eyes
+                    midpoint_x = (left_eye_point.x + right_eye_point.x) / 2.0
+                    midpoint_y = (left_eye_point.y + right_eye_point.y) / 2.0
+                    midpoint_z = (left_eye_point.z + right_eye_point.z) / 2.0
+
+                    eye_midpoint = Point(x=midpoint_x, y=midpoint_y, z=midpoint_z)
+                elif left_eye_point:
+                    eye_midpoint = Point(
+                        x=left_eye_point.x, y=left_eye_point.y, z=left_eye_point.z
+                    )
+                elif right_eye_point:
+                    eye_midpoint = Point(
+                        x=right_eye_point.x,
+                        y=right_eye_point.y,
+                        z=right_eye_point.z,
+                    )
+            if eye_midpoint is not None:
+                # Calculate the distance from the robot point to the eye midpoint
+                distance = (
+                    (eye_midpoint.x - self._robot_point.x) ** 2
+                    + (eye_midpoint.y - self._robot_point.y) ** 2
+                ) ** 0.5
+                if distance < closest_distance:
+                    closest_distance = distance
+                    closest_eye_midpoint = eye_midpoint
+        if closest_eye_midpoint is not None:
+            self._eyes = closest_eye_midpoint
 
     def _execute_callback(self, goal_handle):
         """Execute the eye tracking goal."""
         self.get_logger().info("Beginning eye tracking...")
 
         goal = goal_handle.request
+        feedback_msg = EyeTrackerAction.Feedback()
+        feedback_msg.running = False
 
-        if goal.cancel:
-            self.get_logger().info("Cancelling eye tracker")
-            self._done = True
-            goal_handle.succeed()
-            # self.destroy_node()
-            return EyeTrackerAction.Result()
-
-        if self._robot_point is None:
-            self.get_logger().warn(
-                "No /robot_pose received yet; continuing and waiting asynchronously."
-            )
+        while self._robot_point is None:
+            self.get_logger().warn("Waiting for robot pose")
 
         # First, look to person_point
         if goal.person_point is None:
             self.get_logger().error("No person point provided in goal.")
             goal_handle.abort()
             return EyeTrackerAction.Result()
+
+        self.image_sub = message_filters.Subscriber(
+            self, Image, "/head_front_camera/rgb/image_raw", self.camera_qos
+        )
+        self.depth_sub = message_filters.Subscriber(
+            self, Image, "/head_front_camera/depth/image_raw", self.camera_qos
+        )
+        self.depth_camera_info_sub = message_filters.Subscriber(
+            self, CameraInfo, "/head_front_camera/depth/camera_info", self.camera_qos
+        )
+        self.depth_camera_info_cache = message_filters.Cache(self.depth_camera_info_sub)
+
+        self.ts = message_filters.ApproximateTimeSynchronizer(
+            [self.image_sub, self.depth_sub], 10, 0.1
+        )
+
+        self.subs = [self.image_sub, self.depth_sub, self.depth_camera_info_sub]
+
+        wait = WaitForFuture()
+        wait.set()
 
         g = PointHead.Goal(
             pointing_frame="head_2_link",
@@ -251,95 +347,17 @@ class EyeTracker(Node):
 
         # Send point head goal and wait
         send_goal_future = self._head_point_action_client.send_goal_async(g)
-        goal_response = self._wait_for_future_result(
-            send_goal_future,
-            timeout_sec=2.0,
-            what="initial point-head goal response",
-        )
-        if goal_response is None or not goal_response.accepted:
-            self.get_logger().warn("Initial point-head goal was not accepted.")
+        send_goal_future.add_done_callback(wait.handle_goal)
 
-        def detect_cb(image: Image, depth_image: Image, depth_camera_info: CameraInfo):
-            """Callback for detection from synced messages."""
-            req = YoloPoseDetection3D.Request(
-                image_raw=image,
-                depth_image=depth_image,
-                depth_camera_info=depth_camera_info,
-                model="yolo11n-pose.pt",
-                confidence=0.5,
-                target_frame="map",
-            )
+        while not wait.event.wait(0.5):
+            break
 
-            try:
-                response = self._yolo_keypoint_client.call(req)
-            except Exception as e:
-                self.get_logger().error(f"YOLO service call failed: {e}")
-                return
-
-            detected_keypoints = response.detections
-            left_eye_point = None
-            right_eye_point = None
-            if not detected_keypoints:
-                self._eyes = None
-                return
-            if not self._robot_point:
-                self._eyes = None
-                return
-            closest_eye_midpoint = None
-            closest_distance = self._max_eye_distance
-            for det in detected_keypoints:
-                eye_midpoint = None
-                for keypoint in det.keypoints:
-                    if keypoint.keypoint_name == "left_eye":
-                        left_eye_point = keypoint.point
-                    elif keypoint.keypoint_name == "right_eye":
-                        right_eye_point = keypoint.point
-
-                    if left_eye_point and right_eye_point:
-                        # Calculate the midpoint of the two eyes
-                        midpoint_x = (left_eye_point.x + right_eye_point.x) / 2.0
-                        midpoint_y = (left_eye_point.y + right_eye_point.y) / 2.0
-                        midpoint_z = (left_eye_point.z + right_eye_point.z) / 2.0
-
-                        eye_midpoint = Point(x=midpoint_x, y=midpoint_y, z=midpoint_z)
-                    elif left_eye_point:
-                        eye_midpoint = Point(
-                            x=left_eye_point.x, y=left_eye_point.y, z=left_eye_point.z
-                        )
-                    elif right_eye_point:
-                        eye_midpoint = Point(
-                            x=right_eye_point.x,
-                            y=right_eye_point.y,
-                            z=right_eye_point.z,
-                        )
-                if eye_midpoint is not None:
-                    # Calculate the distance from the robot point to the eye midpoint
-                    distance = (
-                        (eye_midpoint.x - self._robot_point.x) ** 2
-                        + (eye_midpoint.y - self._robot_point.y) ** 2
-                    ) ** 0.5
-                    if distance < closest_distance:
-                        closest_distance = distance
-                        closest_eye_midpoint = eye_midpoint
-            if closest_eye_midpoint is not None:
-                self._eyes = closest_eye_midpoint
-
-        image_sub = message_filters.Subscriber(
-            self, Image, "/head_front_camera/rgb/image_raw", self.camera_qos
-        )
-        depth_sub = message_filters.Subscriber(
-            self, Image, "/head_front_camera/depth/image_raw", self.camera_qos
-        )
-        depth_camera_info_sub = message_filters.Subscriber(
-            self, CameraInfo, "/head_front_camera/depth/camera_info", self.camera_qos
-        )
-        ts = message_filters.ApproximateTimeSynchronizer(
-            [image_sub, depth_sub, depth_camera_info_sub], 10, 0.1
-        )
-        ts.registerCallback(detect_cb)
+        self.ts.registerCallback(self.detect_cb)
 
         self._done = False
+        feedback_msg.running = True
         while rclpy.ok() and not self._done:
+            goal_handle.publish_feedback(feedback_msg)
             if self._eyes is None:
                 current_head_position = self._get_head_join_values()
                 if current_head_position is None:
@@ -350,34 +368,36 @@ class EyeTracker(Node):
                 g = PointHead.Goal(
                     pointing_frame="head_2_link",
                     pointing_axis=Vector3(x=1.0, y=0.0, z=0.0),
-                    max_velocity=2.0,
+                    max_velocity=1.0,
                     target=PointStamped(
                         header=Header(frame_id="map"),
                         point=self._eyes,
                     ),
                 )
+
+                wait = WaitForFuture()
+                wait.set()
+
                 send_goal_future = self._head_point_action_client.send_goal_async(g)
-                goal_response = self._wait_for_future_result(
-                    send_goal_future,
-                    timeout_sec=2.0,
-                    what="tracking point-head goal response",
-                )
-                if goal_response is None or not goal_response.accepted:
-                    self.get_logger().warn("Tracking point-head goal was not accepted.")
+                send_goal_future.add_done_callback(wait.handle_goal)
+                while wait.event.wait(0.5):
+                    break
 
             if goal_handle.is_cancel_requested:
                 self.get_logger().info(
-                    "Eye Tracker Action Server preempted, stopping tracking."
+                    "Eye Tracker Action Server canceled, stopping tracking."
                 )
                 self._look_centre()
-                goal_handle.canceled()
-                image_sub.unregister()
-                depth_sub.unregister()
-                depth_camera_info_sub.unregister()
+                for sub in self.subs:
+                    self.destroy_subscription(sub.sub)
                 self._done = True
+                goal_handle.canceled()
+
+                self.get_logger().info("Canceled EYE TRACKER")
+
                 return EyeTrackerAction.Result()
 
-            self.get_clock().sleep_for(rclpy.duration.Duration(seconds=0.25))
+            time.sleep(0.25)
 
         goal_handle.succeed()
         return EyeTrackerAction.Result()

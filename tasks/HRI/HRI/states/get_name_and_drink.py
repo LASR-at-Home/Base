@@ -9,8 +9,11 @@ import yasmin_ros
 from typing import List, Dict, Any
 from HRI.states import SpeechRecovery
 from lasr_llm_interfaces.srv import HRITaskQueryLlm
+import rclpy
 
 # from tasks.receptionist.src.receptionist.states import SpeechRecovery
+
+from lasr_skills import AskAndListen
 
 
 class GetNameAndDrink(yasmin.StateMachine):
@@ -40,6 +43,8 @@ class GetNameAndDrink(yasmin.StateMachine):
 
         def _handle_resp(self, blackboard, result):
             result = result.response
+            if result.name == "" and result.favourite_drink == "":
+                return "aborted"
             blackboard["guest_data"][self.guest_id][self.task] = (
                 result.name if self.task == "name" else result.favourite_drink
             )
@@ -67,10 +72,17 @@ class GetNameAndDrink(yasmin.StateMachine):
             if not self._recovery_name_and_drink_required(blackboard):
                 if blackboard["guest_data"][self._guest_id]["name"] == "":
                     outcome = "failed_name"
+                    blackboard["guest_data"][self._guest_id]["name"] = "John"
                 else:
+                    blackboard["guest_data"][self._guest_id]["drink"] = "Coke"
                     outcome = "failed_drink"
             else:
+                blackboard["guest_data"][self._guest_id]["name"] = "John"
+                blackboard["guest_data"][self._guest_id]["drink"] = "Coke"
                 outcome = "failed"
+
+            blackboard["placeholders"] = "John"
+            yasmin.YASMIN_LOG_INFO(str(blackboard["guest_data"]))
             return outcome
 
         def _recovery_name_and_drink_required(self, blackboard) -> bool:
@@ -90,9 +102,9 @@ class GetNameAndDrink(yasmin.StateMachine):
         guest_id: str,
         last_resort: bool,
     ):
-        super().__init__(
-            outcomes=["succeeded", "failed", "failed_name", "failed_drink"]
-        )
+        super().__init__(outcomes=["succeeded", "failed"])
+
+        self.flag = True
 
         self.add_input_key("guest_transcription")
         self.add_input_key("guest_data")
@@ -115,20 +127,82 @@ class GetNameAndDrink(yasmin.StateMachine):
                 "aborted": "SPEECH_RECOVERY",
             },
         )
+        # self.add_state(
+        #     "SPEECH_RECOVERY",
+        #     SpeechRecovery(guest_id, last_resort),
+        #     transitions={
+        #         "succeeded": "succeeded",
+        #         "failed": "POST_RECOVERY_DECISION",
+        #     },
+        # )
+
         self.add_state(
             "SPEECH_RECOVERY",
-            SpeechRecovery(guest_id, last_resort),
-            transitions={
-                "succeeded": "succeeded",
-                "failed": "POST_RECOVERY_DECISION",
-            },
-        )
-        self.add_state(
-            "POST_RECOVERY_DECISION",
             self.PostRecoveryDecision(guest_id=guest_id),
             transitions={
-                "failed": "failed",
-                "failed_name": "failed_name",
-                "failed_drink": "failed_drink",
+                "failed": "CHECK_REPEAT",
+                "failed_name": "CHECK_REPEAT",
+                "failed_drink": "CHECK_REPEAT",
             },
         )
+
+        self.add_state(
+            "CHECK_REPEAT",
+            yasmin.CbState(outcomes=["succeeded", "continue"], callback=self.check),
+            transitions={"succeeded": "succeeded", "continue": "REPEAT_ASK_GUEST"},
+        )
+
+        self.add_state(
+            "REPEAT_ASK_GUEST",
+            AskAndListen(
+                tts_phrase="I am sorry, I did not understand. Please say 'Hi Tiago' for me to begin listening. What is your name and drink?",
+            ),
+            transitions={
+                "succeeded": "PARSE_NAME",
+                "failed": "failed",
+            },
+            remappings={"transcribed_speech": "guest_transcription"},
+        )
+
+    def check(self, blackboard):
+        if self.flag:
+            self.flag = False
+            return "continue"
+        else:
+            return "succeeded"
+
+
+def main():
+    rclpy.init()
+
+    yasmin_ros.set_ros_loggers()
+
+    sm = yasmin.StateMachine(outcomes=["succeeded", "failed"], handle_sigint=True)
+
+    sm.add_state(
+        "NAME_DRINK",
+        GetNameAndDrink(guest_id="guest1", last_resort=False),
+        transitions={
+            "succeeded": "succeeded",
+            "failed": "failed",
+            "failed_name": "failed",
+            "failed_drink": "failed",
+        },
+    )
+
+    bb = yasmin.Blackboard()
+    bb["guest_transcription"] = "John"
+    bb["guest_data"] = {
+        "guest1": {
+            "name": "",
+            "drink": "",
+            "detection": False,
+            "seating_detection": False,
+            "attributes": {},
+            "seated_point": None,
+        }
+    }
+
+    outcome = sm(bb)
+
+    rclpy.shutdown()

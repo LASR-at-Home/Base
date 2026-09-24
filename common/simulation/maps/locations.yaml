@@ -1,4 +1,14 @@
 locations:
+  bedroom:
+    orientation:
+      w: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    position:
+      x: -0.765
+      y: 2.524
+      z: 0.0
   kitchen:
     orientation:
       w: 1.0
@@ -6,6 +16,16 @@ locations:
       y: 0.0
       z: 0.0
     position:
-      x: 2.233
-      y: -2.924
+      x: 1.717
+      y: -1.3
+      z: 0.0
+  living room:
+    orientation:
+      w: 1.0
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    position:
+      x: 7.546
+      y: 0.722
       z: 0.0

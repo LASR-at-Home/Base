@@ -142,7 +142,10 @@ def main():
         )[0]
         fig.canvas.draw_idle()
         # focus the textbox
-        textbox.begin_typing(None)
+        try:
+            textbox.begin_typing()
+        except TypeError:
+            textbox.begin_typing(None)
 
     def on_key(event):
         if event.key == "u":

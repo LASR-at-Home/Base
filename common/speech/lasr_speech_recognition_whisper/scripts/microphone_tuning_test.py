@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from pathlib import Path
 import speech_recognition as sr
-from src import ModelCache  # type: ignore
+from lasr_speech_recognition_whisper import ModelCache
 import sounddevice  # needed to remove ALSA error messages
 from typing import Dict
 import rclpy
@@ -38,7 +38,7 @@ def main(args=None):
     recognizer = sr.Recognizer()
     recognizer.pause_threshold = 2
     microphone = sr.Microphone(device_index=args["device_index"], sample_rate=16000)
-    threshold = 100
+    threshold = 10000
     recognizer.dynamic_energy_threshold = False
     recognizer.energy_threshold = threshold
     model_cache = ModelCache()
@@ -67,7 +67,7 @@ def main(args=None):
         print(
             f"Transcription: {transcription_result} at energy threshold {recognizer.energy_threshold}"
         )
-        threshold += 100
+        threshold += 10000
         recognizer.energy_threshold = threshold
 
 

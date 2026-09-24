@@ -1,0 +1,87 @@
+hri:   # the `hri` Node's Parameters
+  ros__parameters:
+    start_point:
+      position:
+        x: -10.543181865250483
+        y: 19.657461427517205
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.5006482302925602
+        w: 0.8656508242385769
+
+    # Where to wait for guests
+    door_pose:
+      position:
+        x: -10.519356990378249
+        y: 17.02404825429358
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.8128891810577156
+        w: 0.5824183885484012
+
+    grab_pose:
+      position:
+        x: -10.527612620449109
+        y: 17.196074261033452
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.7928145458503555
+        w: 0.6094629569449603
+
+
+
+    door_polygon:
+      top_left:     [-10.435281753540039, 15.317619323730469]
+      top_right:    [-11.30875015258789, 15.590652465820312]
+      bottom_right: [-10.973834991455078, 16.30986976623535]
+      bottom_left:  [-10.199817657470703, 16.08153533935547]
+
+    # Where to position self for seating guests
+    seat_pose:
+      position:
+        x: -9.949548986961878
+        y: 18.613158376577758
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.15437572242672076
+        w: 0.9880122146639828
+
+    # Where the robot looks at the general sofa
+    left_sofa_point:
+      x: -7.112998962402344
+      y: 18.6096248626709
+      z: 0.5
+
+    middle_sofa_point:
+      x: -7.32270622253418
+      y: 17.866853713989258
+      z: 0.5
+
+    right_sofa_point:
+      x: -7.6437883377075195
+      y: 17.04224967956543
+      z: 0.5
+    
+    seat_area:
+      top_left: [-6.397213935852051, 19.88530921936035]
+      top_right: [-7.517071723937988, 15.646678924560547]
+      bottom_right: [-9.564236640930176, 16.19935417175293]
+      bottom_left: [-8.219103813171387, 20.35795783996582]
+
+    # Max number of seats
+    max_people_on_sofa: 3
+
+    # Seatable area
+    sofa_area:
+      top_left:     [-6.694643020629883, 19.03266143798828]
+      top_right:    [-7.39281702041626, 16.57363510131836]
+      bottom_right: [-8.41148853302002, 16.765850067138672]
+      bottom_left:  [-7.506037712097168, 19.303058624267578]

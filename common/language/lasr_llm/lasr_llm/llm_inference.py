@@ -141,10 +141,21 @@ class LLMInference:
         self.logger.info(
             f"[LLMInference] Pulling '{self.model_name}' (this only happens once)..."
         )
-        self.client.pull(self.model_name)
+        self.pull_model(self.model_name)
         self.logger.info(
             f"[LLMInference] '{self.model_name}' saved locally — offline use enabled."
         )
+
+    def pull_model(self, model_name):
+        available = [m.model for m in ollama.list().models]
+        if model_name not in available:
+            for chunk in ollama.pull(model_name, stream=True):
+                if chunk.status == "pulling manifest" or chunk.completed:
+                    pct = (
+                        f"{chunk.completed/chunk.total*100:.1f}%" if chunk.total else ""
+                    )
+                    print(f"\r{chunk.status} {pct}", end="", flush=True)
+            print(f"\nDone.")
 
     def infer_task(self) -> str:
         name = self.model_name.lower()
@@ -207,7 +218,7 @@ def interest_commonality_llm(interests: list[str]) -> str:
     :param interests: a list of interests
     :return: a sentence describing the commonalities
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     sentence = ", ".join(interests)
     query = create_query(
         sentence,
@@ -224,7 +235,7 @@ def introduce_llm(name: str, drink: str, interests: str) -> str:
     """
     Create a sentence introducing a person using the given name, drink, and interests.
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     input_summary = f"Name: {name}, Favorite drink: {drink}, Interests: {interests}"
     prompt = f"Create a sentence that introduces a person named {name}, mentioning their favorite drink ({drink}) and their interest in {interests}."
 
@@ -242,7 +253,7 @@ def classify_category(objects: List[str]) -> str:
     :param objects: a list of interests
     :return: category
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     sentence = ", ".join(objects)
     query = create_query(
         sentence, "Detect which category these or a object belongs to."
@@ -260,7 +271,7 @@ def link_category(object: str, categories: list[str]) -> str:
     :param objects: a list of interests
     :return: category
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
     categories_str = ", ".join(categories)
     query = create_query(
         f"Detect which category {object} belongs to the most from the following categories: {categories_str}. If not appropriate category to go return 'new'",
@@ -277,7 +288,7 @@ def extract_fields_llm(text: str, fields: List[str]) -> Dict:
     Extracts structured information from a sentence using an LLM.
     Returns a dictionary with all fields — missing ones are filled with 'Unknown'.
     """
-    config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=False)
+    config = ModelConfig(model_name=models["Qwen"], model_type="llm")
 
     if fields is None:
         fields = ["Name", "Favourite drink", "Interests"]
@@ -297,7 +308,7 @@ def extract_fields_llm(text: str, fields: List[str]) -> Dict:
 
 def main():
     # # Examples for testing
-    # config = ModelConfig(model_name=models["Qwen"], model_type="llm", quantize=True)
+    # config = ModelConfig(model_name=models["Qwen"], model_type="llm")
 
     # # sentence = "My name is John, my favourite drink is green tea, and my interests are robotics."
     # # sentence = "I am John, I usually drink green tea, and I really like robotics. I also like to play chess and watch movies."

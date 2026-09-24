@@ -1,0 +1,65 @@
+hri:   # the `hri` Node's Parameters
+  ros__parameters:
+
+    # Where to wait for guests
+    door_pose:
+      position:
+        x: 4.717383410491155
+        y: 17.660128284836173
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: -0.683215101396084
+        w: 0.7302171767524637
+
+
+
+
+    door_polygon:
+      top_left:     [5.440979480743408, 15.768505096435547]
+      top_right:    [4.780439376831055, 15.682376861572266]
+      bottom_right: [4.521971225738525, 16.677654266357422]
+      bottom_left:  [5.364399433135986, 16.802059173583984]
+
+    # Where to position self for seating guests
+    seat_pose:
+      position:
+        x: 4.204090241696327
+        y: 19.178058281029575
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.15804665933431114
+        w: 0.9874316449624573
+
+
+
+
+
+    # Where the robot looks at the general sofa
+    left_sofa_point:
+      x: 7.210865020751953
+      y: 20.300580978393555
+      z: 0.5
+
+    middle_sofa_point:
+      x: 7.459762096405029
+      y: 19.592403411865234
+      z: 0.5
+
+    right_sofa_point:
+      x: 7.498050212860107
+      y: 18.798095703125
+      z: 0.5
+    
+    # Max number of seats
+    max_people_on_sofa: 3
+
+    # Seatable area
+    sofa_area:
+      top_left:     [7.55566930770874, 20.925668716430664]
+      top_right:    [7.937021255493164, 18.18181037902832]
+      bottom_right: [6.665816307067871, 18.077146530151367]
+      bottom_left:  [6.448974132537842, 20.768667221069336]

@@ -100,7 +100,9 @@ class YOLOServiceNode:
         )
         self._device = self.node.get_parameter("~device").value
 
-        self.node.declare_parameter("~preload", ["yolo11n-seg.pt"])
+        self.node.declare_parameter(
+            "~preload", ["yolo11n-seg.pt", "yolo11n.pt", "yolo11n-pose.pt"]
+        )
         self.preload_param_list = self.node.get_parameter("~preload").value
         for model in self.preload_param_list:
             self._maybe_load_model(model)
@@ -115,7 +117,7 @@ class YOLOServiceNode:
             history=HistoryPolicy.KEEP_LAST,
         )
 
-        self._tf_buffer = Buffer(cache_time=Duration(seconds=10))
+        self._tf_buffer = Buffer(cache_time=Duration(seconds=10.0))
         self._tf_listener = tf.TransformListener(self._tf_buffer, self.node)
 
         self.node.create_service(YoloDetection, "/yolo/detect", self._detect)
@@ -202,18 +204,10 @@ class YOLOServiceNode:
                 target_frame, source_frame, stamp, Duration(seconds=1.0)
             )
         except Exception as e:
-            self.node.get_logger().debug(
-                f"TF {target_frame}<-{source_frame} at image stamp failed ({e}); using latest"
-            )
-        try:
-            return self._tf_buffer.lookup_transform(
-                target_frame, source_frame, Time(), Duration(seconds=1.0)
-            )
-        except Exception as e:
             self.node.get_logger().error(
-                f"TF {target_frame}<-{source_frame} lookup failed: {e}"
+                f"TF {target_frame}<-{source_frame} at image stamp failed ({e})"
             )
-            raise
+            return None
 
     def _detect3d(
         self, req: YoloDetection3D.Request, res: YoloDetection3D.Response
@@ -241,7 +235,11 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
+            if transform is None:
+                return response
 
+        # TODO: Make Detection3D response stamped with frame_id so callers can detect
+        # TF failures externally instead of relying on log warnings
         for result in results:
             detection = Detection3D()
             detection.name = result.names[result.boxes.cls.int().item()]
@@ -313,7 +311,6 @@ class YOLOServiceNode:
         self, req: YoloPoseDetection3D.Request, res: YoloPoseDetection3D.Response
     ) -> YoloPoseDetection3D.Response:
         response = YoloPoseDetection3D.Response()
-
         cv_im = self._bridge.imgmsg_to_cv2(req.image_raw, desired_encoding="bgr8")
         results = self._yolo(cv_im, req.model, req.confidence, [])
         depth_im = self._bridge.imgmsg_to_cv2(
@@ -333,7 +330,11 @@ class YOLOServiceNode:
                 req.depth_image.header.frame_id,
                 req.depth_image.header.stamp,
             )
+            if transform is None:
+                return response
 
+        # TODO: Make Keypoint3D response stamped with frame_id so callers can detect
+        # TF failures externally instead of relying on log warnings
         for result in results:
             keypoints = Keypoint3DList()
             for idx, name in KEYPOINT_MAPPING.items():
@@ -345,9 +346,18 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
+<<<<<<< HEAD
                     z = depth_im[v, u]  #(already in mm) for 32FC1 - in simulation 
                     if req.depth_image.encoding == "16UC1": #(needs m -> mm) - for real robot)
                         z = z / 1000.0
+=======
+                    z_mm = depth_im[v, u]
+                    z = z_mm / 1000.0  # convert mm to meters
+                    # Skip invalid/near-camera depths (< 100mm)
+                    # Allow up to 20m for distant detections (will use laser fallback if needed)
+                    if z <= 0.1 or z > 20.0:
+                        continue
+>>>>>>> origin/ros2
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
@@ -370,7 +380,6 @@ class YOLOServiceNode:
             response.detections.append(keypoints)
 
         self._publish_results(req, results, response)
-
         return response
 
     def _maybe_load_model(self, model_name: str) -> ultralytics.YOLO:
@@ -511,13 +520,19 @@ class YOLOServiceNode:
         self, img, model: str, conf: float, filter: List[str]
     ) -> ultralytics.engine.results.Results:
         yolo = self._maybe_load_model(model)
-        filter_idx = (
-            [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
-            if filter
-            else None
-        )
+        try:  # TODO: handle incorrect filters properly
+            filter_idx = (
+                [{v: k for k, v in yolo.names.items()}[cls] for cls in filter]
+                if filter
+                else None
+            )
+        except KeyError:
+            filter_idx = None
         results = yolo(img, conf=conf, classes=filter_idx, verbose=False)[0]
         return results
+
+
+from rclpy.executors import MultiThreadedExecutor
 
 
 def main(args=None):
@@ -525,12 +540,18 @@ def main(args=None):
 
     node = Node("yolo_service")
     YOLOServiceNode(node)
+
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":

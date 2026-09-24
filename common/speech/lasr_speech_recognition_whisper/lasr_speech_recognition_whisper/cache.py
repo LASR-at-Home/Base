@@ -45,13 +45,13 @@ class ModelCache(Node):
                         "lasr_speech_recognition_whisper",
                     )
                 )
-                example_fp = os.path.join(package_root, "test.m4a")
-                self.get_logger().info(
-                    "Running transcription on example file to ensure model is loaded..."
-                )
-                test_result: str = MODEL_CACHE[name].transcribe(
-                    example_fp, fp16=device == "cuda"
-                )
-                self.get_logger().info(f"Transcription test result: {test_result}")
+                # example_fp = os.path.join(package_root, "test.m4a")
+                # self.get_logger().info(
+                #     "Running transcription on example file to ensure model is loaded..."
+                # )
+                # test_result: str = MODEL_CACHE[name].transcribe(
+                #     example_fp, fp16=device == "cuda"
+                # )
+                # self.get_logger().info(f"Transcription test result: {test_result}")
 
         return MODEL_CACHE[name]
