@@ -51,8 +51,6 @@ setup(
     cmdclass={"install": InstallCommand},
     entry_points={
         "console_scripts": [
-            "get_image = lasr_skills.vision.get_image:main",
-            "wait_state = lasr_skills.wait:main",
             "say = lasr_skills.say:main",
             "detect_3d = lasr_skills.detect_3d:main",
             "detect_all_in_polygon = lasr_skills.detect_all_in_polygon:main",
@@ -60,7 +58,6 @@ setup(
             "play_motion = lasr_skills.play_motion:main",
             "look = lasr_skills.look_to_point:main",
             "go_to_location = lasr_skills.go_to_location:main",
-            "set_initial_pose = lasr_skills.set_initial_pose:main",
             "ask_and_listen = lasr_skills.ask_and_listen:main",
             "receive_object = lasr_skills.receive_object:main",
             "handover_object = lasr_skills.handover_object:main",
@@ -69,6 +66,7 @@ setup(
             "detect_keypoints_3d = lasr_skills.detect_keypoints_3d:main",
             "detect_wave = lasr_skills.detect_wave:main",
             "safety = lasr_skills.safety:main",
+            "detect_doorbell = lasr_skills.detect_doorbell:main",
         ],
     },
 )

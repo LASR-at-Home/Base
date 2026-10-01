@@ -7,24 +7,44 @@
   <maintainer email="yaralkhelaiwi@gmail.com">yara</maintainer>
   <license>MIT</license>
 
-  <depend>smach</depend>
-  <depend>smach_ros</depend>
+  <build_depend>ament_virtualenv</build_depend>
 
+  <!-- Used in the state machine and states -->
+  <depend>rclpy</depend>
+  <depend>yasmin</depend>
+  <depend>yasmin_ros</depend>
+  <depend>yasmin_viewer</depend>
   <depend>skills</depend>
+
   <depend>lasr_vision_interfaces</depend>
+  <depend>lasr_llm_interfaces</depend>
 
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>message_filters</depend>
+  <depend>cv_bridge</depend>
+
+  <!-- Nodes started by the launch files -->
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>lasr_vision_yolo</exec_depend>
+  <exec_depend>lasr_vision_reid</exec_depend>
+  <exec_depend>lasr_vision_eye_tracker</exec_depend>
+  <exec_depend>lasr_vlm</exec_depend>
+  <exec_depend>lasr_llm</exec_depend>
+  <exec_depend>microphone</exec_depend>
+  <exec_depend>lasr_speech_recognition_whisper</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
 
-  <exec_depend>launch</exec_depend>
-  <exec_depend>launch_ros</exec_depend>
-
-  <build_depend>ament_virtualenv</build_depend>
   <export>
     <build_type>ament_python</build_type>
     <pip_requirements>requirements.txt</pip_requirements>

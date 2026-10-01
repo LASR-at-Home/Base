@@ -16,4 +16,3 @@ from .recognise import Recognise
 from .introduce import Introduce
 
 from .place_bag import PlaceBag
-from .doorbell import DetectDoorbell

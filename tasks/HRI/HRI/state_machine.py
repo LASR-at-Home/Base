@@ -16,6 +16,7 @@ from lasr_skills import (
     Rotate,
     FollowPerson,
     ReceiveObject,
+    DetectDoorbell,
 )
 
 from HRI.states import *
@@ -163,7 +164,7 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "GRAB_BAG",
-            ReceiveObject(object_name="bag"),
+            ReceiveObject(object_name="bag", can_hold=True),
             transitions={"succeeded": "ROTATE", "failed": "failed"},
         )
 

@@ -1,27 +1,27 @@
 import csv
+import os
+import threading
+import time
+from pathlib import Path
+
 import numpy as np
-import pyaudio
-import tensorflow as tf
-import kagglehub
+import rclpy
 import yasmin
 import yasmin_ros
-import time
-import rclpy
-from pathlib import Path
-from scipy.signal import resample_poly
-import os
+from yasmin_ros.yasmin_node import YasminNode
+
+from lasr_speech_recognition_interfaces.srv import RecordAudio
+
 
 class DetectDoorbell(yasmin.State):
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 1
     TARGET_RATE = 16000  # What YAMNet needs
-    HARDWARE_RATE = 44100  # Change this to match your hardware's supported rate (e.g., 44100 or 48000)
-    CHUNK_SIZE = 1024
     REQUIRED_SAMPLES = 15600  # ~0.975s segments required by YAMNet
+    RECORD_DURATION = 0.5  # seconds of audio requested per service call
     WAIT_FOR_DOORBELL_TIMEOUT = 15
+    SERVICE_WAIT_TIMEOUT = 5.0
 
     def __init__(
-        self, device_id="default", score_threshold=0.20,
+        self, score_threshold=0.20,
         included_classes=[
                             "Buzzer",
                             "Telephone bell ringing",
@@ -52,47 +52,59 @@ class DetectDoorbell(yasmin.State):
                         ]
     ):
         super().__init__(outcomes=["succeeded", "failed"])
-        # Ensure correct hardware device ID discovered from the step 1 script
-        self.device_id = device_id
         self.score_threshold = score_threshold
         self.included_classes = included_classes
 
         # State variables
         self.model = None
         self.class_names = []
-        self.audio_interface = None
-        self.stream = None
         self.audio_buffer = np.zeros(0, dtype=np.float32)
+
+        self._node = YasminNode.get_instance()
+        self._record_client = self._node.create_client(
+            RecordAudio, "/microphone/record"
+        )
 
         self.load_model()
         self.load_class_map()
-        self.initialize_audio()
 
-    def initialize_audio(self):
-        self.audio_interface = pyaudio.PyAudio()
-        self.stream = self.audio_interface.open(
-            format=self.FORMAT,
-            channels=self.CHANNELS,
-            rate=self.HARDWARE_RATE,  # Open at native hardware rate
-            input=True,
-            input_device_index=self.device_id,
-            frames_per_buffer=self.CHUNK_SIZE,
-        )
+    def record_audio(self):
+        """Record a block from the microphone node and append it to the buffer.
 
-    def process_audio_frame(self):
-        data = self.stream.read(self.CHUNK_SIZE, exception_on_overflow=False)
-        # Convert raw buffer to float32
-        audio_chunk = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
+        Returns False if the recording failed.
+        """
+        request = RecordAudio.Request(mode="fixed", duration=self.RECORD_DURATION)
+        done = threading.Event()
+        future = self._record_client.call_async(request)
+        future.add_done_callback(lambda _: done.set())
 
-        # Resample from hardware rate (e.g., 44100) down to YAMNet target rate (16000)
-        if self.HARDWARE_RATE != self.TARGET_RATE:
-            audio_chunk = resample_poly(
-                audio_chunk, self.TARGET_RATE, self.HARDWARE_RATE
+        if not done.wait(timeout=self.RECORD_DURATION + self.SERVICE_WAIT_TIMEOUT):
+            yasmin.YASMIN_LOG_WARN("Timed out waiting for /microphone/record")
+            return False
+
+        response = future.result()
+        if response is None or not response.success:
+            message = response.message if response else future.exception()
+            yasmin.YASMIN_LOG_WARN(f"Recording failed: {message}")
+            return False
+        if response.sample_rate != self.TARGET_RATE:
+            yasmin.YASMIN_LOG_ERROR(
+                f"Microphone sample rate {response.sample_rate} != {self.TARGET_RATE}"
             )
+            return False
 
-        self.audio_buffer = np.append(self.audio_buffer, audio_chunk)
+        audio_chunk = np.frombuffer(response.samples, dtype=np.float32)
+        # Only the latest window is ever used for inference
+        self.audio_buffer = np.append(self.audio_buffer, audio_chunk)[
+            -self.REQUIRED_SAMPLES :
+        ]
+        return True
 
     def load_model(self):
+        # Imported here so that importing lasr_skills doesn't pull in TensorFlow
+        import kagglehub
+        import tensorflow as tf
+
         relative_path = Path("~/.cache/kagglehub/models/google/yamnet/tensorFlow2/yamnet/1")
         absolute_path = relative_path.expanduser().resolve()
 
@@ -135,38 +147,31 @@ class DetectDoorbell(yasmin.State):
                 )
                 return True
 
-            self.audio_buffer = self.audio_buffer[-int(self.REQUIRED_SAMPLES / 2) :]
             return False
 
         return False
 
-    def cleanup(self):
-        print("\nStopping stream...")
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
-        if self.audio_interface:
-            self.audio_interface.terminate()
-        print("Done.")
-
     def execute(self, blackboard):
-        try:
-            t_end = time.time() + self.WAIT_FOR_DOORBELL_TIMEOUT
-            found = False
+        if not self._record_client.wait_for_service(
+            timeout_sec=self.SERVICE_WAIT_TIMEOUT
+        ):
+            yasmin.YASMIN_LOG_ERROR("/microphone/record service is not available")
+            return "failed"
 
-            while time.time() < t_end and not found:
+        # Don't carry audio over from a previous run of this state
+        self.audio_buffer = np.zeros(0, dtype=np.float32)
+        t_end = time.time() + self.WAIT_FOR_DOORBELL_TIMEOUT
 
-                self.process_audio_frame()
-
-                found = self.run_inference()
-            if found:
-                return "succeeded"
-            else:
+        while time.time() < t_end:
+            if self.is_canceled():
                 return "failed"
-        except KeyboardInterrupt:
-            pass
-        finally:
-            self.cleanup()
+            if not self.record_audio():
+                time.sleep(0.2)  # avoid spinning on a failing microphone
+                continue
+            if self.run_inference():
+                return "succeeded"
+
+        return "failed"
 
 
 def main():
@@ -180,7 +185,7 @@ def main():
     # The first state added to a YASMIN StateMachine automatically becomes the initial state
     sm.add_state(
         "DETECT_DOORBELL",
-        DetectDoorbell(device_id=0),
+        DetectDoorbell(),
         transitions={
             "succeeded": "succeeded",  # Map state outcomes to machine outcomes
             "failed": "failed",
@@ -197,3 +202,7 @@ def main():
 
     if rclpy.ok():
         rclpy.shutdown()
+
+
+if __name__ == "__main__":
+    main()
