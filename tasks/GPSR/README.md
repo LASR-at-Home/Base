@@ -11,8 +11,8 @@ Make sure [config/params.yaml](config/params.yaml) has:
 ```yaml
 gpsr:
   ros__parameters:
-    simulation: true
-    input_mode: "keyboard"
+    simulation: true        # If using simualtion (uses gtts instead)
+    input_mode: "keyboard"  # or "microphone"/"mic"
 ```
 
 ### 2. Start Ollama (first run, if you've already done you don't need to rerun these commands)
@@ -20,45 +20,46 @@ gpsr:
 ```bash
 ollama serve
 ollama pull gemma3   # only first time
+ollama create gemma3-4b-8k -f <path>/Base/tasks/GPSR/external/Modelfile # Once only you can later use `gemma3-4b-8k` like a normal model
 ```
 
-### 3. Build and run
+### 3. Build
 
 ```bash
 # from workspace root (Base/)
 colcon build --packages-select GPSR
 source install/setup.bash
 
-ros2 run GPSR sm --ros-args --params-file tasks/GPSR/config/params.yaml
+ros2 launch GPSR GPSR_tiago.launch.py   # In a terminal
+ros2 launch simulation nav.launch.py    # If testing simulation in another terminal.
 ```
 
-Type your command when prompted, e.g.:
+### 4. Run
 
-```
-> Go to the kitchen and bring me a bottle of water
-```
+ - #### 1. Running the Full Task
+    > Ensure `simulation` is `false` and `input_mode` is `microphone`.
+  
+    To launch the state machine 
+      ```
+        ros2 run GPSR sm --ros-args --params-file tasks/GPSR/config/params.yaml
+      ```
+    In a new terminal run the following to start the Task
+      ```
+        ros2 topic pub /gpsr/start std_msgs/msg/Empty --once
+      ```
 
-The robot will print and speak the planned steps.
+  - #### 2. Using the Service
+    To launch the state machine 
+      ```
+        ros2 run GPSR service --ros-args --params-file tasks/GPSR/config/params.yaml
+      ```
 
----
+    To call the service (in terminal)
+      ```
+        ros2 service call /gpsr/single_query std_srvs/srv/SetBool '{"data": true}'
+      ```
+    > The `data` refers to whether to dispatch the skills or not. (default to false) 
 
-## Full simulation (with Nav2)
-
-Launch Nav2 and the GPSR node in two separate terminals.
-
-**Terminal 1 — Nav2:**
-```bash
-ros2 launch simulation nav.launch.py
-```
-
-**Terminal 2 — GPSR:**
-```bash
-ros2 run GPSR sm --ros-args --params-file tasks/GPSR/config/params.yaml
-```
-
-Set `simulation: false` in `params.yaml` to use the robot TTS instead of gtts. (only for real robot)
-
----
 
 ## Config files
 

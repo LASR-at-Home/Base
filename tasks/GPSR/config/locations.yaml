@@ -1,3 +1,6 @@
+# When setting poses for sub-locations, place then so that TIAGo is looking/orientated at the location. NOT DIRECTLY ON IT.
+# This is to prevent (failed) navigation into objects when used with "go_to_location" skill
+
 locations: # REAL - ARENA 2
 
   # --- Rooms ---

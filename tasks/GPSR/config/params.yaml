@@ -1,7 +1,7 @@
 gpsr:
   ros__parameters:
     use_cloud: false
-    llm_model: "gemma3:4b"
+    llm_model: "gemma3-4b-8k"
     llm_host: "http://localhost:11434/v1"
     cloud_model: "gemma4-31b"
     cloud_host: "https://api.regolo.ai/v1"
@@ -9,7 +9,7 @@ gpsr:
     cloud_api_key: "XXX"
     cloud_timeout_sec: 40.0
     simulation: true              # true = use gtts on PC, false = use robot TTS
-    input_mode: "microphone"        # "keyboard" or "mic"
+    input_mode: "keyboard"        # "keyboard" or "microphone"
     whisper:
       energy_threshold: 400   
       phrase_duration: 10.0
