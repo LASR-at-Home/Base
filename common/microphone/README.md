@@ -65,6 +65,17 @@ To see which input devices are available (for the `mic_device` parameter):
 python3 -c "import sounddevice; print(sounddevice.query_devices())"
 ```
 
+When passing a device index on the command line, quote it so ROS treats it as a string
+(otherwise the node fails with `InvalidParameterTypeException`):
+
+```bash
+ros2 run microphone mic --ros-args -p mic_device:="'2'"
+```
+
+The node records at 16 kHz. Raw `hw:` devices often don't support that rate
+(`Invalid sample rate`); use `default` or `pulse`, which resample. Inside Apptainer this
+needs the audio server socket bound in: `apptainer run -B /run/user/$UID ...`.
+
 ## Technical Overview
 
 On startup the node opens a single `sounddevice.InputStream` (16 kHz, mono, float32, 512-sample
