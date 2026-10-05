@@ -195,7 +195,6 @@ class TranscribeSpeechAction(Node):
             self.get_logger().warn(f"Failed to save recording: {e}")
 
 
-
 def main(args=None):
     whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
     os.makedirs(whisper_cache, exist_ok=True)

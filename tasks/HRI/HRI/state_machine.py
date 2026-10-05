@@ -92,14 +92,26 @@ class HRI(yasmin.StateMachine):
 
         self.add_state(
             "SAY_MISSED_DOORBELL",
-            Say(text="I missed the doorbell. Could someone please open the door for the guest."),
-            transitions={"succeeded": "GO_TO_DOOR", "canceled": "failed", 'aborted': 'failed'},
+            Say(
+                text="I missed the doorbell. Could someone please open the door for the guest."
+            ),
+            transitions={
+                "succeeded": "GO_TO_DOOR",
+                "canceled": "failed",
+                "aborted": "failed",
+            },
         )
 
         self.add_state(
             "ASK_OPEN_DOOR",
-            Say(text='I heard the doorbell. Could someone please open the door for the guest.'),
-            transitions={"succeeded": "GO_TO_DOOR", "canceled": "failed", 'aborted': 'failed'},
+            Say(
+                text="I heard the doorbell. Could someone please open the door for the guest."
+            ),
+            transitions={
+                "succeeded": "GO_TO_DOOR",
+                "canceled": "failed",
+                "aborted": "failed",
+            },
         )
 
         self.add_state(

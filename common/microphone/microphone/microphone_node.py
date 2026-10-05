@@ -23,17 +23,17 @@ class MicrophoneNode(Node):
     """Owns the microphone and serves recordings via the /microphone/record service."""
 
     def __init__(self):
-        super().__init__('microphone_node')
+        super().__init__("microphone_node")
 
-        self.declare_parameter('mic_device', 'default')
-        self.declare_parameter('start_timeout', 5.0)
-        self.declare_parameter('pause_threshold', 2.0)
-        self.declare_parameter('max_phrase_duration', 15.0)
+        self.declare_parameter("mic_device", "default")
+        self.declare_parameter("start_timeout", 5.0)
+        self.declare_parameter("pause_threshold", 2.0)
+        self.declare_parameter("max_phrase_duration", 15.0)
 
-        self._mic_device = self.get_parameter('mic_device').value or None
-        self._start_timeout = self.get_parameter('start_timeout').value
-        self._pause_threshold = self.get_parameter('pause_threshold').value
-        self._max_phrase_duration = self.get_parameter('max_phrase_duration').value
+        self._mic_device = self.get_parameter("mic_device").value or None
+        self._start_timeout = self.get_parameter("start_timeout").value
+        self._pause_threshold = self.get_parameter("pause_threshold").value
+        self._max_phrase_duration = self.get_parameter("max_phrase_duration").value
 
         self._audio_queue = queue.Queue()
         self._collecting = False
@@ -45,7 +45,7 @@ class MicrophoneNode(Node):
         self._stream = sd.InputStream(
             samplerate=SAMPLE_RATE,
             channels=1,
-            dtype='float32',
+            dtype="float32",
             blocksize=CHUNK_SIZE,
             device=self._resolve_mic_device(),
             callback=self._audio_callback,
@@ -53,10 +53,10 @@ class MicrophoneNode(Node):
         self._stream.start()
 
         self._record_srv = self.create_service(
-            RecordAudio, '/microphone/record', self._record_cb
+            RecordAudio, "/microphone/record", self._record_cb
         )
 
-        self.get_logger().info('Microphone node has started')
+        self.get_logger().info("Microphone node has started")
 
     def _resolve_mic_device(self):
         if self._mic_device is None:
@@ -64,9 +64,9 @@ class MicrophoneNode(Node):
         if self._mic_device.isdigit():
             return int(self._mic_device)
         for idx, info in enumerate(sd.query_devices()):
-            if self._mic_device in info['name']:
+            if self._mic_device in info["name"]:
                 return idx
-        raise ValueError(f'Could not find microphone: {self._mic_device}')
+        raise ValueError(f"Could not find microphone: {self._mic_device}")
 
     def _audio_callback(self, indata: np.ndarray, frames: int, time_info, status):
         if self._collecting:
@@ -86,22 +86,22 @@ class MicrophoneNode(Node):
 
         with self._record_lock:
             try:
-                if request.mode == 'phrase':
+                if request.mode == "phrase":
                     chunks = self._record_phrase(request)
-                elif request.mode == 'fixed':
+                elif request.mode == "fixed":
                     chunks = self._record_fixed(request)
                 else:
                     response.success = False
-                    response.message = f'Unknown mode: {request.mode!r}'
+                    response.message = f"Unknown mode: {request.mode!r}"
                     self.get_logger().warn(response.message)
                     return response
             except queue.Empty:
                 chunks = None
-                response.message = 'No audio received from the microphone'
+                response.message = "No audio received from the microphone"
                 self.get_logger().error(response.message)
             except Exception as e:
                 chunks = None
-                response.message = f'Recording error: {e}'
+                response.message = f"Recording error: {e}"
                 self.get_logger().error(response.message)
             finally:
                 self._collecting = False
@@ -109,21 +109,21 @@ class MicrophoneNode(Node):
         if not chunks:
             response.success = False
             if not response.message:
-                response.message = 'No speech detected'
+                response.message = "No speech detected"
             return response
 
         samples = np.concatenate(chunks).astype(np.float32)
-        response.samples = array.array('f', samples.tobytes())
+        response.samples = array.array("f", samples.tobytes())
         response.success = True
-        response.message = f'Recorded {len(samples) / SAMPLE_RATE:.2f}s'
+        response.message = f"Recorded {len(samples) / SAMPLE_RATE:.2f}s"
         self.get_logger().info(response.message)
         return response
 
     def _record_fixed(self, request):
         if request.duration <= 0.0:
-            raise ValueError('duration must be > 0 in fixed mode')
+            raise ValueError("duration must be > 0 in fixed mode")
         target_chunks = max(1, int(request.duration * SAMPLE_RATE / CHUNK_SIZE))
-        self.get_logger().info(f'Recording {request.duration:.2f}s of audio')
+        self.get_logger().info(f"Recording {request.duration:.2f}s of audio")
 
         self._start_collecting()
         return [self._next_chunk() for _ in range(target_chunks)]
@@ -136,7 +136,7 @@ class MicrophoneNode(Node):
         max_phrase_chunks = int(self._max_phrase_duration * SAMPLE_RATE / CHUNK_SIZE)
 
         self._vad_model.reset_states()
-        self.get_logger().info('Waiting for a phrase')
+        self.get_logger().info("Waiting for a phrase")
 
         self._start_collecting()
         pre_roll = deque(maxlen=PRE_ROLL_CHUNKS)
@@ -149,7 +149,7 @@ class MicrophoneNode(Node):
                 break
             start_chunks_elapsed += 1
             if start_chunks_elapsed > max_start_chunks:
-                self.get_logger().warn('Start timeout - no speech detected.')
+                self.get_logger().warn("Start timeout - no speech detected.")
                 return None
 
         silent_chunks = 0
@@ -163,13 +163,14 @@ class MicrophoneNode(Node):
                 if silent_chunks >= max_silent_chunks:
                     return collected_chunks
 
-        self.get_logger().warn('Max phrase duration reached.')
+        self.get_logger().warn("Max phrase duration reached.")
         return collected_chunks
 
     def _is_speech(self, chunk):
-        return self._vad_model(
-            torch.from_numpy(chunk).unsqueeze(0), SAMPLE_RATE
-        ).item() > 0.5
+        return (
+            self._vad_model(torch.from_numpy(chunk).unsqueeze(0), SAMPLE_RATE).item()
+            > 0.5
+        )
 
     def destroy_node(self):
         self._stream.stop()

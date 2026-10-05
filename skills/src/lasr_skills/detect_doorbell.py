@@ -21,31 +21,32 @@ class DetectDoorbell(yasmin.State):
     SERVICE_WAIT_TIMEOUT = 5.0
 
     def __init__(
-        self, score_threshold=0.20,
+        self,
+        score_threshold=0.20,
         included_classes=[
-                            "Buzzer",
-                            "Telephone bell ringing",
-                            "Alarm clock",
-                            "Chink, clink",
-                            "Smoke detector, smoke alarm",
-                            "Beep, bleep",
-                            "Bell",
-                            "Bicycle bell",
-                            "Glass",
-                            "Percussion",
-                            "Doorbell",
-                            "Music",
-                            "Glockenspiel",
-                            "Marimba, xylophone",
-                            "Chime",
-                            "Fire alarm",
-                            "Siren",
-                            "Whistle",
-                            "Air horn, truck horn",
-                            "Vehicle horn, car horn, honking",
-                            "Cowbell",
-                            "Bagpipes"
-                        ]
+            "Buzzer",
+            "Telephone bell ringing",
+            "Alarm clock",
+            "Chink, clink",
+            "Smoke detector, smoke alarm",
+            "Beep, bleep",
+            "Bell",
+            "Bicycle bell",
+            "Glass",
+            "Percussion",
+            "Doorbell",
+            "Music",
+            "Glockenspiel",
+            "Marimba, xylophone",
+            "Chime",
+            "Fire alarm",
+            "Siren",
+            "Whistle",
+            "Air horn, truck horn",
+            "Vehicle horn, car horn, honking",
+            "Cowbell",
+            "Bagpipes",
+        ],
     ):
         super().__init__(outcomes=["succeeded", "failed"])
         self.score_threshold = score_threshold
@@ -101,7 +102,9 @@ class DetectDoorbell(yasmin.State):
         import kagglehub
         import tensorflow as tf
 
-        relative_path = Path("~/.cache/kagglehub/models/google/yamnet/tensorFlow2/yamnet/1")
+        relative_path = Path(
+            "~/.cache/kagglehub/models/google/yamnet/tensorFlow2/yamnet/1"
+        )
         absolute_path = relative_path.expanduser().resolve()
 
         if os.path.exists(absolute_path):
@@ -135,8 +138,8 @@ class DetectDoorbell(yasmin.State):
             prediction_name = self.class_names[top_class_index]
 
             if (
-                top_score > self.score_threshold and prediction_name in self.included_classes
-
+                top_score > self.score_threshold
+                and prediction_name in self.included_classes
             ):
                 yasmin_ros.logger_node.get_logger().info(
                     f" Detected: {prediction_name:<25} (Score: {top_score:.2f})"
