@@ -64,6 +64,7 @@ RULES:
 - pick_up and place_object are ONLY for inanimate objects. If the command explicitly asks to physically pick up or place a PERSON as if they were an object (e.g. "pick up the person", "put the person on the sofa"), set can_do=false. Moving, escorting, transporting, or taking a person to a location is guide_person — never can_do=false.
 - Missing locations/objects/people are NOT a reason for can_do=false — the planner handles those and manages the different cases.
 - Any question, greeting, or request for information: can_do=true, selected_skills=["say"].
+- If the command involves delivering an object to a specific, named person, you MUST include "find_person" before "give_to_person" in the selected skills.
 - If the result of a skill must be reported back to the operator (count, name, description, property), always include "say" in selected_skills.
 - If the command involves bringing/fetching/delivering an object TO a person (including "me", or a named person), use "give_to_person" as the final delivery skill, NOT "place_object". Use "place_object" only when placing at a location with no person recipient.
 - get_person_info is ONLY for learning information ABOUT a person (their name, age, pose, gesture). If the command is about saying or reporting something TO a person, use find_person + say instead — never get_person_info.
@@ -211,6 +212,7 @@ DEPENDENCY RULES (apply all):
 7. Never remove a skill from the input list — only add missing dependencies.
 8. Keep skill names exactly as given (bare names, no arguments).
 9. Any plan that picks up an object must end with either give_to_person (if delivering to a person) or place_object (if placing at a location) — never leave the object undelivered.  
+10. give_to_person directed at a named person requires find_person before it — if find_person is missing, add it.
 
 Output schema:
 {{
@@ -248,6 +250,8 @@ RULES:
 - If the plan is a single say step (e.g. answering a question), the text MUST be a direct factual answer using ONLY information from General knowledge above. Do not invent facts. The answer must be specific and complete — never vague or generic. If the answer cannot be found in the general knowledge, output a say step saying "I'm sorry, I don't have that information."
 - If the command involves bringing/fetching/delivering an object TO a person (including "me", "the operator", or a named person), the final step MUST be give_to_person, NOT place_object. place_object is only for placing objects at a location with no person recipient.
 - get_person_info is ONLY for learning information ABOUT a person. If the command is about saying something TO a person, use find_person then say — never get_person_info.
+- When delivering an object to a named person, you MUST generate a find_person step immediately before the give_to_person step.
+- Do not hallucinate or invent arguments. If a command involves interacting with an unnamed person (e.g., "a lying person"), omit the "name" argument entirely. Never default to using "operator" for guide_person unless the operator is explicitly requested.
 
 Skills available for this command:
 {selected_skill_lines}

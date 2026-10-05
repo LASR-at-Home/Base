@@ -1,0 +1,4 @@
+FROM gemma3:4b
+PARAMETER num_ctx 8192
+PARAMETER temperature 0
+PARAMETER repeat_penalty 1.0

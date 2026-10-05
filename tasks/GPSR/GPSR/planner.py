@@ -60,7 +60,7 @@ def _inject_give_to_operator(steps: list) -> list:
     skills = [s.get("skill") for s in steps]
     if "pick_up" not in skills:
         return steps
-    if "give_to_person" in skills:
+    if "give_to_person" in skills or "place_object" in skills:
         return steps
     # Missing the delivery — append return to instruction point and give to operator
     steps = list(steps)
@@ -162,7 +162,7 @@ def run_planner(backend, world: dict, command: str) -> dict:
         plan_description = parsed.get("plan_description", "")
         if not steps:
             raise ValueError("empty steps")
-        steps = _inject_sublocations(steps, world["objects"])
+        #steps = _inject_sublocations(steps, world["objects"])
         steps = _inject_give_to_operator(steps)
     except Exception:
         result = _fail_safe()
@@ -214,7 +214,7 @@ def run_cloud_planner(backend, world: dict, command: str) -> dict:
         result["elapsed_sec"] = round(time.perf_counter() - t0, 2)
         return result
 
-    steps = _inject_sublocations(steps, world["objects"])
+    #steps = _inject_sublocations(steps, world["objects"])
     steps = _inject_give_to_operator(steps)
 
     if announcement:
