@@ -65,47 +65,48 @@ class GPSR_sm(yasmin.StateMachine):
         self.understand_attempts = 0
         self.operator_attempts = 0
 
-        self.add_state(
-            "SET_PROMPT",
-            yasmin.CbState(outcomes=["succeeded"], callback=self.setPrompt),
-            transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
-        )
+        # Input method for service (keyboard or microphone)
+        input_mode = self.node.get_parameter("input_mode").value.strip().lower()
+        if input_mode == "microphone":
+            self.add_state(
+                "SET_PROMPT",
+                yasmin.CbState(outcomes=["succeeded"], callback=self.setPrompt),
+                transitions={"succeeded": "REQUEST_AND_WAIT_FOR_COMMAND"},
+            )
 
-        self.add_state(
-            "REQUEST_AND_WAIT_FOR_COMMAND",
-            AskAndListen(),
-            transitions={
-                "succeeded": "CHECK_TRANSCRIPT",
-                "failed": "CHECK_TRANSCRIPT",
-            },
-            remappings={"tts_phrase": "instruction_text"},
-        )
+            self.add_state(
+                "REQUEST_AND_WAIT_FOR_COMMAND",
+                AskAndListen(),
+                transitions={
+                    "succeeded": "CHECK_TRANSCRIPT",
+                    "failed": "CHECK_TRANSCRIPT",
+                },
+                remappings={"tts_phrase": "instruction_text"},
+            )
 
-        self.add_state(
-            "CHECK_TRANSCRIPT",
-            yasmin.CbState(
-                outcomes=["valid", "invalid"],
-                callback=self.checkTranscript,
-            ),
-            transitions={
-                "valid": "QUERY_LLM",
-                "invalid": "COUNT_SPEECH_FAILURE",
-            },
-        )
+            self.add_state(
+                "CHECK_TRANSCRIPT",
+                yasmin.CbState(
+                    outcomes=["valid", "invalid"],
+                    callback=self.checkTranscript,
+                ),
+                transitions={
+                    "valid": "QUERY_LLM",
+                    "invalid": "COUNT_SPEECH_FAILURE",
+                },
+            )
 
-        self.add_state(
-            "COUNT_SPEECH_FAILURE",
-            yasmin.CbState(
-                outcomes=["request_rephrase", "request_operator", "failed"],
-                callback=self.countSpeechFailure,
-            ),
-            transitions={
-                "request_rephrase": "REQUEST_REPHRASE",
-                "request_operator": "REQUEST_OPERATOR",
-                "failed": "UNABLE_TO_UNDERSTAND",
-            },
-        )
+        else:
+            self.add_state(
+                "REQUEST_AND_WAIT_FOR_COMMAND",
+                KeyboardInputState(),
+                transitions={
+                    "succeeded": "QUERY_LLM",
+                    "aborted": "REQUEST_AND_WAIT_FOR_COMMAND",
+                },
+            )
 
+        # LLM Query (Planner)
         plan_con = yasmin.Concurrence(
             states={
                 "QUERY_LLM": QueryLLM(node),
@@ -150,6 +151,52 @@ class GPSR_sm(yasmin.StateMachine):
             },
         )
 
+        # Bad outcome handle
+        self.add_state(
+            "COUNT_SPEECH_FAILURE",
+            yasmin.CbState(
+                outcomes=["request_rephrase", "request_operator", "failed"],
+                callback=self.countSpeechFailure,
+            ),
+            transitions={
+                "request_rephrase": "REQUEST_REPHRASE",
+                "request_operator": "REQUEST_OPERATOR",
+                "failed": "UNABLE_TO_UNDERSTAND",
+            },
+        )
+
+        self.add_state(
+            "REQUEST_REPHRASE",
+            Say(text="I'm sorry, could you rephrase the command."),
+            transitions={
+                "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "REQUEST_OPERATOR",
+            Say(
+                text="I am having trouble understanding. Could the operator please state the command for me?"
+            ),
+            transitions={
+                "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
+        self.add_state(
+            "UNABLE_TO_UNDERSTAND",
+            Say(text="I cannot understand or do that currently."),
+            transitions={
+                "succeeded": "failed",
+                "aborted": "failed",
+                "canceled": "failed",
+            },
+        )
+
         readback_state = yasmin.CbState(outcomes=["succeeded"], callback=self.readback)
         readback_state.add_input_key("transcribed_speech")
         readback_state.add_input_key("steps")
@@ -159,6 +206,7 @@ class GPSR_sm(yasmin.StateMachine):
             transitions={"succeeded": "CHECK_DISPATCH"},
         )
 
+        # Dispatcher
         self.add_state(
             "CHECK_DISPATCH",
             yasmin.CbState(
@@ -200,38 +248,6 @@ class GPSR_sm(yasmin.StateMachine):
             },
         )
 
-        self.add_state(
-            "REQUEST_REPHRASE",
-            Say(text="I'm sorry, could you rephrase the command."),
-            transitions={
-                "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "REQUEST_OPERATOR",
-            Say(
-                text="I am having trouble understanding. Could the operator please state the command for me?"
-            ),
-            transitions={
-                "succeeded": "REQUEST_AND_WAIT_FOR_COMMAND",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
-        self.add_state(
-            "UNABLE_TO_UNDERSTAND",
-            Say(text="I cannot understand or do that currently."),
-            transitions={
-                "succeeded": "failed",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
-
     def setPrompt(self, blackboard):
         blackboard["instruction_text"] = "I am ready for your command. Please state it."
         return "succeeded"
@@ -254,7 +270,7 @@ class GPSR_sm(yasmin.StateMachine):
 
     def checkOutcome(self, blackboard):
         steps = blackboard["steps"]
-        yasmin.YASMIN_LOG_INFO(f"{steps}")
+        #yasmin.YASMIN_LOG_INFO(f"{steps}")
 
         if len(steps) == 1 and steps[0].get("skill") == "say":
             say_text = (steps[0].get("args") or {}).get("text", "")
@@ -312,8 +328,8 @@ class GPSR_sm(yasmin.StateMachine):
         return "valid"
 
 
+# GPSR Service node (seperate from State Machine)
 class GPSR_service(Node):
-
     def __init__(self, node):
         super().__init__("gpsr_service")
         self.node = node
@@ -330,6 +346,7 @@ class GPSR_service(Node):
         return response
 
 
+# GPSR StateMachine node
 class GPSRNode(Node):
     def __init__(self):
         super().__init__(
