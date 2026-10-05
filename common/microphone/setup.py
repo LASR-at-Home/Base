@@ -35,7 +35,7 @@ setup(
     zip_safe=True,
     maintainer='fadi',
     maintainer_email='fadimostefai@gmail.com',
-    description='TODO: Package description',
+    description='Owns the microphone and serves audio recordings via the /microphone/record service',
     license='TODO: License declaration',
     extras_require={
         'test': [

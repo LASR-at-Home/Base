@@ -3,7 +3,7 @@
 <package format="3">
   <name>microphone</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>Owns the microphone and serves audio recordings via the /microphone/record service</description>
   <maintainer email="fadimostefai@gmail.com">fadi</maintainer>
   <license>TODO: License declaration</license>
 

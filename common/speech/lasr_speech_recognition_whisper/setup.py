@@ -44,8 +44,6 @@ setup(
     entry_points={
         "console_scripts": [
             "transcribe_microphone_server = lasr_speech_recognition_whisper.transcribe_microphone_server:main",
-            "transcribe_microphone = lasr_speech_recognition_whisper.transcribe_microphone:main",
-            "simple_transcribe_microphone = lasr_speech_recognition_whisper.simple_transcribe_microphone:main",
             "list_microphones = scripts.list_microphones:main",
             "microphone_tuning_test = scripts.microphone_tuning_test:main",
             "test_microphones = scripts.test_microphones:main",
