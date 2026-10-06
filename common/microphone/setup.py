@@ -5,13 +5,13 @@ import ament_virtualenv.install
 
 _here = os.path.dirname(os.path.abspath(__file__))
 
-package_name = "lasr_speech_recognition_whisper"
+package_name = "microphone"
 
 
 class InstallCommand(setuptools.command.install.install):
     def run(self):
         super().run()
-        os.environ["PIP_EXTRA_INDEX_URL"] = "https://download.pytorch.org/whl/cu124"
+        os.environ["PIP_EXTRA_INDEX_URL"] = "https://download.pytorch.org/whl/cpu"
         ament_virtualenv.install.install_venv(
             install_base=self.install_base,
             scripts_base=self.install_scripts,
@@ -27,7 +27,6 @@ class InstallCommand(setuptools.command.install.install):
 
 setup(
     name=package_name,
-    cmdclass={"install": InstallCommand},
     version="0.0.0",
     packages=find_packages(exclude=["test"]),
     data_files=[
@@ -36,18 +35,17 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="maayan",
-    maintainer_email="maayan.armony@gmail.com",
-    description="Speech recognition implemented using OpenAI Whisper",
-    license="MIT",
-    tests_require=["pytest"],
+    maintainer="fadi",
+    maintainer_email="fadimostefai@gmail.com",
+    description="Owns the microphone and serves audio recordings via the /microphone/record service",
+    license="TODO: License declaration",
+    extras_require={
+        "test": [
+            "pytest",
+        ],
+    },
+    cmdclass={"install": InstallCommand},
     entry_points={
-        "console_scripts": [
-            "transcribe_microphone_server = lasr_speech_recognition_whisper.transcribe_microphone_server:main",
-            "list_microphones = scripts.list_microphones:main",
-            "microphone_tuning_test = scripts.microphone_tuning_test:main",
-            "test_microphones = scripts.test_microphones:main",
-            "test_speech_server = scripts.test_speech_server:main",
-        ]
+        "console_scripts": ["mic = microphone.microphone_node:main"],
     },
 )

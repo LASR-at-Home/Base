@@ -27,6 +27,13 @@ def generate_launch_description():
         )
     )
 
+    microphone = Node(
+        package="microphone",
+        executable="mic",
+        name="microphone_node",
+        output="screen",
+    )
+
     transcribe_speech = Node(
         package="lasr_speech_recognition_whisper",
         executable="transcribe_microphone_server",
@@ -47,5 +54,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        [load_motions, yolo_service, follow_person, transcribe_speech]
+        [load_motions, yolo_service, follow_person, microphone, transcribe_speech]
     )

@@ -26,6 +26,7 @@ from .detect_wave import DetectWave
 from .ask_and_listen import AskAndListen
 
 from .detect_door_opening import DetectDoorOpening
+from .detect_doorbell import DetectDoorbell
 
 from .safe_go_to_location import SafeGoToLocation
 from .start_task import StartDoorSM

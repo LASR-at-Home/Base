@@ -1,0 +1,6 @@
+torch==2.6.0+cpu  # CPU-only build; silero-vad runs on CPU
+torchaudio==2.6.0+cpu  # silero-vad depends on torchaudio; pinned to match torch
+silero-vad
+sounddevice
+numpy
+setuptools

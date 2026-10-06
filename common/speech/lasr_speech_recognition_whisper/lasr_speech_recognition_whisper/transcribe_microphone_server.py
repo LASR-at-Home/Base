@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 import os
-import queue
 import datetime
-from collections import deque
+import threading
 from pathlib import Path
 from timeit import default_timer as timer
 from typing import Optional
@@ -10,21 +9,19 @@ from typing import Optional
 import numpy as np
 import torch
 import whisper
-import sounddevice as sd
 import soundfile as sf
 
 import rclpy
 from rclpy.node import Node
 from rclpy.action.server import ActionServer, CancelResponse
-from rclpy.executors import ExternalShutdownException
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 
 from lasr_speech_recognition_interfaces.action import TranscribeSpeech
+from lasr_speech_recognition_interfaces.srv import RecordAudio
 from std_msgs.msg import String
 
 SAMPLE_RATE = 16000
-CHUNK_SIZE = 512
-MAX_PHRASE_CHUNKS = int(15.0 * SAMPLE_RATE / CHUNK_SIZE)
-PRE_ROLL_CHUNKS = 16  # ~512 ms
 
 
 class TranscribeSpeechAction(Node):
@@ -35,7 +32,6 @@ class TranscribeSpeechAction(Node):
 
         self.declare_parameter("model", "small.en")
         self.declare_parameter("device", "cuda" if torch.cuda.is_available() else "cpu")
-        self.declare_parameter("mic_device", "default")
         self.declare_parameter("start_timeout", 5.0)
         self.declare_parameter("pause_threshold", 2.0)
 
@@ -52,7 +48,6 @@ class TranscribeSpeechAction(Node):
 
         self._model_name = self.get_parameter("model").value
         self._device = self.get_parameter("device").value
-        self._mic_device = self.get_parameter("mic_device").value or None
         self._start_timeout = self.get_parameter("start_timeout").value
         self._pause_threshold = self.get_parameter("pause_threshold").value
 
@@ -87,23 +82,15 @@ class TranscribeSpeechAction(Node):
             np.zeros(SAMPLE_RATE, dtype=np.float32), fp16=self._device == "cuda"
         )
 
-        from silero_vad import load_silero_vad
-
-        self._vad_model = load_silero_vad()
-
-        self._audio_queue: queue.Queue = queue.Queue()
-        self._pre_roll: deque = deque(maxlen=PRE_ROLL_CHUNKS)
-        self._collecting = False
-
-        self._stream = sd.InputStream(
-            samplerate=SAMPLE_RATE,
-            channels=1,
-            dtype="float32",
-            blocksize=CHUNK_SIZE,
-            device=self._resolve_mic_device(),
-            callback=self._audio_callback,
+        # The record call is waited on from inside execute_cb, so its response
+        # must be handled by a different thread than the one running execute_cb.
+        self._record_client = self.create_client(
+            RecordAudio,
+            "/microphone/record",
+            callback_group=MutuallyExclusiveCallbackGroup(),
         )
-        self._stream.start()
+        self.get_logger().info("Waiting for /microphone/record service...")
+        self._record_client.wait_for_service()
 
         self._action_server = ActionServer(
             self,
@@ -111,33 +98,15 @@ class TranscribeSpeechAction(Node):
             "transcribe_speech",
             execute_callback=self.execute_cb,
             cancel_callback=self.cancel_cb,
+            callback_group=ReentrantCallbackGroup(),
         )
 
         self.get_logger().info(
             f"Whisper server ready (model={self._model_name}, device={self._device})"
         )
 
-    def _resolve_mic_device(self) -> Optional[int]:
-        if self._mic_device is None:
-            return None
-        if self._mic_device.isdigit():
-            return int(self._mic_device)
-        for idx, info in enumerate(sd.query_devices()):
-            if self._mic_device in info["name"]:
-                return idx
-        raise ValueError(f"Could not find microphone: {self._mic_device}")
-
-    def _audio_callback(
-        self, indata: np.ndarray, frames: int, time_info, status
-    ) -> None:
-        chunk = indata[:, 0].copy()
-        self._pre_roll.append(chunk)
-        if self._collecting:
-            self._audio_queue.put_nowait(chunk)
-
     def cancel_cb(self, goal_handle) -> CancelResponse:
         self.get_logger().info("Goal cancelled")
-        self._collecting = False
         return CancelResponse.ACCEPT
 
     def execute_cb(self, goal_handle):
@@ -147,72 +116,39 @@ class TranscribeSpeechAction(Node):
             if goal.max_phrase_limit > 0.0
             else self._pause_threshold
         )
-        max_silent_chunks = int(pause_threshold * SAMPLE_RATE / CHUNK_SIZE)
-        max_start_chunks = int(self._start_timeout * SAMPLE_RATE / CHUNK_SIZE)
 
-        self._vad_model.reset_states()
-        self._audio_queue = queue.Queue()
-        self._collecting = True
+        request = RecordAudio.Request(
+            mode="phrase",
+            start_timeout=float(self._start_timeout),
+            pause_threshold=float(pause_threshold),
+        )
+        done = threading.Event()
+        future = self._record_client.call_async(request)
+        future.add_done_callback(lambda _: done.set())
 
-        speech_started = False
-        silent_chunks = 0
-        start_chunks_elapsed = 0
-        collected_chunks = []
+        # The microphone node can't be interrupted mid-recording, so on cancel
+        # we stop waiting and its response is discarded when it arrives.
+        while not done.wait(timeout=0.1):
+            if goal_handle.is_cancel_requested:
+                goal_handle.canceled()
+                self._result.sequence = ""
+                return self._result
 
-        try:
-            while True:
-                if goal_handle.is_cancel_requested:
-                    self._collecting = False
-                    goal_handle.canceled()
-                    self._result.sequence = ""
-                    return self._result
-
-                try:
-                    chunk = self._audio_queue.get(timeout=CHUNK_SIZE / SAMPLE_RATE)
-                except queue.Empty:
-                    continue
-
-                is_speech = (
-                    self._vad_model(
-                        torch.from_numpy(chunk).unsqueeze(0), SAMPLE_RATE
-                    ).item()
-                    > 0.5
-                )
-
-                if not speech_started:
-                    start_chunks_elapsed += 1
-                    if start_chunks_elapsed > max_start_chunks:
-                        self.get_logger().warn("Start timeout — no speech detected.")
-                        self._collecting = False
-                        self._result.sequence = ""
-                        goal_handle.succeed()
-                        return self._result
-                    if is_speech:
-                        speech_started = True
-                        collected_chunks = list(self._pre_roll) + [chunk]
-                else:
-                    collected_chunks.append(chunk)
-                    if is_speech:
-                        silent_chunks = 0
-                    else:
-                        silent_chunks += 1
-                        if silent_chunks >= max_silent_chunks:
-                            break
-                    if len(collected_chunks) >= MAX_PHRASE_CHUNKS:
-                        self.get_logger().warn("Max phrase duration reached.")
-                        break
-
-        except Exception as e:
-            self.get_logger().error(f"Audio collection error: {e}")
-            self._collecting = False
+        response = future.result()
+        if response is None:
+            self.get_logger().error(f"Record service error: {future.exception()}")
             self._result.sequence = ""
             goal_handle.abort()
             return self._result
-        finally:
-            self._collecting = False
+        if not response.success:
+            # Start timeout is not an error, it just means nobody spoke
+            self.get_logger().warn(f"No audio recorded: {response.message}")
+            self._result.sequence = ""
+            goal_handle.succeed()
+            return self._result
 
         try:
-            float_data = np.concatenate(collected_chunks)
+            float_data = np.frombuffer(response.samples, dtype=np.float32)
             start = timer()
             result = self._model.transcribe(
                 float_data,
@@ -258,16 +194,6 @@ class TranscribeSpeechAction(Node):
         except Exception as e:
             self.get_logger().warn(f"Failed to save recording: {e}")
 
-    def destroy_node(self):
-        self._stream.stop()
-        self._stream.close()
-        super().destroy_node()
-
-    def destroy_node(self):
-        self._stream.stop()
-        self._stream.close()
-        super().destroy_node()
-
 
 def main(args=None):
     whisper_cache = os.path.join(str(Path.home()), ".cache", "whisper")
@@ -276,8 +202,10 @@ def main(args=None):
 
     rclpy.init(args=args)
     server = TranscribeSpeechAction()
+    executor = MultiThreadedExecutor()
+    executor.add_node(server)
     try:
-        rclpy.spin(server)
+        executor.spin()
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
