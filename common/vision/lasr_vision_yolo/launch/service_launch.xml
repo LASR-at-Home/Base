@@ -1,7 +1,9 @@
 <launch>
     <arg name="preload" default="['yolo11n-seg.pt']"/>
+    <arg name="sim" default="False"/>
 
     <node name="yolo_service" exec="yolo_service_node" pkg="lasr_vision_yolo" output="screen">
         <param name="preload" type="yaml" value="$(var preload)"/>
+        <param name="sim" value="$(var sim)"/>
     </node>
 </launch>

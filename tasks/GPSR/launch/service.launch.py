@@ -32,6 +32,7 @@ def generate_launch_description():
         period=5.0, actions=[gpsr_service_node]  # Delay in seconds (adjust as needed)
     )
 
+    sim = DeclareLaunchArgument("sim", default_value="False")
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -39,7 +40,8 @@ def generate_launch_description():
                 "launch",
                 "service_launch.xml",
             )
-        )
+        ),
+        launch_arguments={"sim": LaunchConfiguration("sim")}.items(),
     )
 
     load_motions = IncludeLaunchDescription(
@@ -73,6 +75,7 @@ def generate_launch_description():
                 default_value="mic",
                 description='Command input source: "keyboard" or "mic"',
             ),
+            sim,
             whisper_server,
             load_motions,
             yolo_service,

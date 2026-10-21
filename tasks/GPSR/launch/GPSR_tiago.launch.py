@@ -17,9 +17,9 @@ def generate_launch_description():
     input_mode = LaunchConfiguration("input_mode")
 
     pkg_gpsr = get_package_share_directory("GPSR")
-
     params = os.path.join(pkg_gpsr, "config", "params.yaml")
 
+    sim = DeclareLaunchArgument("sim", default_value="False")
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -27,7 +27,8 @@ def generate_launch_description():
                 "launch",
                 "service_launch.xml",
             )
-        )
+        ),
+        launch_arguments={"sim": LaunchConfiguration("sim")}.items(),
     )
 
     load_motions = IncludeLaunchDescription(
@@ -63,11 +64,13 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+
             DeclareLaunchArgument(
                 "input_mode",
                 default_value="mic",
                 description='Command input source: "keyboard" or "mic"',
             ),
+            sim,
             whisper_server,
             load_motions,
             yolo_service,

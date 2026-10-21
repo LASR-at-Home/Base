@@ -104,6 +104,17 @@ class YOLOServiceNode:
             "~preload", ["yolo11n-seg.pt", "yolo11n.pt", "yolo11n-pose.pt"]
         )
         self.preload_param_list = self.node.get_parameter("~preload").value
+
+        # The sim publishes depth in meters, the real camera in millimeters
+        self.node.declare_parameter("sim", False)
+        if self.node.get_parameter("sim").value:
+            self._depth_scale = 1.0
+            self.node.get_logger().info("SIM USE - No Depth Scaling")
+        else:
+            self._depth_scale = 1000.0
+            self.node.get_logger().info("REAL USE - Depth Scaling Applied")
+
+        
         for model in self.preload_param_list:
             self._maybe_load_model(model)
 
@@ -186,7 +197,7 @@ class YOLOServiceNode:
         roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
 
         v, u = np.where(roi)
-        z = depth_im[v, u] / 1000.0  # convert mm to meters
+        z = depth_im[v, u] / self._depth_scale  # convert mm to meters (real only)
         valid = z > 0
         z = z[valid]
         u = u[valid]
@@ -347,7 +358,7 @@ class YOLOServiceNode:
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
                     z_mm = depth_im[v, u]
-                    z = z_mm / 1000.0  # convert mm to meters
+                    z = z_mm / self._depth_scale  # convert mm to meters (real only)
                     # Skip invalid/near-camera depths (< 100mm)
                     # Allow up to 20m for distant detections (will use laser fallback if needed)
                     if z <= 0.1 or z > 20.0:

@@ -2,9 +2,9 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import IncludeLaunchDescription, TimerAction, DeclareLaunchArgument
 from launch.launch_description_sources import AnyLaunchDescriptionSource
-
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     load_motions = IncludeLaunchDescription(
@@ -17,6 +17,7 @@ def generate_launch_description():
         )
     )
 
+    sim = DeclareLaunchArgument("sim", default_value="False")
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -24,7 +25,8 @@ def generate_launch_description():
                 "launch",
                 "service_launch.xml",
             )
-        )
+        ),
+        launch_arguments={"sim": LaunchConfiguration("sim")}.items(),
     )
 
     vlm = Node(
@@ -61,6 +63,8 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            sim,
+
             load_motions,
             yolo_service,
             reid_service,

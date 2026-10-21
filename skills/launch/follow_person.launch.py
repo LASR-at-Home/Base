@@ -2,11 +2,15 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, TimerAction
-from launch.launch_description_sources import AnyLaunchDescriptionSource
 
+from launch.actions import IncludeLaunchDescription, TimerAction, DeclareLaunchArgument
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
+
+    sim = DeclareLaunchArgument("sim", default_value="False")
+
     load_motions = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -23,8 +27,9 @@ def generate_launch_description():
                 get_package_share_directory("lasr_vision_yolo"),
                 "launch",
                 "service_launch.xml",
-            )
-        )
+            ),
+        ),
+        launch_arguments={"sim": LaunchConfiguration("sim")}.items(),
     )
 
     transcribe_speech = Node(
@@ -47,5 +52,5 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        [load_motions, yolo_service, follow_person, transcribe_speech]
+        [sim, load_motions, yolo_service, follow_person, transcribe_speech]
     )
