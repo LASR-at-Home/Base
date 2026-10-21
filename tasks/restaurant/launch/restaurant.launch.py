@@ -17,15 +17,6 @@ def generate_launch_description():
         )
     )
 
-    bodypix_service = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-            os.path.join(
-                get_package_share_directory("lasr_vision_bodypix"),
-                "launch",
-                "bodypix_launch.py",
-            )
-        )
-    )
 
     yolo_service = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -35,6 +26,21 @@ def generate_launch_description():
                 "service_launch.xml",
             )
         )
+    )
+    llm_service = Node(
+        package="lasr_llm",
+        executable="restaurant_service",
+        name="restaurant_llm",
+        output="screen",
+        additional_env={"CUDA_VISIBLE_DEVICES": ""},  # ← Qwen на CPU, звільняє 3ГБ
+    )
+
+    speech_recognition = Node(
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_microphone_server",
+        name="transcribe_speech",
+        output="screen",
+        additional_env={"CUDA_VISIBLE_DEVICES": ""},
     )
 
     restaurant = TimerAction(
@@ -59,5 +65,7 @@ def generate_launch_description():
             load_motions,
             yolo_service,
             restaurant,
+            llm_service,
+            speech_recognition,
         ]
     )

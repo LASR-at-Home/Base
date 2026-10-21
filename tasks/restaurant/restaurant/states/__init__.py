@@ -1,6 +1,5 @@
+from .detect_wave import DetectWave
 from .survey import Survey
-
-# from .detect_wave import DetectWave
-from .detect_waving_person_rgb import DetectWavingPersonRGB
-
-# from .survey import Survey
+from .approach_person import ApproachPerson
+from .face_customer import FaceCustomer
+from .take_order_sm import TakeOrderSM

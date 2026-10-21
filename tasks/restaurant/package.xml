@@ -7,16 +7,12 @@
   <maintainer email="illiaputintsev03@gmail.com">illia</maintainer>
   <license>MIT</license>
 
-  <depend>rclpy</depend>
-  <depend>yasmin</depend>
-  <depend>yasmin_ros</depend>
+  <depend>smach</depend>
+  <depend>smach_ros</depend>
   <depend>skills</depend>
   <depend>lasr_vision_interfaces</depend>
   <depend>std_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>sensor_msgs</depend>
-  <depend>visualization_msgs</depend>
-  <depend>message_filters</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

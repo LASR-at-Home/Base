@@ -1,5 +1,7 @@
 restaurant:
   ros__parameters:
     kitchen_bar_pose:
-      posiiton: {x: 0.0, y: 0.0, z: 0.0}
+      position: {x: 0.0, y: 0.0, z: 0.0}
       orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}
+    priors:
+      items: ["cola", "water", "juice", "coffee", "tea", "sandwich", "cookie", "chips"]
