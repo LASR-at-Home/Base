@@ -1,5 +1,12 @@
 # LASR BASE development guide
 
+## Creating a new package
+1. `cd` to the relevent directory (this will be one of the folders in common)
+2. Run `ros2 pkg create --build-type ament_python <package_name>`
+    - Use `--build-type ament_cmake`instead for C++ packages or interface packages
+3. Add virtual environment support for your package (refer to: [venv guide](ament_virtualenv_guide.md)) 
+
+
 ## Supporting Documentation
 - [YASMIN](YASMIN_PORT.md)
 - [Virtual Environment](ament_virtualenv_guide.md)

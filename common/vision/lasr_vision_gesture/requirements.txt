@@ -1,0 +1,1 @@
+# no extra python dependencies (classifiers are pure python)

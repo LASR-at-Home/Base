@@ -3,7 +3,7 @@ from .wait import Wait
 from .detect_3d import Detect3D
 from .detect_3d_in_area import Detect3DInArea
 from .detect_all_in_polygon import DetectAllInPolygon
-from .detect_keypoints_3d import DetectKeypoints3D
+from .detect_gesture import DetectGesture
 
 from .say import Say
 
@@ -20,8 +20,6 @@ from .receive_object import ReceiveObject
 from .handover_object import HandoverObject
 from .eye_tracker import StartEyeTracker, StopEyeTracker
 from .wait_for_person_in_area import WaitForPersonInArea
-
-from .detect_wave import DetectWave
 
 from .ask_and_listen import AskAndListen
 

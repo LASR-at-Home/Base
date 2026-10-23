@@ -32,6 +32,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/YoloDetection3D.srv"
   "srv/YoloPoseDetection.srv"
   "srv/YoloPoseDetection3D.srv"
+  "srv/DetectGesture.srv"
   "srv/Recognise3D.srv"
   "srv/OpenVocabDetect.srv"
   "srv/OpenVocabDetectAndSegment.srv"

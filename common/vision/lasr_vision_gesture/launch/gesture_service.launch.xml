@@ -1,0 +1,12 @@
+<launch>
+    <!-- defaults are the robot topics; override for a webcam, e.g. rgb_topic:=/image_raw -->
+    <arg name="rgb_topic" default="/head_front_camera/rgb/image_raw"/>
+    <arg name="depth_topic" default="/head_front_camera/depth/image_raw"/>
+    <arg name="camera_info_topic" default="/head_front_camera/depth/camera_info"/>
+
+    <node name="gesture_service" exec="gesture_service_node" pkg="lasr_vision_gesture" output="screen">
+        <param name="rgb_topic" value="$(var rgb_topic)"/>
+        <param name="depth_topic" value="$(var depth_topic)"/>
+        <param name="camera_info_topic" value="$(var camera_info_topic)"/>
+    </node>
+</launch>

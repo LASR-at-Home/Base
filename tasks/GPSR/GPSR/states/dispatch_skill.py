@@ -19,7 +19,7 @@ from lasr_skills import (
     GoToLocation,
     HandoverObject,
     ReceiveObject,
-    DetectWave,
+    DetectGesture,
     Rotate,
     FollowPerson,
     Wait,
@@ -162,8 +162,8 @@ class DispatchSkill(yasmin.State):
 
     def _detect_waving_person(self) -> bool:
         try:
-            outcome = DetectWave()(self.task_bb)
-            if outcome == "waving":
+            outcome = DetectGesture(gesture="waving")(self.task_bb)
+            if outcome == "succeeded" and len(self.task_bb["gesture_locations"]) > 0:
                 return True
 
         except Exception as exc:
@@ -411,23 +411,25 @@ class DispatchSkill(yasmin.State):
             return self._say(args.get("text", ""))
         if skill == "go_to_location":  # CHECKED
             return self._go_to_location(args.get("location", ""))
-        if skill == "guide_person":  # SOMEWHAT WORKS
+        if skill == "guide_person":  # SHOULD WORK (only uses go_to_location)
             return self._guide_person(args)
-        if (
-            skill == "find_person"
-        ):  # OUTDATED / BROKEN BACKEND - Disabled use of face detector
+        if skill == "find_person":  # BROKEN BACKEND 
+            # Broken/Missing logic: 
+            #  - New Gesture Logic exists just need to be implemented in the dispatcher
+            #  - Clothes description are untested
+            #  - Check is only infront of the camera / Doesn't scan entire room
             return self._find_person(args)
-        if skill == "get_person_info":  # SHOULD WORK
+        if skill == "get_person_info":  # UNTESTED
             return self._get_person_info(args)
-        if skill == "pick_up":  # SHOULD WORK
+        if skill == "pick_up":  # WORKED IN ROBOCUP (RETEST) - WITHOUT MANIPULATION
             return self._pick_up(args)
-        if skill == "place_object":  # SHOULD WORK
+        if skill == "place_object":  # WORKED IN ROBOCUP (RETEST) - WITHOUT MANIPULATION
             return self._place_object(args)
-        if skill == "give_to_person":  # SHOULD WORK
+        if skill == "give_to_person":  # WORKED IN ROBOCUP (RETEST) - WITHOUT MANIPULATION
             return self._give_to_person(args)
-        if skill == "follow_person":  # SHOULD WORK
+        if skill == "follow_person":  # UNTESTED - INDEPENDENT STATE RAN - SHOULD WORK
             return self._follow_person()
-        if skill == "find_object":  # SHOULD WORK
+        if skill == "find_object":  # I BELIEVE IT WORKED IN ROBOCUP HOWEVER NEEDS TO BE RETESTED.
             return self._find_object(args.get("object", ""))
 
         # CAN ADD follow_person, find_object

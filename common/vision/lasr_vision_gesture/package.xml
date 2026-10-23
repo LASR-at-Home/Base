@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>lasr_vision_gesture</name>
+  <version>0.0.0</version>
+  <description>A package providing a gesture detection service.</description>
+  <maintainer email="aldrich.fernandes05@gmail.com">aldrich</maintainer>
+  <license>TODO: License declaration</license>
+
+  <depend>lasr_vision_interfaces</depend>
+  <depend>rclpy</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>message_filters</depend>
+
+  <build_depend>ament_virtualenv</build_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+    <pip_requirements>requirements.txt</pip_requirements>
+  </export>
+</package>

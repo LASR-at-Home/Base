@@ -1,0 +1,16 @@
+# Name of the gesture to look for, e.g. raising_left_arm, pointing_right, waving
+string gesture
+
+# Use depth to return 3D locations (default). If false (or if no depth arrives) the
+# locations are in image pixels with z = 0 and frame_id "image"
+bool use_3d true
+
+# Frame the 3D locations are returned in (only used when use_3d is true)
+string target_frame "map"
+
+# How long to keep looking for the gesture, in seconds
+float32 timeout 5.0
+
+---
+# One location per person found making the gesture
+geometry_msgs/PointStamped[] locations
