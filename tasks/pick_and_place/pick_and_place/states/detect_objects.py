@@ -134,7 +134,7 @@ class DetectObjects(yasmin.State):
 
     # ── helpers ──
     @staticmethod
-    def _wait_future(future, timeout=30.0):
+    def _wait_future(future, timeout=120.0):
         start = time.time()
         while not future.done():
             if time.time() - start > timeout:
@@ -231,7 +231,7 @@ class DetectObjects(yasmin.State):
         req.text_threshold = float(self.TEXT_THRESHOLD)
         yasmin.YASMIN_LOG_INFO(f"open_vocab queries: {self._queries}")
 
-        resp = self._wait_future(self._ovd.call_async(req), timeout=30.0)
+        resp = self._wait_future(self._ovd.call_async(req), timeout=120.0)
         if resp is None:
             yasmin.YASMIN_LOG_ERROR("open_vocab/detect failed or timed out.")
             return "failed"
