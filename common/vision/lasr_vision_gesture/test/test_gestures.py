@@ -21,10 +21,10 @@ def person(**overrides):
     return kp
 
 
-def test_neutral_person_matches_nothing():
+def test_neutral_person_is_only_standing():
     kp = person()
     for name, classify in STATIC.items():
-        assert not classify(kp), name
+        assert classify(kp) == (name == "standing"), name
 
 
 def test_raising_arms():
@@ -55,12 +55,15 @@ def test_lying_down_and_sitting():
     assert STATIC["lying_down"](lying)
     seated = person(left_knee=(330, 420), right_knee=(270, 420))
     assert STATIC["sitting"](seated)
+    assert not STATIC["standing"](seated)
     assert not STATIC["sitting"](person())
+    assert not STATIC["standing"](lying)
 
 
 def test_missing_keypoints_cannot_decide():
     assert not STATIC["raising_left_arm"]({"left_wrist": (0, 0)})
     assert not STATIC["sitting"]({})
+    assert not STATIC["standing"]({})
 
 
 def _wave_frame(t):

@@ -26,6 +26,7 @@ POINT_MIN_ELBOW_ANGLE = math.radians(150)  # arm is (nearly) straight
 POINT_MIN_REACH = 1.2  # wrist this many shoulder widths away sideways
 POINT_MAX_HEIGHT_DIFF = 0.5  # wrist within this of shoulder height
 SIT_MAX_THIGH_RATIO = 0.4  # vertical thigh length / torso length
+STAND_MIN_THIGH_RATIO = 0.6  # between the two it is neither sitting nor standing
 LYING_MAX_TORSO_ANGLE = math.radians(35)  # torso angle from horizontal
 
 
@@ -81,16 +82,28 @@ def lying_down(kp: Person) -> bool:
     return torso_angle is not None and torso_angle < LYING_MAX_TORSO_ANGLE
 
 
-def sitting(kp: Person) -> bool:
-    """Knees at roughly hip height. Weak from a head-on 2D view, best effort."""
+def _thigh_ratio(kp: Person):
+    """Vertical hip-to-knee distance / torso length for an upright torso, else None."""
     torso_angle, torso_len = _torso_angle_from_horizontal(kp)
     knee = mean_point(kp, "left_knee", "right_knee")
     hip = hip_mid(kp)
     if torso_angle is None or knee is None or hip is None:
-        return False
+        return None
     if torso_angle < LYING_MAX_TORSO_ANGLE:
-        return False
-    return abs(knee[1] - hip[1]) / torso_len < SIT_MAX_THIGH_RATIO
+        return None
+    return abs(knee[1] - hip[1]) / torso_len
+
+
+def sitting(kp: Person) -> bool:
+    """Knees at roughly hip height. Weak from a head-on 2D view, best effort."""
+    ratio = _thigh_ratio(kp)
+    return ratio is not None and ratio < SIT_MAX_THIGH_RATIO
+
+
+def standing(kp: Person) -> bool:
+    """Upright torso with the knees well below the hips. Best effort in 2D."""
+    ratio = _thigh_ratio(kp)
+    return ratio is not None and ratio > STAND_MIN_THIGH_RATIO
 
 
 STATIC: Dict[str, Callable[[Person], bool]] = {
@@ -100,4 +113,5 @@ STATIC: Dict[str, Callable[[Person], bool]] = {
     "pointing_right": _pointing(-1),
     "lying_down": lying_down,
     "sitting": sitting,
+    "standing": standing,
 }

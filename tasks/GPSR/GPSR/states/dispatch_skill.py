@@ -143,9 +143,9 @@ class DispatchSkill(yasmin.State):
             return "failed"
         return outcome
 
-    def _detect_faces(
-        self,
-    ):  # TODO: Use Yolo to detect people then choose closest --- Update to find people faces   # Redundent as is replaced by REiD and spin breaks code.
+    def _detect_faces(self):  # Sub-skill
+        # TODO: Use Yolo to detect people then choose closest --- Update to find people faces
+        # TODO: Update to use ReID
         try:
             outcome = Detect3D(model="yolo11n.pt", filter=["person"])
 
@@ -154,25 +154,27 @@ class DispatchSkill(yasmin.State):
 
         except Exception as exc:
             self.node.get_logger().error(
-                f"Detect faces (placeholder with detect_wave) failed: {exc}"
+                f"Detect faces (Detect3d with person filter) failed: {exc}"
             )
             return False
 
         return False
-
-    def _detect_waving_person(self) -> bool:
+    
+    def _detect_gesture(self, gesture: str="") -> bool:
+        #TODO: update to get and use room polygon
         try:
-            outcome = DetectGesture(gesture="waving")(self.task_bb)
+            outcome = DetectGesture(gesture=gesture)(self.task_bb)
             if outcome == "succeeded" and len(self.task_bb["gesture_locations"]) > 0:
                 return True
 
         except Exception as exc:
-            self.node.get_logger().error(f"Ask/listen failed: {exc}")
+            self.node.get_logger().error(f"Detect Gestures failed: {exc}")
             return False
 
         return False
 
     def _describe_person(self):
+        #TODO: Ensure this works properly and handles the inputs and outputs correctly
         try:
             outcome = DescribePeople()(self.task_bb)
         except Exception as exc:
@@ -195,6 +197,7 @@ class DispatchSkill(yasmin.State):
             self._say("I need a destination to guide a person.")
             return "failed"
 
+        # if a start location was defined ensures the robot is there
         if start:
             if self._go_to_location(start) == "failed":
                 return "failed"
@@ -205,35 +208,47 @@ class DispatchSkill(yasmin.State):
             self._say(f"Please follow me to the {end}.")
         return self._go_to_location(end)
 
-    def _find_person(
-        self, args: dict[str, Any]
-    ):  # TODO:  Update with a 'search in area' which scans and rotates to find an object/person in the room
+    def _find_person(self, args: dict[str, Any]):  
+        # TODO:  Update with a 'search in area' which scans and rotates to find an object/person in the room - creatrea a new service/skill for this
         location = self._first_arg(args, "location")
         name = self._first_arg(args, "name")
         gesture = self._first_arg(args, "gesture")
         clothes = self._first_arg(args, "clothes")
-
-        # check around room
 
         if location:
             if self._go_to_location(location) == "failed":
                 return "failed"
 
         if gesture:
-            if gesture == "waving":
-                if self._detect_waving_person():
-                    self._say("I found someone waving.")
-                    return "succeeded"
-                self._say("Please wave so I can find you.")
-                if self._detect_waving_person():
-                    self._say("I found someone waving.")
-                    return "succeeded"
-                self._say("I could not confirm a waving person.")
-                return "failed"
+            valid_gestures = ['lying_down', 'pointing_left', 'pointing_right', 'raising_left_arm', 'raising_right_arm', 'sitting', 'waving', 'standing']
+            gesture_clean = gesture.replace("_", " ")
+
+            # If gesture is not handled default to waving
+            if gesture not in valid_gestures:
+                self._say(f"Requested gesture {gesture_clean}, is not a handled gesture. Please wave instead.")
+                gesture = "waving"
+                gesture_clean = "waving"
+
+
+            if self._detect_gesture(gesture):
+                self._say(f"I found someone with gesture {gesture_clean}.")
+                return "succeeded"
+            
+            # Backup Behaviour
+            self._say(f"Please gesture {gesture_clean} so I can find you.")
+            Wait(1)(self.task_bb)
+            if self._detect_gesture(gesture):
+                self._say(f"I found someone with gesture {gesture_clean}.")
+                return "succeeded"
+            
+            self._say(f"I could not confirm someone with gesture {gesture_clean}.")
+            
+            return "failed"
+            
 
         if name:
             self._say(f"{name}, please wave so I can find you.")
-            if self._detect_waving_person():
+            if self._detect_gesture("waving"):
                 self._say(f"I found someone who may be {name}.")
                 return "succeeded"
 
@@ -245,12 +260,12 @@ class DispatchSkill(yasmin.State):
                     self._say(f"I found a person wearing a {clothes} shirt.")
                     return "succeeded"
 
-        # TODO:  Ask for person to move infront of you. then wait
         self._say(
             "I cannot see you so can you please step infront of me. I will wait a few seconds"
         )
-        time.sleep(3)
+        Wait(3)(self.task_bb)
 
+        # Final fallback - Just detect anybody 
         detections = self._detect_faces()
         if detections:
             self._say("I found a person.")
@@ -264,7 +279,7 @@ class DispatchSkill(yasmin.State):
         try:
             outcome = ReceiveObject(object_name=obj)(self.task_bb)
         except Exception as exc:
-            self.node.get_logger().error(f"ReceiveObject failed: {exc}")
+            self.node.get_logger().error(f"ReceiveObject for object pick-up failed: {exc}")
             return "failed"
         return outcome
 
@@ -415,7 +430,6 @@ class DispatchSkill(yasmin.State):
             return self._guide_person(args)
         if skill == "find_person":  # BROKEN BACKEND 
             # Broken/Missing logic: 
-            #  - New Gesture Logic exists just need to be implemented in the dispatcher
             #  - Clothes description are untested
             #  - Check is only infront of the camera / Doesn't scan entire room
             return self._find_person(args)

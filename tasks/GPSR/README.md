@@ -81,7 +81,7 @@ The GPSR dispatcher currently executes the following skills in the real ROS runt
 | `go_to_location` | yes | Uses Nav2 to drive to a mapped pose. | Both |
 | `say` | yes | Uses the TTS action. | Both |
 | `guide_person` | partial | Speaks a follow-me instruction and navigates to the destination. | No |
-| `find_person` | reimplement | Identifies people using, location, gesture or description. Package for gesture is implemented in common, However other aspects need to be implemented and tested. | No |
+| `find_person` | yes/reimplement | Identifies people using, location, gesture or description. | No |
 | `get_person_info` | partial | Uses the vision-backed person description service for visible attributes. | No |
 | `pick_up` | yes/reimplement | Human-assisted pickup via the existing `ReceiveObject` sequence. | Both |
 | `place_object` | reimplement | Human-assisted placement request at the target location; still depends on `AskAndListen` to confirm completion. | No |
@@ -89,7 +89,7 @@ The GPSR dispatcher currently executes the following skills in the real ROS runt
 | `find_object` | reimplement/improve | Uses `detect3d` with `LookToPoint` to find Item. However lacks robustness and may need to be reimplemented. | SIM ONLY |
 | `follow_person` | yes | Utilises exisiting `FollowPerson` skill. | Both |
 | `count_objects` | no | Not implemented. | No |
-| `count_people` | no | Not implemented. | No |
+| `count_people` | no | Not implemented. | No | 
 | `find_object_by_property` | no | Not implemented. | No |
 | `answer_question` | yes | Utilises `say` skill | Both |
 
