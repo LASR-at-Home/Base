@@ -1,95 +1,40 @@
 import yasmin
 import yasmin_ros
+from yasmin_ros.yasmin_node import YasminNode
 import rclpy
+import time
+# NOTE: lasr_llm_interfaces is imported LAZILY inside _classify_with_llm so that a
+# broken/stale typesupport (.so) never crashes state-machine construction. The LLM
+# is only a 3rd-tier fallback after param lookup + CATEGORY_MAP.
 
-from lasr_llm_msgs.srv import Llm
 
-# Hardcoded category map as fallback when params are unavailable.
-# Mirrors the category_map from the ROS 1 ClassifyCategory.
-# Ideally these live in your config yaml under pick_and_place.objects.<name>.category
+
 CATEGORY_MAP = {
     "fruit": {
-        "apple",
-        "banana",
-        "orange",
-        "grape",
-        "pineapple",
-        "lemon",
-        "lime",
-        "peach",
-        "plum",
-        "pear",
-        "mango",
-        "watermelon",
-        "strawberry",
-        "blueberry",
+        "apple", "banana", "orange",
     },
     "vegetable": {
-        "carrot",
-        "tomato",
-        "cucumber",
-        "lettuce",
-        "onion",
-        "broccoli",
-        "cabbage",
-        "pepper",
-        "zucchini",
-        "radish",
-        "corn",
-        "potato",
-        "garlic",
+        "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli",
+        "cabbage", "pepper", "zucchini", "radish", "corn", "potato", "garlic",
     },
     "beverage": {
-        "bottle",
-        "can",
-        "water bottle",
-        "juice box",
-        "milk carton",
-        "soda can",
-        "coffee cup",
-        "energy drink",
-        "thermos",
+        "bottle", "water bottle", "juice", "milk",
+        "soda can", "coffee cup", "energy drink", "thermos", "coke", "red bull", "iced tea",
     },
     "snack": {
-        "chips",
-        "crackers",
-        "candy",
-        "chocolate bar",
-        "cookie",
-        "snack bag",
-        "biscuit",
-        "granola bar",
-        "popcorn",
+        "chips", "crackers", "candy", "chocolate bar", "cookie",
+        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "crisps",
     },
     "cleaning": {
-        "soap",
-        "sponge",
-        "brush",
-        "cleaner",
-        "detergent",
-        "tissue box",
-        "toilet paper",
-        "broom",
-        "mop",
-        "spray bottle",
-        "bucket",
+        "soap", "sponge", "brush", "cleaner", "detergent", "tissue box",
+        "toilet paper", "broom", "mop", "spray bottle", "bucket", "toothpaste",
     },
     "cereal": {
-        "cereal",
-        "cereal box",
-        "oats",
-        "muesli",
+        "cereal", "cereal box", "oats", "muesli",
     },
     "dish": {
-        "fork",
-        "knife",
-        "spoon",
-        "plate",
-        "bowl",
-        "cup",
-        "wine glass",
-        "mug",
-        "chopsticks",
+        "fork", "knife", "spoon", "plate", "bowl", "wine glass",
+        "mug", "chopsticks",
     },
 }
 
@@ -107,7 +52,7 @@ class ClassifyCategory(yasmin.State):
     Classification priority:
         1. ROS 2 param lookup  (pick_and_place.objects.<name>.category)
         2. Hardcoded CATEGORY_MAP
-        3. LLM fallback via /lasr_llm/llm
+        3. LLM fallback via /storing_groceries/query_llm
 
     Blackboard inputs:
         object_name  : str        — single object name (used when task="object")
@@ -126,10 +71,8 @@ class ClassifyCategory(yasmin.State):
         """
         super().__init__(outcomes=["succeeded", "failed", "empty"])
 
-        assert task in (
-            "object",
-            "shelf",
-        ), f"ClassifyCategory task must be 'object' or 'shelf', got '{task}'"
+        assert task in ("object", "shelf"), \
+            f"ClassifyCategory task must be 'object' or 'shelf', got '{task}'"
 
         self._task = task
 
@@ -141,7 +84,9 @@ class ClassifyCategory(yasmin.State):
             self.add_output_key("shelf_category")
 
         self.node = yasmin_ros.logger_node
-        self._llm_client = self.node.create_client(Llm, "/lasr_llm/llm")
+        # Created lazily on first LLM use (see _classify_with_llm).
+        self._llm_client = None
+        self._llm_srv_type = None
 
     def execute(self, blackboard) -> str:
         if self._task == "object":
@@ -178,7 +123,6 @@ class ClassifyCategory(yasmin.State):
             return "succeeded"
 
         from collections import Counter
-
         category_counts = Counter()
 
         for name in names:
@@ -211,7 +155,9 @@ class ClassifyCategory(yasmin.State):
         # 1. Param lookup
         try:
             category = (
-                self.node.get_parameter(f"pick_and_place.objects.{name}.category")
+                self.node.get_parameter(
+                    f"pick_and_place.objects.{name}.category"
+                )
                 .get_parameter_value()
                 .string_value
             )
@@ -229,38 +175,40 @@ class ClassifyCategory(yasmin.State):
         return self._classify_with_llm(name)
 
     def _classify_with_llm(self, name: str) -> str | None:
-        """Calls the LLM service to determine the category of an unknown object."""
+        # Lazily import the interface + create the client on first use only.
+        # BOTH the import AND create_client are wrapped: the typesupport error
+        # for a broken lasr_llm_interfaces fires at create_client, so it must be
+        # inside the try. On any failure we skip the LLM tier instead of crashing.
+        if self._llm_client is None:
+            try:
+                from lasr_llm_interfaces.srv import StoringGroceriesQueryLlm
+                self._llm_srv_type = StoringGroceriesQueryLlm
+                self._llm_client = self.node.create_client(
+                    StoringGroceriesQueryLlm, "/storing_groceries/query_llm"
+                )
+            except Exception as e:
+                yasmin.YASMIN_LOG_WARN(
+                    f"lasr_llm_interfaces unavailable — skipping LLM tier ({e})."
+                )
+                return None
+
         if not self._llm_client.wait_for_service(timeout_sec=5.0):
-            yasmin.YASMIN_LOG_WARN("LLM service not available.")
+            yasmin.YASMIN_LOG_WARN("LLM service not available — skipping LLM tier.")
             return None
 
-        category_list = ", ".join(sorted(CATEGORY_MAP.keys()))
-
-        req = Llm.Request()
-        req.system_prompt = (
-            "You are a robot classifying household objects into categories. "
-            "Respond with only one word from the list provided."
-        )
-        req.prompt = (
-            f"Which category does '{name}' belong to most? "
-            f"Choose from: {category_list}."
-        )
-        req.max_tokens = 10
+        req = self._llm_srv_type.Request()
+        req.llm_input = [name]
+        req.task = "ClassifyObject"
 
         future = self._llm_client.call_async(req)
-        rclpy.spin_until_future_complete(self.node, future)
-        response = future.result()
+        deadline = time.time() + 10.0
+        while not future.done() and time.time() < deadline:
+            time.sleep(0.02)
+        response = future.result() if future.done() else None
 
         if response is None:
-            yasmin.YASMIN_LOG_WARN("LLM call failed.")
+            yasmin.YASMIN_LOG_WARN("LLM call failed/timed out.")
             return None
 
-        words = response.output.strip().lower().replace(",", "").split()
-        for word in words:
-            if word in CATEGORY_MAP:
-                return word
-
-        yasmin.YASMIN_LOG_WARN(
-            f"LLM response '{response.output}' didn't match any known category."
-        )
-        return None
+        category = response.category.strip().lower()
+        return category or None
