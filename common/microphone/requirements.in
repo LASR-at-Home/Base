@@ -1,0 +1,6 @@
+torch
+torchaudio
+silero-vad
+sounddevice
+numpy
+setuptools

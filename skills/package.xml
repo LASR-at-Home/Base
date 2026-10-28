@@ -13,6 +13,7 @@
     <test_depend>python3-pytest</test_depend>
 
     <depend>lasr_vision_interfaces</depend>
+    <depend>lasr_speech_recognition_interfaces</depend>
     <depend>sensor_msgs</depend>
     <depend>tf2_ros</depend>
     <depend>tf2_geometry_msgs</depend>

@@ -43,8 +43,36 @@ This package has no launch files.
 
 ### Services
 
-This package has no services.
+#### `RecordAudio`
+
+Served by the `microphone` node on `/microphone/record`. See the
+[microphone README](../../microphone/README.md) for details.
+
+| Request field     | Type    | Description                                                              |
+|-------------------|---------|--------------------------------------------------------------------------|
+| `mode`            | string  | `"phrase"` (wait for speech, record until a pause) or `"fixed"`.         |
+| `duration`        | float32 | `fixed` mode: seconds to record.                                         |
+| `start_timeout`   | float32 | `phrase` mode: seconds to wait for speech (0 = node default).            |
+| `pause_threshold` | float32 | `phrase` mode: seconds of silence that end the phrase (0 = node default). |
+
+| Response field | Type      | Description                                                    |
+|----------------|-----------|----------------------------------------------------------------|
+| `success`      | bool      | False on invalid request, start timeout, or recording error.   |
+| `message`      | string    | Status or error message.                                       |
+| `samples`      | float32[] | Mono samples in [-1, 1].                                       |
+| `sample_rate`  | uint32    | Sample rate of `samples` (16000).                              |
 
 ### Actions
 
-This package has no actions.
+#### `TranscribeSpeech`
+
+Served by `lasr_speech_recognition_whisper` on `/transcribe_speech`.
+
+| Goal field         | Type    | Description                                                     |
+|--------------------|---------|-----------------------------------------------------------------|
+| `energy_threshold` | float32 | Unused.                                                         |
+| `max_phrase_limit` | float32 | Seconds of silence that end the phrase (0 = server default).    |
+
+| Result field | Type   | Description                                      |
+|--------------|--------|--------------------------------------------------|
+| `sequence`   | string | Transcribed phrase, or `""` if nothing was heard. |

@@ -7,6 +7,7 @@ PyAudio
 PyYaml
 setuptools
 numba>=0.60.0
+scipy>=1.13  # numba needs scipy for BLAS; without it the numpy-1.x system scipy is picked up
 coverage>=7.0
 silero-vad
 soundfile

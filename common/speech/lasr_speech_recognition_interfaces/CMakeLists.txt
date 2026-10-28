@@ -20,6 +20,7 @@ find_package(rosidl_default_generators REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "action/TranscribeSpeech.action"
   "msg/Transcription.msg"
+  "srv/RecordAudio.srv"
   DEPENDENCIES builtin_interfaces # Add packages that above messages depend on
 )
 

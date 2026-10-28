@@ -1,0 +1,22 @@
+# Record audio from the shared microphone node.
+
+# "phrase": wait for speech (VAD), record until a pause, return the phrase.
+# "fixed":  record exactly `duration` seconds.
+string mode
+
+# fixed mode: seconds of audio to record
+float32 duration
+
+# phrase mode: seconds to wait for speech to start (0 = node default)
+float32 start_timeout
+
+# phrase mode: seconds of silence that end the phrase (0 = node default)
+float32 pause_threshold
+---
+# false on invalid request, start timeout, or recording error
+bool success
+string message
+
+# mono samples in [-1, 1]
+float32[] samples
+uint32 sample_rate

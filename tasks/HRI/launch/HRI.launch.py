@@ -52,6 +52,13 @@ def generate_launch_description():
         output="screen",
     )
 
+    microphone = Node(
+        package="microphone",
+        executable="mic",
+        name="microphone_node",
+        output="screen",
+    )
+
     transcribe_speech = Node(
         package="lasr_speech_recognition_whisper",
         executable="transcribe_microphone_server",
@@ -66,6 +73,7 @@ def generate_launch_description():
             reid_service,
             vlm,
             eye_tracker,
+            microphone,
             transcribe_speech,
             llm_service,
         ]
