@@ -346,23 +346,16 @@ class YOLOServiceNode:
 
                 conf = result.keypoints.conf.squeeze()[idx].item()
                 if conf > 0.0:
-<<<<<<< HEAD
-                    z = depth_im[v, u]  #(already in mm) for 32FC1 - in simulation 
-                    if req.depth_image.encoding == "16UC1": #(needs m -> mm) - for real robot)
-                        z = z / 1000.0
-=======
                     z_mm = depth_im[v, u]
-                    z = z_mm / 1000.0  # convert mm to meters
+                    z = z_mm / 1000.0 if req.depth_image.encoding == "16UC1" else float(z_mm)  # sim 32FC1 is already metres
                     # Skip invalid/near-camera depths (< 100mm)
                     # Allow up to 20m for distant detections (will use laser fallback if needed)
                     if z <= 0.1 or z > 20.0:
                         continue
->>>>>>> origin/ros2
                     x = z * (u - cx) / fx
                     y = z * (v - cy) / fy
                     if np.isnan(x) or np.isnan(y) or np.isnan(z):
                         continue
-
 
                     point = Point(x=float(x), y=float(y), z=float(z))
                     point_stamped = PointStamped()

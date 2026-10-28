@@ -1,5 +1,6 @@
 import rclpy
 import yasmin
+import tf2_ros
 from yasmin_ros import ServiceState
 from time import sleep
 import message_filters
@@ -22,6 +23,8 @@ class DetectWave(ServiceState):
         confidence=0.5,
         target_frame="map",
         max_arm=0.9,
+        raise_margin=0.15,
+        elbow_tolerance=0.15,
     ):
         super().__init__(
             srv_type=YoloPoseDetection3D,
@@ -38,6 +41,10 @@ class DetectWave(ServiceState):
         self.target_frame = target_frame
         self._marker_pub = self._node.create_publisher(Marker, "/wave_debug_marker", 1)
         self.max_arm = max_arm
+        self.raise_margin = raise_margin
+        self.elbow_tolerance = elbow_tolerance
+        self._buf = tf2_ros.Buffer()
+        self._tf = tf2_ros.TransformListener(self._buf, self._node)
 
         qos = QoSProfile(
             depth=10,
@@ -85,38 +92,64 @@ class DetectWave(ServiceState):
         req.target_frame = self.target_frame
         return req
 
+    def _raised_arm(self, kp, side):
+        shoulder = kp.get(f"{side}_shoulder")
+        elbow = kp.get(f"{side}_elbow")
+        wrist = kp.get(f"{side}_wrist")
+        if shoulder is None or elbow is None or wrist is None:
+            return None
+        # hand clearly above the shoulder, and the elbow up too, so one noisy wrist point is not enough
+        if wrist.z < shoulder.z + self.raise_margin:
+            return None
+        if elbow.z < shoulder.z - self.elbow_tolerance:
+            return None
+        return shoulder, wrist
+
+    def _arm_heights(self, kp):
+        parts = []
+        for side in ("left", "right"):
+            sh = kp.get(f"{side}_shoulder")
+            if sh is None:
+                parts.append(f"{side}: no shoulder")
+                continue
+            el, wr = kp.get(f"{side}_elbow"), kp.get(f"{side}_wrist")
+            el_s = f"{el.z - sh.z:+.2f}" if el is not None else "none"
+            wr_s = f"{wr.z - sh.z:+.2f}" if wr is not None else "none"
+            parts.append(f"{side} elbow {el_s} wrist {wr_s}")
+        return ", ".join(parts)
+
+    def _robot_xy(self):
+        try:
+            t = self._buf.lookup_transform(self.target_frame, "base_footprint", Time())
+            return t.transform.translation.x, t.transform.translation.y
+        except Exception as e:
+            yasmin.YASMIN_LOG_WARN(f"no robot pose, ranking by distance to origin: {e}")
+            return 0.0, 0.0
+
     def _response_handler(self, blackboard, response):
         best_point, best_dist = None, None
-        for det in response.detections:
+        rx, ry = self._robot_xy()
+        for i, det in enumerate(response.detections):
             kp = {k.keypoint_name: k.point for k in det.keypoints}
-            shoulder = wrist = None
-            yasmin.YASMIN_LOG_INFO(f"kp: {kp}")
-
-            if (
-                "left_wrist" in kp
-                and "left_shoulder" in kp
-                and kp["left_wrist"].z > kp["left_shoulder"].z
-            ):
-                shoulder, wrist = kp["left_shoulder"], kp["left_wrist"]
-            elif (
-                "right_wrist" in kp
-                and "right_shoulder" in kp
-                and kp["right_wrist"].z > kp["right_shoulder"].z
-            ):
-                shoulder, wrist = kp["right_shoulder"], kp["right_wrist"]
-            if shoulder is None:
+            arm = self._raised_arm(kp, "left") or self._raised_arm(kp, "right")
+            if arm is None:
+                yasmin.YASMIN_LOG_INFO(f"person {i}: not waving ({self._arm_heights(kp)})")
                 continue
+            shoulder, wrist = arm
 
-            arm = (
+            length = (
                 (wrist.x - shoulder.x) ** 2
                 + (wrist.y - shoulder.y) ** 2
                 + (wrist.z - shoulder.z) ** 2
             ) ** 0.5
-            if arm > self.max_arm:
-                yasmin.YASMIN_LOG_WARN(f"rejected: arm={arm:.2f}m (mis-grouped?)")
+            if length > self.max_arm:
+                yasmin.YASMIN_LOG_WARN(f"person {i}: rejected, arm={length:.2f}m (mis-grouped?)")
                 continue
 
-            d = shoulder.x**2 + shoulder.y**2
+            d = (shoulder.x - rx) ** 2 + (shoulder.y - ry) ** 2
+            yasmin.YASMIN_LOG_INFO(
+                f"person {i}: waving at ({shoulder.x:.2f}, {shoulder.y:.2f}), {d ** 0.5:.2f}m from robot"
+            )
             if best_dist is None or d < best_dist:
                 best_dist, best_point = d, shoulder
 
