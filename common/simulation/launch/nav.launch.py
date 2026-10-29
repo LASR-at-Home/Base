@@ -10,13 +10,6 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg_sim = get_package_share_directory("simulation")
-    pkg_tiago_gazebo = get_package_share_directory("tiago_gazebo")
-
-    my_models_path = os.path.join(pkg_sim, "models")
-    existing = os.environ.get("GAZEBO_MODEL_PATH", "")
-    os.environ["GAZEBO_MODEL_PATH"] = (
-        (existing + ":" + my_models_path) if existing else my_models_path
-    )
 
     maps_dir = os.path.join(pkg_sim, "maps")
     map_pgm = os.path.join(maps_dir, "map.pgm")
@@ -33,18 +26,10 @@ def generate_launch_description():
     INITIAL_POSE_Y = "-6.340"
     INITIAL_POSE_YAW = "2.204"
 
+    # TIAGo in the house world with MoveIt and grasping (rviz:=True also
+    # opens MoveIt's RViz next to the mapping one below)
     tiago = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_tiago_gazebo, "launch", "tiago_gazebo.launch.py")
-        ),
-        launch_arguments={
-            "is_public_sim": "True",
-            "world_name": "house",
-            "moveit": "True",
-            "rviz": "False",
-            "navigation": "False",
-            "tuck_arm": "True",
-        }.items(),
+        PythonLaunchDescriptionSource(os.path.join(pkg_sim, "launch", "sim.launch.py"))
     )
 
     map_server = Node(
