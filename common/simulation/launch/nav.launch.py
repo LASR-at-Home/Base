@@ -17,14 +17,14 @@ from launch_ros.actions import Node
 def generate_launch_description():
     pkg_sim = get_package_share_directory("simulation")
 
-    # map:=<name> loads maps/<name>.yaml (which points at maps/<name>.pgm)
-    map_arg = DeclareLaunchArgument(
-        "map",
-        default_value="robocup_map",
-        description="Name of the map in maps/ without extension (robocup_map or map)",
+    # world:=<name> loads worlds/<name>.world and the matching maps/<name>.yaml
+    world_arg = DeclareLaunchArgument(
+        "world",
+        default_value="robocup",
+        description="World and map name in worlds/ and maps/ without extension (robocup or house)",
     )
     map_yaml = PathJoinSubstitution(
-        [pkg_sim, "maps", [LaunchConfiguration("map"), ".yaml"]]
+        [pkg_sim, "maps", [LaunchConfiguration("world"), ".yaml"]]
     )
 
     nav_params = os.path.join(pkg_sim, "config", "nav2_params_scan_raw.yaml")
@@ -39,7 +39,8 @@ def generate_launch_description():
     # TIAGo in the house world with MoveIt and grasping (rviz:=True also
     # opens MoveIt's RViz next to the mapping one below)
     tiago = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(pkg_sim, "launch", "sim.launch.py"))
+        PythonLaunchDescriptionSource(os.path.join(pkg_sim, "launch", "sim.launch.py")),
+        launch_arguments={"world": LaunchConfiguration("world")}.items(),
     )
 
     map_server = Node(
@@ -213,7 +214,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            map_arg,
+            world_arg,
             tiago,
             nav2_nodes,
             rviz,

@@ -2,7 +2,7 @@
 """Interactive tool to label locations on the map by clicking.
 
 Usage:
-    python3 label_locations.py [--map map] [--output locations.yaml]
+    python3 label_locations.py [--map robocup] [--output locations.yaml]
 
 Click on the map, type the name in the text box at the bottom, press Enter to confirm.
 Press 'u' to undo last, 's' or 'q' to save and quit.
@@ -22,8 +22,8 @@ import yaml
 from PIL import Image
 
 MAP_DIR = Path(__file__).parent
-MAP_IMAGE = MAP_DIR / "map.pgm"
-MAP_YAML = MAP_DIR / "map.yaml"
+MAP_IMAGE = MAP_DIR / "house.pgm"
+MAP_YAML = MAP_DIR / "house.yaml"
 
 
 def load_map_params():
@@ -54,7 +54,7 @@ def save(output_path, locations):
 def main():
     parser = argparse.ArgumentParser(description="Label locations on the map")
     parser.add_argument("--output", default=str(MAP_DIR / "locations.yaml"))
-    parser.add_argument("--map", default="map", help="map name in this folder, e.g. robocup_map")
+    parser.add_argument("--map", default="robocup", help="map name in this folder, e.g. robocup or house")
     args = parser.parse_args()
 
     global MAP_IMAGE, MAP_YAML

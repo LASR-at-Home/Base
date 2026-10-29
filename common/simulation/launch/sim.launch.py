@@ -38,13 +38,19 @@ def generate_launch_description():
         description="Show RViz with MoveIt's MotionPlanning display",
     )
 
+    world_arg = DeclareLaunchArgument(
+        "world",
+        default_value="robocup",
+        description="Name of the world in worlds/ without extension (robocup or house)",
+    )
+
     tiago_launch = include(
         "tiago_gazebo",
         "tiago_gazebo.launch.py",
         {
             "navigation": "False",
             "is_public_sim": "True",
-            "world_name": "robocup",
+            "world_name": LaunchConfiguration("world"),
             "moveit": "False",  # started below instead
             "tuck_arm": "True",
         },
@@ -75,6 +81,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            world_arg,
             rviz_arg,
             tiago_launch,
             move_group,

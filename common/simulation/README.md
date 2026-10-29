@@ -13,6 +13,7 @@ Arguments (both launch files):
 
 - `rviz:=True` opens RViz with MoveIt's MotionPlanning display (with `nav.launch.py`, next to its mapping RViz)
 - `gzclient:=False` runs Gazebo without its GUI
+- `world:=robocup_map` defines which world map to use. (default "robocup_map". Old map is "house")
 
 ## Grasping
 
@@ -34,13 +35,20 @@ they stop at the object, and with a larger error the gripper controller (2 cm
 goal tolerance) may report the motion as failed.
 
 ## Mapping
+1. Launch the simulation using:
+    ```
+    ros2 launch simulation sim.launch.py
+    ``` 
+    or launch a fresh gazebo world with TIAGo
 
-slam_toolbox / neccesary dependencies may not be availiable
 
-Mapping:
-
+2. Mapping:
+    ```
     ros2 run slam_toolbox async_slam_toolbox_node --ros-args --params-file <path_to_slam_params.yaml>
+    ```
 
-Save the map:
+3. Save the map:
 
+    ```
     ros2 run nav2_map_server map_saver_cli -f <path_map>
+    ```
