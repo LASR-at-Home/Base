@@ -3,28 +3,38 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    TimerAction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     pkg_sim = get_package_share_directory("simulation")
 
-    maps_dir = os.path.join(pkg_sim, "maps")
-    map_pgm = os.path.join(maps_dir, "map.pgm")
-    map_yaml = "/tmp/map_resolved.yaml"
-    with open(os.path.join(maps_dir, "map.yaml")) as f:
-        content = f.read()
-    with open(map_yaml, "w") as f:
-        f.write(content.replace("image: map.pgm", f"image: {map_pgm}"))
+    # map:=<name> loads maps/<name>.yaml (which points at maps/<name>.pgm)
+    map_arg = DeclareLaunchArgument(
+        "map",
+        default_value="robocup_map",
+        description="Name of the map in maps/ without extension (robocup_map or map)",
+    )
+    map_yaml = PathJoinSubstitution(
+        [pkg_sim, "maps", [LaunchConfiguration("map"), ".yaml"]]
+    )
 
     nav_params = os.path.join(pkg_sim, "config", "nav2_params_scan_raw.yaml")
     rviz_config = os.path.join(pkg_sim, "config", "mapping.rviz")
 
-    INITIAL_POSE_X = "9.151"
-    INITIAL_POSE_Y = "-6.340"
-    INITIAL_POSE_YAW = "2.204"
+    # Start pose in the map frame. The map was built in the Gazebo world frame, so
+    # this is also where TIAGo is teleported to (tiago_gazebo spawns it at 0, 0).
+    INITIAL_POSE_X = "2.37254"
+    INITIAL_POSE_Y = "-0.9725"
+    INITIAL_POSE_YAW = "-0.1406"
 
     # TIAGo in the house world with MoveIt and grasping (rviz:=True also
     # opens MoveIt's RViz next to the mapping one below)
@@ -174,34 +184,39 @@ def generate_launch_description():
         ],
     )
 
-    initial_pose = TimerAction(
-        period=25.0,
-        actions=[
-            ExecuteProcess(
-                cmd=[
-                    "ros2",
-                    "topic",
-                    "pub",
-                    "--once",
-                    "/initialpose",
-                    "geometry_msgs/msg/PoseWithCovarianceStamped",
-                    (
-                        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
-                        f'"position": {{"x": {INITIAL_POSE_X}, "y": {INITIAL_POSE_Y}, "z": 0.0}}, '
-                        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {round(math.sin(float(INITIAL_POSE_YAW)/2), 6)}, "w": {round(math.cos(float(INITIAL_POSE_YAW)/2), 6)}}}'
-                        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
-                    ),
-                ],
-                output="screen",
-            )
+    qz = round(math.sin(float(INITIAL_POSE_YAW) / 2), 6)
+    qw = round(math.cos(float(INITIAL_POSE_YAW) / 2), 6)
+    teleport_msg = (
+        '{state: {name: tiago, reference_frame: world, pose: {'
+        f"position: {{x: {INITIAL_POSE_X}, y: {INITIAL_POSE_Y}, z: 0.01}}, "
+        f"orientation: {{x: 0.0, y: 0.0, z: {qz}, w: {qw}}}}}}}}}"
+    )
+    initial_pose_msg = (
+        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
+        f'"position": {{"x": {INITIAL_POSE_X}, "y": {INITIAL_POSE_Y}, "z": 0.0}}, '
+        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {qz}, "w": {qw}}}'
+        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
+    )
+    # Retry until TIAGo exists in Gazebo, then give AMCL the same pose
+    place_robot = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-c",
+            "until ros2 service call /gazebo/set_entity_state "
+            f"gazebo_msgs/srv/SetEntityState '{teleport_msg}' | grep -q 'success=True'; "
+            "do sleep 2; done; sleep 15; "
+            "ros2 topic pub -r 1 -t 5 /initialpose "
+            f"geometry_msgs/msg/PoseWithCovarianceStamped '{initial_pose_msg}'",
         ],
+        output="screen",
     )
 
     return LaunchDescription(
         [
+            map_arg,
             tiago,
             nav2_nodes,
             rviz,
-            initial_pose,
+            place_robot,
         ]
     )

@@ -44,7 +44,7 @@ def generate_launch_description():
         {
             "navigation": "False",
             "is_public_sim": "True",
-            "world_name": "house",
+            "world_name": "robocup",
             "moveit": "False",  # started below instead
             "tuck_arm": "True",
         },
