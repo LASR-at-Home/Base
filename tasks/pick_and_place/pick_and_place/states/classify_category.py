@@ -33,7 +33,7 @@ CATEGORY_MAP = {
         "cereal", "cereal box", "oats", "muesli",
     },
     "dish": {
-        "fork", "knife", "spoon", "plate", "bowl", "wine glass",
+        "cup", "fork", "knife", "spoon", "plate", "bowl", "wine glass",
         "mug", "chopsticks",
     },
 }

@@ -47,7 +47,7 @@ class DetectObjects(yasmin.State):
 
     HEAD_PAN_JOINT = "head_1_joint"
     HEAD_TILT_JOINT = "head_2_joint"
-    HEAD_TILT_DOWN = -0.65
+    HEAD_TILT_DOWN = -0.45
 
     RGB_TOPIC = "/head_front_camera/rgb/image_raw"
     DEPTH_TOPIC = "/head_front_camera/depth/image_raw"
@@ -60,7 +60,7 @@ class DetectObjects(yasmin.State):
 
     # ── VLM naming (Ollama). DINO finds the boxes; the VLM says what each is.
     #    Run clip_rerank:=false in the launch — the VLM replaces CLIP here.
-    VLM_ENABLE = True
+    VLM_ENABLE = False
     VLM_MODEL = "moondream"
     VLM_HOST = "http://localhost:11434"
     VLM_TIMEOUT = 60.0
@@ -121,7 +121,7 @@ class DetectObjects(yasmin.State):
             yasmin.YASMIN_LOG_WARN("head controller unavailable; skipping look-down")
             return
         pt = JointTrajectoryPoint()
-        pt.positions = [0.0, self.HEAD_TILT_DOWN]
+        pt.positions = [-0.3, self.HEAD_TILT_DOWN]
         pt.time_from_start = DurationMsg(sec=2)
         traj = JointTrajectory()
         traj.joint_names = [self.HEAD_PAN_JOINT, self.HEAD_TILT_JOINT]

@@ -11,11 +11,11 @@
 
       table:
         pose:
-          position: {x: 0.2685513414272136, y: -1.0408096690305066, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: 0.9975020239235763, w: 0.07063789541293575}
+          position: {x: 2.405, y: -3.01, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.9594, w: 0.2819}
         observe_pose:
-          position: {x: 0.5876252953308133, y: -1.0687492206833655, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: 0.996990359390238, w: 0.07752562984538826}
+          position: {x: 3.299, y: -2.068, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.9356, w: 0.3531}
         look_point: [5.25, 2.27, 0.78]
         polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
         search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
@@ -70,7 +70,6 @@
             z_max: 0.6
 
       grasp:
-        enable: false
-        reach: 0.80
-        use_moveit: true
+        enable: true
+        use_moveit: false
         publish_box: true

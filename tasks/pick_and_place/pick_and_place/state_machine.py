@@ -74,7 +74,7 @@ class PickAndPlace(yasmin.StateMachine):
 
         self.add_state(
             "ADD_TABLE_COLLISION",
-            AddTableCollision(head_tilt=-0.6),     # детект усього столу здалеку
+            AddTableCollision(head_tilt=-0.3),     # детект усього столу здалеку
             transitions={
                 "succeeded": "GO_TO_TABLE_FOR_PICK",   # було "DETECT_OBJECTS"
             },
