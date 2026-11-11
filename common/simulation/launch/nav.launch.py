@@ -3,20 +3,18 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription, TimerAction
+from launch.actions import (
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+)
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     pkg_sim = get_package_share_directory("simulation")
-    pkg_tiago_gazebo = get_package_share_directory("tiago_gazebo")
-
-    my_models_path = os.path.join(pkg_sim, "models")
-    existing = os.environ.get("GAZEBO_MODEL_PATH", "")
-    os.environ["GAZEBO_MODEL_PATH"] = (
-        (existing + ":" + my_models_path) if existing else my_models_path
-    )
 
     maps_dir = os.path.join(pkg_sim, "maps")
     map_pgm = os.path.join(maps_dir, "map.pgm")
@@ -33,18 +31,10 @@ def generate_launch_description():
     INITIAL_POSE_Y = "-6.340"
     INITIAL_POSE_YAW = "2.204"
 
-    tiago = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_tiago_gazebo, "launch", "tiago_gazebo.launch.py")
-        ),
-        launch_arguments={
-            "is_public_sim": "True",
-            "world_name": "house",
-            "moveit": "True",
-            "rviz": "False",
-            "navigation": "False",
-            "tuck_arm": "True",
-        }.items(),
+    # The simulation (Gazebo, TIAGo, MoveIt) is launched first; everything below
+    # for navigation only starts once it is up.
+    sim = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(pkg_sim, "launch", "sim.launch.py"))
     )
 
     map_server = Node(
@@ -158,65 +148,71 @@ def generate_launch_description():
         ],
     )
 
-    nav2_nodes = TimerAction(
-        period=15.0,
-        actions=[
-            map_server,
-            amcl,
-            lifecycle_manager,
-            controller_server,
-            smoother_server,
-            planner_server,
-            behavior_server,
-            bt_navigator,
-            waypoint_follower,
-            velocity_smoother,
-            navigation_lifecycle_manager,
-        ],
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", rviz_config],
+        parameters=[{"use_sim_time": True}],
+        output="screen",
     )
 
-    rviz = TimerAction(
-        period=20.0,
-        actions=[
-            Node(
-                package="rviz2",
-                executable="rviz2",
-                name="rviz2",
-                arguments=["-d", rviz_config],
-                parameters=[{"use_sim_time": True}],
-                output="screen",
-            )
+    initial_pose_msg = (
+        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
+        f'"position": {{"x": {INITIAL_POSE_X}, "y": {INITIAL_POSE_Y}, "z": 0.0}}, '
+        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {round(math.sin(float(INITIAL_POSE_YAW)/2), 6)}, "w": {round(math.cos(float(INITIAL_POSE_YAW)/2), 6)}}}'
+        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
+    )
+    # AMCL only accepts the pose once it is active
+    initial_pose = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-c",
+            "until ros2 lifecycle get /amcl 2>/dev/null | grep -q '^active'; do sleep 1; done; "
+            "ros2 topic pub --once /initialpose "
+            f"geometry_msgs/msg/PoseWithCovarianceStamped '{initial_pose_msg}'",
         ],
+        output="screen",
     )
 
-    initial_pose = TimerAction(
-        period=25.0,
-        actions=[
-            ExecuteProcess(
-                cmd=[
-                    "ros2",
-                    "topic",
-                    "pub",
-                    "--once",
-                    "/initialpose",
-                    "geometry_msgs/msg/PoseWithCovarianceStamped",
-                    (
-                        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
-                        f'"position": {{"x": {INITIAL_POSE_X}, "y": {INITIAL_POSE_Y}, "z": 0.0}}, '
-                        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {round(math.sin(float(INITIAL_POSE_YAW)/2), 6)}, "w": {round(math.cos(float(INITIAL_POSE_YAW)/2), 6)}}}'
-                        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
-                    ),
-                ],
-                output="screen",
-            )
+    # TIAGo's lidar publishes once the robot is spawned, so wait for that
+    robot_ready = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "topic",
+            "echo",
+            "--once",
+            "--qos-reliability",
+            "best_effort",
+            "/scan_raw",
         ],
+        output="log",
+    )
+    nav = RegisterEventHandler(
+        OnProcessExit(
+            target_action=robot_ready,
+            on_exit=[
+                map_server,
+                amcl,
+                lifecycle_manager,
+                controller_server,
+                smoother_server,
+                planner_server,
+                behavior_server,
+                bt_navigator,
+                waypoint_follower,
+                velocity_smoother,
+                navigation_lifecycle_manager,
+                rviz,
+                initial_pose,
+            ],
+        )
     )
 
     return LaunchDescription(
         [
-            tiago,
-            nav2_nodes,
-            rviz,
-            initial_pose,
+            sim,
+            robot_ready,
+            nav,
         ]
     )
