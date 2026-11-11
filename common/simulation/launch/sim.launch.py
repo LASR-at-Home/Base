@@ -1,8 +1,15 @@
 import os
 from ament_index_python.packages import get_package_prefix, get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    GroupAction,
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+)
 from launch.conditions import IfCondition
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import SetParameter
@@ -79,12 +86,29 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("rviz")),
     )
 
+    # TIAGo publishes joint states once it is spawned and its controllers are up,
+    # so MoveIt is only started after that.
+    robot_ready = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "topic",
+            "echo",
+            "--once",
+            "--qos-reliability",
+            "best_effort",
+            "/joint_states",
+        ],
+        output="log",
+    )
+
     return LaunchDescription(
         [
             world_arg,
             rviz_arg,
             tiago_launch,
-            move_group,
-            rviz,
+            robot_ready,
+            RegisterEventHandler(
+                OnProcessExit(target_action=robot_ready, on_exit=[move_group, rviz])
+            ),
         ]
     )

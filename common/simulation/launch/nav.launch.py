@@ -7,8 +7,9 @@ from launch.actions import (
     DeclareLaunchArgument,
     ExecuteProcess,
     IncludeLaunchDescription,
-    TimerAction,
+    RegisterEventHandler,
 )
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -154,35 +155,46 @@ def generate_launch_description():
         ],
     )
 
-    nav2_nodes = TimerAction(
-        period=15.0,
-        actions=[
-            map_server,
-            amcl,
-            lifecycle_manager,
-            controller_server,
-            smoother_server,
-            planner_server,
-            behavior_server,
-            bt_navigator,
-            waypoint_follower,
-            velocity_smoother,
-            navigation_lifecycle_manager,
-        ],
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", rviz_config],
+        parameters=[{"use_sim_time": True}],
+        output="screen",
     )
 
-    rviz = TimerAction(
-        period=20.0,
-        actions=[
-            Node(
-                package="rviz2",
-                executable="rviz2",
-                name="rviz2",
-                arguments=["-d", rviz_config],
-                parameters=[{"use_sim_time": True}],
-                output="screen",
-            )
+    # Nav2 and RViz only start once TIAGo's lidar is publishing (robot is spawned)
+    robot_ready = ExecuteProcess(
+        cmd=[
+            "ros2",
+            "topic",
+            "echo",
+            "--once",
+            "--qos-reliability",
+            "best_effort",
+            "/scan_raw",
         ],
+        output="log",
+    )
+    nav2_nodes = RegisterEventHandler(
+        OnProcessExit(
+            target_action=robot_ready,
+            on_exit=[
+                map_server,
+                amcl,
+                lifecycle_manager,
+                controller_server,
+                smoother_server,
+                planner_server,
+                behavior_server,
+                bt_navigator,
+                waypoint_follower,
+                velocity_smoother,
+                navigation_lifecycle_manager,
+                rviz,
+            ],
+        )
     )
 
     qz = round(math.sin(float(INITIAL_POSE_YAW) / 2), 6)
@@ -205,7 +217,8 @@ def generate_launch_description():
             "-c",
             "until ros2 service call /gazebo/set_entity_state "
             f"gazebo_msgs/srv/SetEntityState '{teleport_msg}' | grep -q 'success=True'; "
-            "do sleep 2; done; sleep 15; "
+            "do sleep 2; done; "
+            "until ros2 lifecycle get /amcl 2>/dev/null | grep -q '^active'; do sleep 1; done; "
             "ros2 topic pub -r 1 -t 5 /initialpose "
             f"geometry_msgs/msg/PoseWithCovarianceStamped '{initial_pose_msg}'",
         ],
@@ -216,8 +229,8 @@ def generate_launch_description():
         [
             world_arg,
             tiago,
+            robot_ready,
             nav2_nodes,
-            rviz,
             place_robot,
         ]
     )
