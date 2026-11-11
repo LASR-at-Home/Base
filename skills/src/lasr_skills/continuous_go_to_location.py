@@ -38,6 +38,9 @@ class ContinuousGoToLocation(State):
         if "cancel_nav" not in blackboard.keys():
             blackboard["cancel_nav"] = False
 
+        # Forget goals from a previous run so an identical goal is sent again.
+        self.last_goal = None
+
         while not self.is_canceled() and rclpy.ok():
             current_goal = blackboard["location"]
 
@@ -50,6 +53,8 @@ class ContinuousGoToLocation(State):
                 if not self.navigator.isTaskComplete():
                     self.navigator.cancelTask()
                     self.node.get_logger().warn("Stop Requested")
+                # Resend the goal once the stop request is lifted, even if unchanged.
+                self.last_goal = None
                 time.sleep(0.1)
                 continue
 
