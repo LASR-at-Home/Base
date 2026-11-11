@@ -28,7 +28,30 @@ def generate_launch_description():
                 "service_launch.xml",
             )
         ),
-        launch_arguments={"sim": LaunchConfiguration("sim")}.items(),
+        launch_arguments={
+            "sim": LaunchConfiguration("sim"),
+            # seg model for Detect3D, pose model for the gesture service
+            "preload": "['yolo11n-seg.pt', 'yolo11n-pose.pt']",
+        }.items(),
+    )
+
+    # ADded new
+    gesture_service = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_vision_gesture"),
+                "launch",
+                "gesture_service.launch.xml",
+            )
+        )
+    )
+
+    # Added new
+    vlm = Node(
+        package="lasr_vlm",
+        executable="vlm_service",
+        name="lasr_vlm_service",
+        output="screen",
     )
 
     load_motions = IncludeLaunchDescription(
@@ -74,6 +97,8 @@ def generate_launch_description():
             whisper_server,
             load_motions,
             yolo_service,
+            gesture_service,  # find_person / count_people by gesture
+            vlm,  # get_person_info / find_person by clothes
         ]
     )
 
