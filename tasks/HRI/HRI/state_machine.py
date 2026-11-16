@@ -171,14 +171,14 @@ class HRI(yasmin.StateMachine):
         self.add_state(
             "INTRODUCE",
             Introduce(),
-            transitions={"succeeded": "ROTATE", "failed": "ROTATE"},
+            transitions={"succeeded": "GRAB_BAG", "failed": "GRAB_BAG"},
         )
 
-        # self.add_state(
-        #     "GRAB_BAG",
-        #     ReceiveObject(object_name="bag", can_hold=True),
-        #     transitions={"succeeded": "ROTATE", "failed": "failed"},
-        # )
+        self.add_state(
+            "GRAB_BAG",
+            ReceiveObject(object_name="bag", can_hold=True),
+            transitions={"succeeded": "ROTATE", "failed": "failed"},
+        )
 
         self.add_state(
             "ROTATE",
