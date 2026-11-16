@@ -73,3 +73,17 @@
         enable: true
         use_moveit: false
         publish_box: true
+
+      # ── Place on a shelf (sim: house.world Bookshelf; map frame) ──
+      place:
+        enable: true
+        all_objects: true        # every grasped object goes to the shelf (sim demo)
+        observe_pose:            # 1.10 m in front of the bookshelf, facing it
+          position: {x: -4.879, y: 2.279, z: 0.0}
+          orientation: {x: 0.0, y: 0.0, z: -0.9503, w: 0.3113}
+        board_z: [0.44, 0.81]    # shelf board tops to try (m)
+        inner_width: 0.86
+        depth: 0.40
+        gap: 0.35                # board top to the underside of the board above
+        drop: 0.015              # object bottom above the board when let go
+        behind_edge: 0.13        # object centre behind the board's front edge

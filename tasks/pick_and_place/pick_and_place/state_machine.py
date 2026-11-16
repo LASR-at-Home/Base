@@ -8,6 +8,7 @@ import yasmin_ros
 from yasmin_viewer import YasminViewerPub
 
 from lasr_skills import Say, GoToLocation
+from pick_and_place.states.place_object import PlaceObject, ShelfLocation
 
 from pick_and_place.states import (
     Start,
@@ -151,7 +152,20 @@ class PickAndPlace(yasmin.StateMachine):
         )
         self.add_state(
             "GRASP", GraspObject(),
-            transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
+            transitions={"succeeded": "SHELF_LOCATION", "failed": "GO_TO_DESTINATION"},
+        )
+        # ── Holding it: put it on a free spot of the shelf (else the old announce) ─
+        self.add_state(
+            "SHELF_LOCATION", ShelfLocation(),
+            transitions={"shelf": "GO_TO_SHELF", "other": "GO_TO_DESTINATION"},
+        )
+        self.add_state(
+            "GO_TO_SHELF", GoToLocation(),  # reads blackboard["location"]
+            transitions={"succeeded": "PLACE", "failed": "PLACE"},
+        )
+        self.add_state(
+            "PLACE", PlaceObject(),
+            transitions={"succeeded": "GO_TO_TABLE", "failed": "INSTRUCT_PLACE"},
         )
         # ── Navigate to the chosen destination (pose set by DecideDestination)─
         self.add_state(

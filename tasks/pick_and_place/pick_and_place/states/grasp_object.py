@@ -975,6 +975,7 @@ class GraspObject(yasmin.State):
         self._setup_ik()
 
         obj = blackboard["selected_object"]
+        blackboard["held_object"] = None   # set again only if this grasp holds something
         p = getattr(obj, "point", None)
         if p is None or not all(math.isfinite(v) for v in (p.x, p.y, p.z)) or (p.x, p.y, p.z) == (0.0, 0.0, 0.0):
             yasmin.YASMIN_LOG_WARN("Object has no valid 3D point (depth projection failed).")
@@ -1372,5 +1373,8 @@ class GraspObject(yasmin.State):
         if not holding:
             yasmin.YASMIN_LOG_WARN("Grasp failed: gripper closed on nothing.")
             return "failed"
+        # what the place step needs to know about the object in the hand
+        blackboard["held_object"] = {"width": float(width), "below": float(g[2] - table_z),
+                                     "above": float(top - g[2])}
         yasmin.YASMIN_LOG_INFO("Grasp complete.")
         return "succeeded"
