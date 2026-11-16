@@ -1,5 +1,6 @@
 """
-Follow a person (the host) with the TIAGo using Nav2 + YOLO 3D detections.
+Follow a person (the host) with the TIAGo using YOLO 3D detections and direct velocity
+commands (see `follow_velocity_controller.py`; Nav2 is not used while following).
 
 ROS2 / yasmin port of the ROS1 `follow_person` state machine. The ROS1 version fused
 SAM2, a leg tracker and a Kalman filter; none of those exist in this stack, so tracking
@@ -8,7 +9,9 @@ last known position with a distance gate".
 
 Behaviour (mirrors the ROS1 logic where it still applies):
     * wait for the host to stand in front of the robot, lock onto the closest person
-    * continuously re-detect, send Nav2 goals that stop `safe_distance` short of the host
+    * continuously re-detect; the velocity controller drives along the path the host
+      walked, keeps `safe_distance` to them, slows for other people it would run into
+      and keeps clear of walls using the laser
     * if the host is briefly occluded, keep driving to the last known position and wait a
       short grace period before declaring them lost; then scan left/centre/right
     * if the host stops for `stationary_time` seconds (after having walked), ask whether
@@ -16,8 +19,8 @@ Behaviour (mirrors the ROS1 logic where it still applies):
     * bounded retries everywhere so the skill returns "failed" rather than hanging
 
 Blackboard keys owned by this skill (all reset on entry):
-    location, cancel_nav, stop_robot_requested, last_known, last_known_stamped,
-    detections_3d, polygon, track_memory
+    cancel_nav, stop_robot_requested, last_known, last_known_stamped, detections_3d,
+    polygon, track_memory, host_state, other_people
 """
 
 import math
@@ -37,7 +40,6 @@ import tf2_ros
 from std_msgs.msg import Header
 from geometry_msgs.msg import (
     PointStamped,
-    Pose,
     PolygonStamped,
     Point32,
 )
@@ -49,11 +51,11 @@ from lasr_skills import (
     Wait,
     PlayMotion,
     Say,
-    ContinuousGoToLocation,
     WaitForPersonInArea,
     LookToPoint,
     AskAndListen,
 )
+from lasr_skills.follow_velocity_controller import FollowVelocityController
 
 # Z window (map frame) used for every person detection in this skill.
 Z_MIN = -10.0
@@ -76,6 +78,28 @@ def _dist(a, b) -> float:
     ax, ay = _xy(a)
     bx, by = _xy(b)
     return math.hypot(ax - bx, ay - by)
+
+
+def _estimate_velocity(pos, prev, now, smoothing: float = 0.5, max_speed: float = 2.0):
+    """
+    Smoothed (vx, vy) of something now at `pos`, given its previous state
+    {"pos", "vel", "stamp"} (or None). Zero if the previous state is missing or too old.
+    """
+    if prev is None:
+        return 0.0, 0.0
+    dt = now - prev["stamp"]
+    if dt > 1.5:
+        return 0.0, 0.0
+    if dt < 0.05:
+        return prev["vel"]
+    vx = (pos[0] - prev["pos"][0]) / dt
+    vy = (pos[1] - prev["pos"][1]) / dt
+    vx = smoothing * vx + (1.0 - smoothing) * prev["vel"][0]
+    vy = smoothing * vy + (1.0 - smoothing) * prev["vel"][1]
+    speed = math.hypot(vx, vy)
+    if speed > max_speed:
+        vx, vy = vx / speed * max_speed, vy / speed * max_speed
+    return vx, vy
 
 
 def _bb_get(blackboard, key, default=None):
@@ -129,16 +153,17 @@ class ResetFollowState(State):
     def __init__(self, clear_target: bool = True):
         super().__init__(outcomes=["done"])
         self.clear_target = clear_target
-        self.add_output_key("location")
         self.add_output_key("cancel_nav")
         self.add_output_key("stop_robot_requested")
         self.add_output_key("last_known")
         self.add_output_key("last_known_stamped")
         self.add_output_key("detections_3d")
         self.add_output_key("track_memory")
+        self.add_output_key("host_state")
+        self.add_output_key("other_people")
 
     def execute(self, blackboard):
-        blackboard["location"] = None
+        blackboard["other_people"] = []
         blackboard["cancel_nav"] = False
         blackboard["stop_robot_requested"] = False
         blackboard["detections_3d"] = []
@@ -146,11 +171,12 @@ class ResetFollowState(State):
         if self.clear_target:
             blackboard["last_known"] = None
             blackboard["last_known_stamped"] = None
+            blackboard["host_state"] = None
         return "done"
 
 
 class CancelNavigation(State):
-    """Tells ContinuousGoToLocation to stop and exit."""
+    """Tells the velocity controller to stop and exit."""
 
     def __init__(self):
         super().__init__(outcomes=["done"])
@@ -254,6 +280,9 @@ class GetPersonPoint(State):
       `max_jump + walk_speed * seconds_since_seen` from the previous position is rejected
       (so a bystander walking past isn't adopted as the host).
 
+    Also estimates velocities for the velocity controller: `host_state` for the host and
+    `other_people` for everyone else in view (matched to the previous tick by proximity).
+
     "failed" means nobody (acceptable) was found; `detections_3d` is then cleared so that
     EvaluateDetections treats it as "person not visible".
     """
@@ -268,11 +297,14 @@ class GetPersonPoint(State):
         self.add_input_key("detections_3d")
         self.add_input_key("last_known")
         self.add_input_key("track_memory")
+        self.add_input_key("host_state")
 
         self.add_output_key("detections_3d")
         self.add_output_key("last_known")
         self.add_output_key("last_known_stamped")
         self.add_output_key("track_memory")
+        self.add_output_key("host_state")
+        self.add_output_key("other_people")
 
         self.gate = gate
         self.max_jump = max_jump
@@ -313,6 +345,37 @@ class GetPersonPoint(State):
                         blackboard["detections_3d"] = []
                         return "failed"
 
+            # Velocities, so the controller can project where everyone is heading.
+            host_pos = _xy(best.point)
+            prev_host = (
+                _bb_get(blackboard, "host_state") if last_known is not None else None
+            )
+            blackboard["host_state"] = {
+                "pos": host_pos,
+                "vel": _estimate_velocity(host_pos, prev_host, now),
+                "stamp": now,
+            }
+            prev_others = mem.get("others", [])
+            others = []
+            for d in detections:
+                if d is best:
+                    continue
+                pos = _xy(d.point)
+                prev = min(
+                    prev_others, key=lambda o: _dist(o["pos"], pos), default=None
+                )
+                if prev is not None and _dist(prev["pos"], pos) > 1.0:
+                    prev = None
+                others.append(
+                    {
+                        "pos": pos,
+                        "vel": _estimate_velocity(pos, prev, now),
+                        "stamp": now,
+                    }
+                )
+            mem["others"] = others
+            blackboard["other_people"] = others
+
             mem["last_seen"] = now
             blackboard["track_memory"] = mem
             blackboard["detections_3d"] = [best]
@@ -337,8 +400,9 @@ class EvaluateDetections(State):
     `detections_3d` is non-empty the host is visible at `last_known`.
 
     Outcomes:
-        updated           - a new Nav2 goal was written to blackboard["location"]
-        paused            - robot should hold still (close enough / waiting)
+        updated           - the velocity controller may drive (towards the host, or
+                            their last known position if they are briefly out of view)
+        paused            - robot should hold still (waiting for the host to reappear)
         person_stationary - host has walked, then stopped for `stationary_time`
         person_lost       - host not seen for too long / not found at last known position
     """
@@ -360,7 +424,6 @@ class EvaluateDetections(State):
         self.add_input_key("last_known")
         self.add_input_key("track_memory")
 
-        self.add_output_key("location")
         self.add_output_key("cancel_nav")
         self.add_output_key("stop_robot_requested")
         self.add_output_key("track_memory")
@@ -375,26 +438,6 @@ class EvaluateDetections(State):
 
         self.node = yasmin_ros.logger_node
         self.robot = TfRobotPose(self.node)
-
-    def create_goal_pose(self, robot, target) -> Pose:
-        """Goal `safe_distance` short of `target`, facing it."""
-        rx, ry = _xy(robot)
-        tx, ty = _xy(target)
-        dx, dy = tx - rx, ty - ry
-        distance = math.hypot(dx, dy)
-
-        goal_x, goal_y = tx, ty
-        if distance > self.safe_distance:
-            goal_x = tx - (dx / distance) * self.safe_distance
-            goal_y = ty - (dy / distance) * self.safe_distance
-
-        theta = math.atan2(dy, dx)
-        goal = Pose()
-        goal.position.x = goal_x
-        goal.position.y = goal_y
-        goal.orientation.z = math.sin(theta / 2.0)
-        goal.orientation.w = math.cos(theta / 2.0)
-        return goal
 
     def execute(self, blackboard: Blackboard):
         robot = self.robot.get(timeout=1.0)
@@ -434,10 +477,13 @@ class EvaluateDetections(State):
         if _dist(person, origin) > self.min_travel:
             mem["has_travelled"] = True
 
+        # While the host is visible the controller's gap control decides the speed
+        # (it eases to a stop at safe_distance by itself).
+        blackboard["stop_robot_requested"] = False
+
         distance_to_person = _dist(person, robot)
         if distance_to_person <= self.close_distance:
             mem.setdefault("close_since", now)
-            blackboard["stop_robot_requested"] = True
 
             still_for = min(now - mem["anchor_time"], now - mem["close_since"])
             if mem.get("has_travelled") and still_for >= self.stationary_time:
@@ -449,9 +495,6 @@ class EvaluateDetections(State):
             return "paused"
 
         mem.pop("close_since", None)
-        blackboard["location"] = self.create_goal_pose(robot, person)
-        blackboard["stop_robot_requested"] = False
-        self.node.get_logger().info("HOST VISIBLE: UPDATING NAV GOAL")
         return "updated"
 
     def _host_missing(self, blackboard, mem, robot, last_known, now):
@@ -471,7 +514,8 @@ class EvaluateDetections(State):
             blackboard["stop_robot_requested"] = True
             return "paused"
 
-        blackboard["location"] = self.create_goal_pose(robot, last_known)
+        # host_state still holds the last known position: the controller keeps driving
+        # along the host's trail towards it.
         blackboard["stop_robot_requested"] = False
         self.node.get_logger().warn("HOST NOT VISIBLE: MOVING TO LAST KNOWN POSITION")
         return "updated"
@@ -548,7 +592,7 @@ class InitialRecovery(StateMachine):
 class TrackPerson(StateMachine):
     """
     Loop: update polygon -> detect -> associate -> look at host -> evaluate -> wait.
-    Runs concurrently with ContinuousGoToLocation, communicating via the blackboard.
+    Runs concurrently with FollowVelocityController, communicating via the blackboard.
     """
 
     def __init__(self, **evaluate_kwargs):
@@ -605,7 +649,7 @@ class TrackPerson(StateMachine):
         )
         self.add_state(
             "WAIT",
-            Wait(0.2),
+            Wait(0.05),
             transitions={"succeeded": "UPDATE_POLYGON", "failed": "CANCEL_AND_FAIL"},
         )
         self.add_state(
@@ -636,6 +680,7 @@ class FollowPerson(StateMachine):
 
     Args:
         safe_distance: how close (m) the robot stops to the host.
+        max_speed: top forward speed (m/s) while following.
         stationary_time: seconds the host must stand still before we ask if we arrived.
         max_lost_attempts: times to ask the host to come back before giving up.
         max_ask_attempts: unanswered/unclear arrival questions before assuming arrival.
@@ -644,6 +689,7 @@ class FollowPerson(StateMachine):
     def __init__(
         self,
         safe_distance: float = 1.0,
+        max_speed: float = 0.7,
         stationary_time: float = 6.0,
         max_lost_attempts: int = 3,
         max_ask_attempts: int = 3,
@@ -724,7 +770,9 @@ class FollowPerson(StateMachine):
                         stationary_time=stationary_time,
                         **evaluate_kwargs,
                     ),
-                    "navigator": ContinuousGoToLocation(),
+                    "navigator": FollowVelocityController(
+                        safe_distance=safe_distance, max_linear=max_speed
+                    ),
                 },
                 default_outcome="failed",
                 outcome_map={
