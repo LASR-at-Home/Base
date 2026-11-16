@@ -7,7 +7,10 @@
       trash_category: "snack"
 
       # Open-vocab query words for table detection (common nouns).
-      objects: ["cup", "can", "bottle", "bowl", "box", "apple"]
+      # Gazebo house kitchen table. Real objects: ["red coke can", "green iced tea can",
+      # "bag of crisps", "red apple", "white paper cup"] -> ["coke", "iced tea", "crisps", "apple", "paper cup"]
+      objects: ["red coca cola can", "green sprite can", "pringles can", "biscuit box", "clear plastic cup"]
+      object_names: ["coke", "sprite", "pringles", "biscuits", "cup"]   # one per query, same order
 
       table:
         pose:

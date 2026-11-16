@@ -19,11 +19,11 @@ CATEGORY_MAP = {
     },
     "beverage": {
         "bottle", "water bottle", "juice", "milk",
-        "soda can", "coffee cup", "energy drink", "thermos", "coke", "red bull", "iced tea",
+        "soda can", "coffee cup", "energy drink", "thermos", "coke", "red bull", "iced tea", "coke can", "iced tea can", "sprite",
     },
     "snack": {
         "chips", "crackers", "candy", "chocolate bar", "cookie",
-        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "crisps",
+        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "crisps", "crisp packet", "biscuits",
     },
     "cleaning": {
         "soap", "sponge", "brush", "cleaner", "detergent", "tissue box",
@@ -34,7 +34,7 @@ CATEGORY_MAP = {
     },
     "dish": {
         "cup", "fork", "knife", "spoon", "plate", "bowl", "wine glass",
-        "mug", "chopsticks",
+        "mug", "chopsticks", "paper cup",
     },
 }
 

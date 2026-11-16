@@ -55,7 +55,7 @@ class DetectObjects(yasmin.State):
 
     DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "apple"]
     BOX_THRESHOLD = 0.25
-    TEXT_THRESHOLD = 0.10
+    TEXT_THRESHOLD = 0.30   # 0.10 glued several query names into one phrase
     NMS_IOU = 0.5
 
     # ── VLM naming (Ollama). DINO finds the boxes; the VLM says what each is.
@@ -81,6 +81,13 @@ class DetectObjects(yasmin.State):
             self._queries = q or list(self.DEFAULT_QUERIES)
         except Exception:
             self._queries = list(self.DEFAULT_QUERIES)
+        # a short name per query (same order as pick_and_place.objects): "red coca cola can" -> "coke"
+        try:
+            n = list(self.node.get_parameter("pick_and_place.object_names")
+                     .get_parameter_value().string_array_value)
+        except Exception:
+            n = []
+        self._names = dict(zip(self._queries, n)) if len(n) == len(self._queries) else {}
 
         self._rgb = None
         self._depth = None
@@ -146,11 +153,20 @@ class DetectObjects(yasmin.State):
             return None
 
     def _clean_label(self, phrase):
-        p = phrase.lower()
-        for q in self._queries:
-            if q.lower() in p:
-                return q
-        return phrase
+        """The query the detector's phrase is about: the one sharing most words with it (the
+        phrase can drop words, "red coca cola" for "red coca cola can", or be a word piece,
+        "pring" for "pringles"), as its short name; "" if it matches none."""
+        words = {w.strip("#") for w in phrase.lower().split()}
+        words = {w for w in words if len(w) >= 3}
+
+        def score(q):
+            qw = q.lower().split()
+            return sum(1 for w in words if any(w == x or (len(w) >= 4 and w in x) for x in qw))
+
+        best = max(self._queries, key=score, default=None)
+        if best is None or score(best) == 0:
+            return ""
+        return self._names.get(best, best)
 
     @staticmethod
     def _iou(a, b):  # a,b = (cx,cy,w,h) midpoint format
@@ -173,7 +189,9 @@ class DetectObjects(yasmin.State):
         if self._depth is None or self._info is None or self._rgb is None:
             return None
         try:
-            depth_img = self.bridge.imgmsg_to_cv2(self._depth, "32FC1")
+            depth_img = self.bridge.imgmsg_to_cv2(self._depth, "passthrough").astype(np.float32)
+            if self._depth.encoding == "16UC1":   # real robot: millimetres
+                depth_img = depth_img / 1000.0
         except Exception:
             return None
         h, w = depth_img.shape[:2]
@@ -245,7 +263,8 @@ class DetectObjects(yasmin.State):
         for n, c, b in raw:
             yasmin.YASMIN_LOG_INFO(f"   {n}: {c:.2f} cxywh={b}")
 
-        cleaned = [(self._clean_label(n), c, b) for n, c, b in raw]
+        # boxes whose name matches no query ("", "##ng") are dropped
+        cleaned = [(l, c, b) for l, c, b in ((self._clean_label(n), c, b) for n, c, b in raw) if l]
         kept = self._nms(cleaned)
 
         # VLM naming: convert the RGB once, then let the VLM name each kept crop.

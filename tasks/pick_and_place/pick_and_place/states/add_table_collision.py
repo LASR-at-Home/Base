@@ -239,7 +239,9 @@ class AddTableCollision(yasmin.State):
         if self._depth is None or self._info is None or self._rgb is None:
             return None
         try:
-            depth_img = self.bridge.imgmsg_to_cv2(self._depth, "32FC1")
+            depth_img = self.bridge.imgmsg_to_cv2(self._depth, "passthrough").astype(np.float32)
+            if self._depth.encoding == "16UC1":   # real robot: millimetres
+                depth_img = depth_img / 1000.0
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"depth convert failed: {e}")
             return None
