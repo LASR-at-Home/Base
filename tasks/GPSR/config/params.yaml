@@ -10,12 +10,13 @@ gpsr:
     cloud_timeout_sec: 40.0
     simulation: true              # true = use gtts on PC, false = use robot TTS
     input_mode: "keyboard"        # "keyboard" or "microphone"
+    object_detection_confidence: 0.5  # YOLO confidence for find/count objects (lower to catch non-COCO objects)
     whisper:
       energy_threshold: 400   
       phrase_duration: 10.0
       device: "cuda"
 
-    entrance_point: # An intermediate pose beyond the door
+    entrance_point: # An intermediate pose beyond the door. TODO: ARENA values - set for the lab
       position:
         x: 4.672576427459717
         y: 17.97470474243164
@@ -28,14 +29,14 @@ gpsr:
 
 
 
-    instruction_point: # The intruction point
+    instruction_point: # The intruction point (LAB - keep in sync with locations.yaml)
       position:
-        x: 0.11800265312194824
-        y: 22.62601089477539
+        x: 0.042011573910713196
+        y: 0.032788991928100586
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: -0.9968338902074738
-        w: 0.0795122338626833
+        z: -0.16264902938468917
+        w: 0.9866839885395012
 

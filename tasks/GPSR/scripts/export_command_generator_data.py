@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""Export GPSR config/*.yaml as a RoboCup@Home CommandGenerator data directory.
+
+Writes the four files the generator reads, in the same layout as the competition
+repos (e.g. RoboCupAtHome/Incheon2026):
+
+    <out>/names/names.md            <- people.yaml
+    <out>/maps/room_names.md        <- locations.yaml (locations with a `polygon`)
+    <out>/maps/location_names.md    <- locations.yaml (all other locations)
+    <out>/objects/objects.md        <- objects.yaml
+
+so generated commands only use people, rooms, locations and objects that GPSR knows.
+
+Usage:
+    python3 scripts/export_command_generator_data.py [--config DIR] [--out DIR]
+    athome-generator -d <out>
+"""
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+import yaml
+
+PKG_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PKG_ROOT))
+from GPSR.world import normalise_name, room_names, sublocation_rooms  # noqa: E402
+
+# Plurals that the simple English rules below get wrong
+IRREGULAR_PLURALS = {"food": "food"}
+
+# What the generator's regex parsers accept (robocupathome_generator/knowledge.py)
+NAME_RE = re.compile(r"^[A-Za-z]+$")
+ROOM_RE = re.compile(r"^\w+( \w+)?$")
+LOCATION_RE = re.compile(r"^[A-Za-z ]+$")
+CATEGORY_RE = re.compile(r"^[A-Za-z ]+$")
+OBJECT_RE = re.compile(r"^\w+$")
+
+
+def pluralise(word: str) -> str:
+    if word in IRREGULAR_PLURALS:
+        return IRREGULAR_PLURALS[word]
+    if word.endswith("y") and word[-2:-1] not in "aeiou":
+        return word[:-1] + "ies"
+    if word.endswith(("s", "sh", "ch", "x", "z")):
+        return word + "es"
+    return word + "s"
+
+
+def load(config_dir: Path, filename: str, key: str) -> dict:
+    with open(config_dir / filename) as f:
+        return (yaml.safe_load(f) or {}).get(key) or {}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--config", type=Path, default=PKG_ROOT / "config")
+    parser.add_argument(
+        "--out", type=Path, default=PKG_ROOT / "command_generator_data"
+    )
+    args = parser.parse_args()
+
+    people = load(args.config, "people.yaml", "people")
+    locations = load(args.config, "locations.yaml", "locations")
+    objects = load(args.config, "objects.yaml", "objects")
+
+    errors, warnings = [], []
+
+    def check(regex, value, what):
+        if not regex.match(value):
+            errors.append(f"{what} '{value}' cannot be parsed by the command generator")
+
+    # --- names
+    names = [str(n).strip().capitalize() for n in people]
+    for name in names:
+        check(NAME_RE, name, "Name (letters only)")
+
+    # --- rooms / locations
+    included = {
+        n: (info or {})
+        for n, info in locations.items()
+        if not (info or {}).get("exclude_from_commands", False)
+    }
+    rooms = [n for n in room_names(locations) if n in included]
+    room_of = sublocation_rooms(locations)
+    furniture = [n for n in included if n not in rooms]
+    for room in rooms:
+        check(ROOM_RE, room, "Room (one or two words)")
+    for loc in furniture:
+        check(LOCATION_RE, loc, "Location (letters and spaces only)")
+        if loc not in room_of:
+            warnings.append(f"Location '{loc}' is not in any room")
+
+    # --- objects, grouped by plural category (in order of first appearance)
+    by_category: dict[str, list[str]] = {}
+    singular_of: dict[str, str] = {}
+    storage: dict[str, list[str]] = {}
+    for name, info in objects.items():
+        info = info or {}
+        category = normalise_name(info.get("category"))
+        if not category:
+            errors.append(f"Object '{name}' has no category")
+            continue
+        check(CATEGORY_RE, category, "Category")
+        plural = pluralise(category)
+        singular_of[plural] = category
+        obj = normalise_name(name).replace(" ", "_")
+        check(OBJECT_RE, obj, "Object (letters, digits, underscores)")
+        by_category.setdefault(plural, []).append(obj)
+
+        location = info.get("location")
+        if location not in locations:
+            errors.append(f"Object '{name}' default location '{location}' is not in locations.yaml")
+        elif plural not in storage.setdefault(location, []):
+            storage[location].append(plural)
+
+    for location, cats in storage.items():
+        if len(cats) > 1:
+            warnings.append(
+                f"Location '{location}' stores several categories {cats}; only "
+                f"'{cats[0]}' is written (the generator allows one per location)"
+            )
+
+    for w in warnings:
+        print(f"WARNING: {w}", file=sys.stderr)
+    if errors:
+        for e in errors:
+            print(f"ERROR: {e}", file=sys.stderr)
+        return 1
+
+    # --- write files (formats match the generator's regex parsers)
+    out = args.out
+    for sub in ("names", "maps", "objects"):
+        (out / sub).mkdir(parents=True, exist_ok=True)
+
+    header = "<!-- Generated by scripts/export_command_generator_data.py from config/*.yaml - do not edit -->\n\n"
+
+    (out / "names" / "names.md").write_text(
+        header
+        + "## Names\n| Names |\n| ------------ |\n"
+        + "".join(f"| {n} |\n" for n in names)
+    )
+
+    (out / "maps" / "room_names.md").write_text(
+        header
+        + "## Rooms\n| Name |\n| ------------ |\n"
+        + "".join(f"| {r} |\n" for r in rooms)
+    )
+
+    rows = []
+    for i, loc in enumerate(furniture, start=1):
+        p = " (p)" if included[loc].get("placeable", False) else ""
+        category = (storage.get(loc) or [""])[0]
+        # The category column must always be closed with "|", or the parser
+        # swallows the next row
+        rows.append(f"| {i} | {loc}{p} | {category} |\n")
+    (out / "maps" / "location_names.md").write_text(
+        header
+        + "## Locations\n| Number | Name | Object Category |\n"
+        + "| ------------ | ----------- | ----------- |\n"
+        + "".join(rows)
+        + "\n(p) indicates whether objects can be placed at the location\n"
+    )
+
+    blocks = []
+    for plural, objs in by_category.items():
+        cls = f"{plural.replace(' ', '_')} ({singular_of[plural].replace(' ', '_')})"
+        blocks.append(
+            f"# Class {cls}\n\n| Objectname |\n| :---: |\n"
+            + "".join(f"| {o} |\n" for o in objs)
+        )
+    (out / "objects" / "objects.md").write_text(header + "\n\n".join(blocks))
+
+    print(f"Wrote command generator data to {out}")
+    print(f"  names:      {len(names)}")
+    print(f"  rooms:      {rooms}")
+    print(f"  locations:  {furniture}")
+    print(f"  categories: {list(by_category)}")
+    print(f"  objects:    {sum(len(o) for o in by_category.values())}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

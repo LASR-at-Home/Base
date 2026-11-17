@@ -1,200 +1,263 @@
-objects:
-  # --- fabric (laundry table in laundry) ---
-  white_shirt:
-    category: fabric
-    location: laundry table
-    grabbable: true
-    size: small
-    aliases: []
+# objects:
+#   # --- fabric (laundry table in laundry) ---
+#   white_shirt:
+#     category: fabric
+#     location: laundry table
+#     grabbable: true
+#     size: small
+#     aliases: []
 
-  grey_shirt:
-    category: fabric
-    location: laundry table
-    grabbable: true
-    size: small
-    aliases: []
+#   grey_shirt:
+#     category: fabric
+#     location: laundry table
+#     grabbable: true
+#     size: small
+#     aliases: []
 
-  blue_shirt:
-    category: fabric
-    location: laundry table
-    grabbable: true
-    size: small
-    aliases: []
+#   blue_shirt:
+#     category: fabric
+#     location: laundry table
+#     grabbable: true
+#     size: small
+#     aliases: []
 
-  black_shirt:
-    category: fabric
-    location: laundry table
-    grabbable: true
-    size: small
-    aliases: []
+#   black_shirt:
+#     category: fabric
+#     location: laundry table
+#     grabbable: true
+#     size: small
+#     aliases: []
   
-  hand_towel:
-    category: fabric
-    location: laundry table
-    grabbable: true
-    size: small
-    aliases: []
+#   hand_towel:
+#     category: fabric
+#     location: laundry table
+#     grabbable: true
+#     size: small
+#     aliases: []
 
-  # --- toy (bed in bedroom) ---
-  rubiks_cube:
-    category: toy
-    location: bed
-    grabbable: true
-    size: small
-    aliases: [cube, rubiks]
+#   # --- toy (bed in bedroom) ---
+#   rubiks_cube:
+#     category: toy
+#     location: bed
+#     grabbable: true
+#     size: small
+#     aliases: [cube, rubiks]
 
-  # --- snack (shelf in laundry) ---
+#   # --- snack (shelf in laundry) ---
+#   pringles:
+#     category: snack
+#     location: shelf
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   seaweed:
+#     category: snack
+#     location: shelf
+#     grabbable: true
+#     size: small
+#     aliases: []
+
+#   # --- fruit (dinner table in kitchen) ---
+#   apple:
+#     category: fruit
+#     location: dinner table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   peach:
+#     category: fruit
+#     location: dinner table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   mangostane:
+#     category: fruit
+#     location: dinner table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   lemon:
+#     category: fruit
+#     location: dinner table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   yellow_bellpepper:
+#     category: fruit
+#     location: dinner table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   red_bellpepper:
+#     category: fruit
+#     location: dinner table
+#     grabbable: true
+#     size: small
+#     aliases: []
+
+#   # --- food (coffee table in living room) ---
+#   instant_noodles:
+#     category: food
+#     location: coffee table 
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   cornflakes:
+#     category: food
+#     location: coffee table 
+#     grabbable: true
+#     size: small
+#     aliases: []
+
+#   # --- drinks (cabinet in kitchen) ---
+#   coke:
+#     category: drink
+#     location: cabinet     # Sub-location
+#     grabbable: true
+#     size: small
+#     aliases: [coke, soda]
+#   red_bull:
+#     category: drink
+#     location: cabinet
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   milk:
+#     category: drink
+#     location: cabinet
+#     grabbable: true
+#     size: small
+#     aliases: [oj]
+#   soju:
+#     category: drink
+#     location: cabinet
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   pepsi:
+#     category: drink
+#     location: cabinet
+#     grabbable: true
+#     size: small
+#     aliases: []
+
+#   # --- cleaning supplies (cooking table in kitchen) ---
+#   dishwasher_tab:
+#     category: cleaning supply
+#     location: cooking table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   sponge:
+#     category: cleaning supply
+#     location: cooking table
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   toothpaste:
+#     category: cleaning supply
+#     location: cooking table
+#     grabbable: true
+#     size: small
+#     aliases: []
+
+#   # --- dishes (kitchen table) ---
+#   cup:
+#     category: dish
+#     location: dishwasher
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   spoon:
+#     category: dish
+#     location: dishwasher
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   plate:
+#     category: dish
+#     location: dishwasher
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   knife:
+#     category: dish
+#     location: dishwasher
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   fork:
+#     category: dish
+#     location: dishwasher
+#     grabbable: true
+#     size: small
+#     aliases: []
+#   bowl:
+#     category: dish
+#     location: dishwasher
+#     grabbable: true
+#     size: small
+#     aliases: []
+
+# Object fields:
+#   category:  singular category (snack, drink, food, dish, ...). Commands may use the
+#              singular or plural form ("drinks"); plural is derived automatically.
+#   location:  default sub-location (must be a key in locations.yaml)
+#   size:      small / medium / large - proxy for heaviest / lightest
+#   aliases:   other spoken names for the object
+#   detect_as: COCO classes yolo11n-seg reports this object as. Objects that are not a
+#              COCO class (cans, tubes, boxes) are only found through this list.
+#              Several objects may share a class, e.g. coke / pringles / paper_cup
+#              are all seen as "cup", so a single-object search cannot tell them apart.
+# Names use underscores (spoken as spaces) to match the RoboCup command generator.
+
+objects: # Lab Testing
+  # --- snacks (study table in office) ---
   pringles:
     category: snack
-    location: shelf
+    location: study table
     grabbable: true
     size: small
-    aliases: []
-  seaweed:
-    category: snack
-    location: shelf
-    grabbable: true
-    size: small
-    aliases: []
+    aliases: [crisps, chips]
+    detect_as: [cup, bottle]     # tube - not a COCO class
 
-  # --- fruit (dinner table in kitchen) ---
-  apple:
-    category: fruit
-    location: dinner table
-    grabbable: true
-    size: small
-    aliases: []
-  peach:
-    category: fruit
-    location: dinner table
-    grabbable: true
-    size: small
-    aliases: []
-  mangostane:
-    category: fruit
-    location: dinner table
-    grabbable: true
-    size: small
-    aliases: []
-  lemon:
-    category: fruit
-    location: dinner table
-    grabbable: true
-    size: small
-    aliases: []
-  yellow_bellpepper:
-    category: fruit
-    location: dinner table
-    grabbable: true
-    size: small
-    aliases: []
-  red_bellpepper:
-    category: fruit
-    location: dinner table
-    grabbable: true
-    size: small
-    aliases: []
-
-  # --- food (coffee table in living room) ---
-  instant_noodles:
-    category: food
-    location: coffee table 
-    grabbable: true
-    size: small
-    aliases: []
-  cornflakes:
-    category: food
-    location: coffee table 
-    grabbable: true
-    size: small
-    aliases: []
-
-  # --- drinks (cabinet in kitchen) ---
+  # --- drinks (dining table in living room) ---
   coke:
     category: drink
-    location: cabinet     # Sub-location
+    location: dining table
     grabbable: true
     size: small
-    aliases: [coke, soda]
-  red_bull:
+    aliases: [coca cola, cola, soda]
+    detect_as: [cup, bottle]     # can - not a COCO class
+  water_bottle:
     category: drink
-    location: cabinet
+    location: dining table
     grabbable: true
-    size: small
-    aliases: []
-  milk:
-    category: drink
-    location: cabinet
-    grabbable: true
-    size: small
-    aliases: [oj]
-  soju:
-    category: drink
-    location: cabinet
-    grabbable: true
-    size: small
-    aliases: []
-  pepsi:
-    category: drink
-    location: cabinet
-    grabbable: true
-    size: small
-    aliases: []
+    size: medium
+    aliases: [water]
+    detect_as: [bottle]
 
-  # --- cleaning supplies (cooking table in kitchen) ---
-  dishwasher_tab:
-    category: cleaning supply
-    location: cooking table
+  # --- food (tv stand in living room) ---
+  cereal:
+    category: food
+    location: tv stand
     grabbable: true
-    size: small
-    aliases: []
-  sponge:
-    category: cleaning supply
-    location: cooking table
-    grabbable: true
-    size: small
-    aliases: []
-  toothpaste:
-    category: cleaning supply
-    location: cooking table
-    grabbable: true
-    size: small
-    aliases: []
+    size: medium
+    aliases: [cereal box, cornflakes]
+    detect_as: [book]            # box - not a COCO class; CHECK on the real object
 
-  # --- dishes (kitchen table) ---
-  cup:
-    category: dish
-    location: dishwasher
-    grabbable: true
-    size: small
-    aliases: []
+  # --- dishes (computer desk in office) ---
   spoon:
     category: dish
-    location: dishwasher
+    location: computer desk
     grabbable: true
     size: small
-    aliases: []
-  plate:
+    aliases: [tablespoon, table spoon]
+    detect_as: [spoon, knife]    # often seen as knife at low confidence
+  paper_cup:
     category: dish
-    location: dishwasher
+    location: computer desk
     grabbable: true
     size: small
     aliases: []
-  knife:
-    category: dish
-    location: dishwasher
-    grabbable: true
-    size: small
-    aliases: []
-  fork:
-    category: dish
-    location: dishwasher
-    grabbable: true
-    size: small
-    aliases: []
-  bowl:
-    category: dish
-    location: dishwasher
-    grabbable: true
-    size: small
-    aliases: []
+    detect_as: [cup]
