@@ -78,7 +78,7 @@ class HRI(yasmin.StateMachine):
             "SAY_START",  # SM1: Waits for Door to open, then goes to start
             Say(text="Start of H R I task."),
             transitions={
-                "succeeded": "WAIT_FOR_DOORBELL",
+                "succeeded": "SAY_WAITING_DOORBELL",
                 "canceled": "failed",
                 "aborted": "failed",
             },
@@ -90,7 +90,7 @@ class HRI(yasmin.StateMachine):
                 text="I am waiting for the doorbell."
             ),
             transitions={
-                "succeeded": "GO_TO_DOOR",
+                "succeeded": "WAIT_FOR_DOORBELL",
                 "canceled": "failed",
                 "aborted": "failed",
             },
