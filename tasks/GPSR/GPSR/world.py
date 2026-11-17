@@ -16,8 +16,12 @@ __all__ = [
     "format_objects",
     "format_people",
     "load_locations",
+    "normalise_name",
     "placeable_locations",
+    "room_names",
     "selected_skill_lines",
+    "sublocation_rooms",
+    "vocabulary_prompt",
 ]
 
 
@@ -45,35 +49,75 @@ def compact_skill_lines(skills_text: str) -> str:
     return "\n".join(lines)
 
 
-SUBLOCATION_ROOM = {
-    "laundry table": "laundry",
-    "washing machine": "laundry",
-    "shelf": "laundry",
-    "laundry trash bin": "laundry",
-    "bed": "bedroom",
-    "bedside table": "bedroom",
-    "coat rack": "bedroom",
-    "tv stand": "living room",
-    "sofa": "living room",
-    "coffee table": "living room",
-    "cabinet": "kitchen",
-    "refrigerator": "kitchen",
-    "counter": "kitchen",
-    "sink": "kitchen",
-    "cooking table": "kitchen",
-    "dishwasher": "kitchen",
-    "kitchen trash bin": "kitchen",
-    "dinner table": "kitchen",
-}
+def normalise_name(name) -> str:
+    """Lower-case and replace underscores with spaces ("Red_Bull" -> "red bull")."""
+    return str(name or "").strip().lower().replace("_", " ")
 
 
-def format_objects(objects: dict) -> str:
+def _point_in_polygon(x: float, y: float, polygon) -> bool:
+    """Ray-casting point-in-polygon test; polygon is a list of [x, y] vertices."""
+    inside = False
+    n = len(polygon)
+    for i in range(n):
+        x1, y1 = polygon[i]
+        x2, y2 = polygon[(i + 1) % n]
+        if (y1 > y) != (y2 > y):
+            if x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+                inside = not inside
+    return inside
+
+
+def _polygon_vertices(polygon) -> list:
+    """locations.yaml polygons are {top_left: [x, y], ...} (in order) or a list of [x, y]."""
+    if isinstance(polygon, dict):
+        return [list(v) for v in polygon.values()]
+    return [list(v) for v in polygon or []]
+
+
+def room_names(locations: dict) -> list:
+    """Locations that are rooms, i.e. have a `polygon` in locations.yaml."""
+    return [name for name, info in locations.items() if (info or {}).get("polygon")]
+
+
+def sublocation_rooms(locations: dict) -> dict:
+    """Map each non-room location to the room it is in: {sub-location: room}.
+
+    Uses the location's explicit `room:` key if set, otherwise the room whose polygon
+    contains the location's position. Locations in no room are left out.
+    """
+    rooms = room_names(locations)
+    result = {}
+    for name, info in locations.items():
+        info = info or {}
+        if name in rooms:
+            continue
+        room = info.get("room")
+        if not room:
+            pos = info.get("position") or {}
+            if "x" in pos and "y" in pos:
+                for candidate in rooms:
+                    vertices = _polygon_vertices(locations[candidate].get("polygon"))
+                    if len(vertices) >= 3 and _point_in_polygon(
+                        float(pos["x"]), float(pos["y"]), vertices
+                    ):
+                        room = candidate
+                        break
+        if room:
+            result[name] = room
+    return result
+
+
+def format_objects(objects: dict, sublocation_room: dict = None) -> str:
     """Format the objects dict as a single line for the planner prompt."""
+    sublocation_room = sublocation_room or {}
     parts = []
     for name, obj in objects.items():
+        obj = obj or {}
         subloc = obj.get("location", "?")
-        room = SUBLOCATION_ROOM.get(subloc, "?")
-        parts.append(f"{name} ({obj.get('category', '?')} at {subloc} in {room})")
+        room = sublocation_room.get(subloc, "?")
+        parts.append(
+            f"{normalise_name(name)} ({obj.get('category', '?')} at {subloc} in {room})"
+        )
     return ", ".join(parts) or "none"
 
 
@@ -188,8 +232,28 @@ def build_world(node) -> dict:
     return {
         "locations": locations,
         "placement_locations": placeable_locations(locations),
+        "sublocation_rooms": sublocation_rooms(locations),
         "objects": load_objects(node),
         "people": load_people(node),
         "general_knowledge": load_general_knowledge(node),
         "skill_lines": compact_skill_lines(skills_text),
     }
+
+
+def vocabulary_prompt(node=None) -> str:
+    """Comma-separated people, object and location names from the config yaml files.
+
+    Used as the Whisper `initial_prompt` so speech recognition is biased towards the
+    words that are actually declared for the current arena.
+    """
+    words = list(load_people(node).keys())
+    for name, info in load_objects(node).items():
+        words.append(normalise_name(name))
+        words.extend(normalise_name(a) for a in (info or {}).get("aliases") or [])
+    words.extend(normalise_name(name) for name in load_locations(node).keys())
+    seen, unique = set(), []
+    for word in words:
+        if word and word.lower() not in seen:
+            seen.add(word.lower())
+            unique.append(word)
+    return ", ".join(unique)

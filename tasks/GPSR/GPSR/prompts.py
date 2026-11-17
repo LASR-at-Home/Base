@@ -241,7 +241,7 @@ RULES:
 - Known locations are ONLY: {locations}. Any place not in this list is unknown — the robot cannot navigate there.
 - FIRST check every room/place mentioned in the command. If ANY of them is NOT in known locations: output ONLY a single say step refusing. Do not plan any other steps.
 - Only after confirming all locations are known: use ALL selected skills in the plan.
-- place_object MUST only target a placeable location (from: {placement_locations}). Never place objects at navigation-only locations such as entrance, exit, sink, refrigerator, kitchen trash bin, or coat rack.
+- place_object MUST only target a placeable location (from: {placement_locations}). Never place objects at any location that is not in that list (e.g. navigation-only locations such as doors or the instruction point).
 - The known objects list shows each object's typical location as "name (category at sub-location in room)". This is a default only. If the command explicitly states where to find the object, ALWAYS use the command's stated location — never override it with the default. If the command does not state a location, use the default from the known objects list.
 - When navigating to find an object at a sub-location, always go to the parent room first: go_to_location(room) → go_to_location(sub-location) → find_object.
 - Fill args from the command and known world.

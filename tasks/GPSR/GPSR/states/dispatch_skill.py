@@ -11,7 +11,7 @@ from geometry_msgs.msg import Point, Pose, Quaternion, PointStamped
 from rclpy.wait_for_message import wait_for_message
 from sensor_msgs.msg import Image
 
-from GPSR.world import load_locations, load_objects
+from GPSR.world import load_locations, load_objects, normalise_name
 from GPSR.tts import say
 from lasr_skills import (
     AskAndListen,
@@ -67,6 +67,9 @@ class DispatchSkill(yasmin.State):
         }
         self._image_topic = "/head_front_camera/rgb/image_raw"
         self._yolo_model = "yolo11n-seg.pt"
+        self._detection_confidence = float(
+            self._param("object_detection_confidence", 0.5)
+        )
         # Detect3D subscribes to the cameras on construction and never unsubscribes,
         # so one instance per class filter is kept and reused (see _detect).
         self._detectors: dict[tuple, Detect3D] = {}
@@ -74,6 +77,13 @@ class DispatchSkill(yasmin.State):
         self.task_bb = None
 
     # --- Support Methods
+    def _param(self, name: str, default):
+        if self.node.has_parameter(name):
+            value = self.node.get_parameter(name).value
+            if value is not None:
+                return value
+        return default
+
     def _first_arg(self, args: dict[str, Any], *names: str) -> str:
         for name in names:
             value = args.get(name)
@@ -85,7 +95,19 @@ class DispatchSkill(yasmin.State):
 
     @staticmethod
     def _normalise(name: Any) -> str:
-        return str(name or "").strip().lower().replace("_", " ")
+        return normalise_name(name)
+
+    @staticmethod
+    def _singular_forms(target: str) -> set:
+        """`target` plus naive singular forms ("drinks" -> "drink", "dishes" -> "dish")."""
+        forms = {target}
+        if target.endswith("ies"):
+            forms.add(target[:-3] + "y")
+        if target.endswith("es"):
+            forms.add(target[:-2])
+        if target.endswith("s"):
+            forms.add(target[:-1])
+        return forms
 
     def _object_info(self, name: str) -> dict[str, Any]:
         """objects.yaml entry for a (normalised) object name or alias, {} if unknown."""
@@ -96,33 +118,58 @@ class DispatchSkill(yasmin.State):
                 return info
         return {}
 
+    def _detection_classes(self, obj_name: str) -> set:
+        """Detector class names that count as the objects.yaml object `obj_name`.
+
+        The object's own name, its aliases and its `detect_as` list (the YOLO classes
+        the object is detected as, e.g. a coke can as "cup" / "bottle").
+        """
+        info = self.objects.get(obj_name, {})
+        names = [obj_name, *(info.get("aliases") or []), *(info.get("detect_as") or [])]
+        return {self._normalise(n) for n in names}
+
+    def _target_objects(self, target: str) -> list:
+        """objects.yaml names that `target` refers to - by name, alias or category."""
+        forms = self._singular_forms(target)
+        result = []
+        for name, info in self.objects.items():
+            aliases = {self._normalise(a) for a in info.get("aliases") or []}
+            category = self._normalise(info.get("category"))
+            if name in forms or aliases & forms or category in forms:
+                result.append(name)
+        return result
+
+    def _object_label(self, detected_name: str, target: str = "") -> str:
+        """Best objects.yaml name for a detection (restricted to `target` if given)."""
+        detected = self._normalise(detected_name)
+        candidates = self._target_objects(target) if target else list(self.objects)
+        matching = [n for n in candidates if detected in self._detection_classes(n)]
+        if not matching:
+            return detected
+        # Prefer the most specific object, e.g. "bottle" -> water bottle over coke
+        return min(
+            matching, key=lambda n: len(self.objects[n].get("detect_as") or [])
+        )
+
     def _matches_object(self, detected_name: str, target: str) -> bool:
         """Whether a detection counts as `target` (a normalised name, alias or category).
 
         The YOLO service silently detects *every* class when the filter contains a
         name its model does not know, so Detect3D is always run unfiltered and the
-        detections are matched here instead: by class name, by objects.yaml alias,
-        or by objects.yaml category (singular or plural, e.g. "drink" / "drinks").
+        detections are matched here instead: a detection matches if its class is the
+        target itself, or a name / alias / `detect_as` class of any objects.yaml object
+        the target refers to (by name, alias, or category - singular or plural).
         An empty target matches any object except people.
         """
         detected = self._normalise(detected_name)
         if not target:
             return detected != "person"
-        forms = {target}
-        if target.endswith("ies"):
-            forms.add(target[:-3] + "y")
-        if target.endswith("es"):
-            forms.add(target[:-2])
-        if target.endswith("s"):
-            forms.add(target[:-1])
-        if detected in forms:
+        if detected in self._singular_forms(target):
             return True
-        info = self._object_info(detected)
-        if not info:
-            return False
-        if any(info is self._object_info(form) for form in forms):
-            return True
-        return self._normalise(info.get("category")) in forms
+        return any(
+            detected in self._detection_classes(name)
+            for name in self._target_objects(target)
+        )
 
     def _crop_image(self, image: Image, xywh) -> Image:
         """Crop an 8-bit sensor_msgs/Image to a pixel bounding box."""
@@ -460,7 +507,9 @@ class DispatchSkill(yasmin.State):
         try:
             if key not in self._detectors:
                 self._detectors[key] = Detect3D(
-                    model=self._yolo_model, filter=list(key)
+                    model=self._yolo_model,
+                    filter=list(key),
+                    confidence=self._detection_confidence,
                 )
             outcome = self._detectors[key](self.task_bb)
         except Exception as exc:
@@ -656,7 +705,8 @@ class DispatchSkill(yasmin.State):
         # Weight proxy: the objects.yaml `size` class (unknown objects count as
         # medium), with the pixel area as a tie-break.
         def weight(detection) -> tuple:
-            size = self._object_info(self._normalise(detection.name)).get("size")
+            label = self._object_label(detection.name, target)
+            size = self.objects.get(label, {}).get("size")
             return (SIZE_RANK.get(size, SIZE_RANK["medium"]), area(detection))
 
         if prop == "biggest":
@@ -671,7 +721,7 @@ class DispatchSkill(yasmin.State):
             chosen = min(matches, key=weight)
 
         self._record_found_object(chosen, matches)
-        self._say(f"The {prop} {spoken} is the {self._normalise(chosen.name)}.")
+        self._say(f"The {prop} {spoken} is the {self._object_label(chosen.name, target)}.")
         self._play_motion("look_centre")
         return "succeeded"
 
@@ -763,12 +813,12 @@ def main():
             # {"skill": "go_to_location", "args": {"location": "shelf"}},
             {
                 "skill": "find_object",
-                "args": {"object": "red_bull", "location": "shelf"},
+                "args": {"object": "coke", "location": "dining table"},
             },
-            {"skill": "pick_up", "args": {"object": "red_bull"}},
+            {"skill": "pick_up", "args": {"object": "coke"}},
             # {"skill": "go_to_location", "args": {"location": "living room"}},
             # {"skill": "go_to_location", "args": {"location": "coffee table"}},
-            {"skill": "place_object", "args": {"location": "coffee table"}},
+            {"skill": "place_object", "args": {"location": "tv stand"}},
             # {"skill": "count_objects", "args": {"object": "drink", "location": "cabinet"}},
             # {"skill": "count_people", "args": {"location": "living room"}},
             # {"skill": "count_people", "args": {"pose": "sitting", "location": "living room"}},

@@ -16,8 +16,8 @@ from GPSR.world import (
     format_objects,
     format_people,
     selected_skill_lines,
-    SUBLOCATION_ROOM,
     placeable_locations,
+    sublocation_rooms,
 )
 
 
@@ -25,7 +25,7 @@ class SkillSelectorError(Exception):
     """Stage 1 failed — no plan available."""
 
 
-def _inject_sublocations(steps: list, objects: dict = None) -> list:
+def _inject_sublocations(steps: list, locations: dict) -> list:
     """For every go_to_location that targets a sub-location, prepend a go_to_location for its room."""
 
     def _prev_loc(result):
@@ -34,6 +34,7 @@ def _inject_sublocations(steps: list, objects: dict = None) -> list:
                 return step.get("args", {}).get("location")
         return None
 
+    room_of = sublocation_rooms(locations)
     result = []
     for step in steps:
         skill = step.get("skill")
@@ -43,7 +44,7 @@ def _inject_sublocations(steps: list, objects: dict = None) -> list:
         # ensure the parent room is visited first.
         if skill == "go_to_location":
             target = args.get("location", "")
-            room = SUBLOCATION_ROOM.get(target)
+            room = room_of.get(target)
             if room:
                 prev = _prev_loc(result)
                 if prev != room and prev != target:
@@ -152,7 +153,11 @@ def run_planner(backend, world: dict, command: str) -> dict:
                 selected_skill_names=", ".join(skills),
                 locations=", ".join(world["locations"].keys()) or "none",
                 placement_locations=", ".join(placement) or "none",
-                objects=format_objects(world["objects"]),
+                objects=format_objects(
+                    world["objects"],
+                    world.get("sublocation_rooms")
+                    or sublocation_rooms(world["locations"]),
+                ),
                 people=format_people(world["people"]),
                 command=command,
             ),
@@ -162,7 +167,7 @@ def run_planner(backend, world: dict, command: str) -> dict:
         plan_description = parsed.get("plan_description", "")
         if not steps:
             raise ValueError("empty steps")
-        #steps = _inject_sublocations(steps, world["objects"])
+        #steps = _inject_sublocations(steps, world["locations"])
         steps = _inject_give_to_operator(steps)
     except Exception:
         result = _fail_safe()
@@ -192,7 +197,11 @@ def run_cloud_planner(backend, world: dict, command: str) -> dict:
                 skill_lines=world["skill_lines"],
                 locations=", ".join(world["locations"].keys()) or "none",
                 placement_locations=", ".join(placement) or "none",
-                objects=format_objects(world["objects"]),
+                objects=format_objects(
+                    world["objects"],
+                    world.get("sublocation_rooms")
+                    or sublocation_rooms(world["locations"]),
+                ),
                 people=format_people(world["people"]),
                 command=command,
             )
@@ -214,7 +223,7 @@ def run_cloud_planner(backend, world: dict, command: str) -> dict:
         result["elapsed_sec"] = round(time.perf_counter() - t0, 2)
         return result
 
-    #steps = _inject_sublocations(steps, world["objects"])
+    #steps = _inject_sublocations(steps, world["locations"])
     steps = _inject_give_to_operator(steps)
 
     if announcement:
