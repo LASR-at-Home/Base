@@ -85,6 +85,18 @@ class HRI(yasmin.StateMachine):
         )
 
         self.add_state(
+            "SAY_WAITING_DOORBELL",
+            Say(
+                text="I am waiting for the doorbell."
+            ),
+            transitions={
+                "succeeded": "GO_TO_DOOR",
+                "canceled": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        self.add_state(
             "WAIT_FOR_DOORBELL",  # Waits for the first guest to ring the doorbell
             DetectDoorbell(),
             transitions={"succeeded": "ASK_OPEN_DOOR", "failed": "SAY_MISSED_DOORBELL"},

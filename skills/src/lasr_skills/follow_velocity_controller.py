@@ -77,8 +77,8 @@ class FollowVelocityController(State):
     def __init__(
         self,
         safe_distance: float = 1.0,
-        max_linear: float = 0.7,
-        max_angular: float = 1.2,
+        max_linear: float = 0.4,
+        max_angular: float = 0.4,
         cmd_vel_topic: str = "/cmd_vel",
         scan_topic: str = "/scan_raw",
         rate: float = 20.0,
@@ -86,12 +86,12 @@ class FollowVelocityController(State):
         crumb_spacing: float = 0.15,
         lookahead: float = 0.6,
         # gap control
-        gap_gain: float = 0.9,
+        gap_gain: float = 0.7,
         predict_horizon: float = 0.8,
         heading_gain: float = 1.8,
-        linear_accel: float = 0.8,
-        linear_decel: float = 2.0,
-        angular_accel: float = 3.0,
+        linear_accel: float = 0.4,
+        linear_decel: float = 1.0,
+        angular_accel: float = 1.0,
         # laser failsafe
         robot_radius: float = 0.27,
         laser_offset: float = 0.2,

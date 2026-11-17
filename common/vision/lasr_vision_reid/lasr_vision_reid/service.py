@@ -45,6 +45,7 @@ class ReID(Node):
     _tf_client: rclpy.client.Client
     _image_publisher: rclpy.publisher.Publisher
     _marker_publisher: rclpy.publisher.Publisher
+    _add_face_debug_publisher: rclpy.publisher.Publisher
     _recognise_3d_service: rclpy.service.Service
     _recognise_2d_service: rclpy.service.Service
     _add_face_service: rclpy.service.Service
@@ -62,6 +63,10 @@ class ReID(Node):
         )
         self._marker_publisher = self.create_publisher(
             Marker, "/lasr_vision_reid/recognise/points", 10
+        )
+        # Debug image published every time a face is successfully registered
+        self._add_face_debug_publisher = self.create_publisher(
+            Image, "/lasr_vision_reid/recognise/debug", 10
         )
 
         self._recognise_service = self.create_service(
@@ -255,7 +260,54 @@ class ReID(Node):
             f"Added face embedding for {name}, total samples: {len(self._db[name])}"
         )
 
+        self._publish_add_face_debug(
+            cv_im, results[0].get("facial_area"), name, len(self._db[name])
+        )
+
         return response
+
+    def _publish_add_face_debug(
+        self, cv_im: Mat, region: Optional[dict], name: str, num_samples: int
+    ) -> None:
+        """
+        Publish an annotated image to /lasr_vision_reid/recognise/debug when a face
+        is registered: bounding box of the face DeepFace used, plus the name and
+        the number of samples stored for that name. Never raises, so a debug
+        failure cannot break face registration.
+        """
+        try:
+            annotated = cv_im.copy()
+            h, w, _ = annotated.shape
+            x, y = 0, 0
+
+            if region:
+                x1 = max(0, int(region["x"]))
+                y1 = max(0, int(region["y"]))
+                x2 = min(w, x1 + int(region["w"]))
+                y2 = min(h, y1 + int(region["h"]))
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                x, y = x1, y1
+
+            label = f"REGISTERED: {name} (sample {num_samples})"
+            cv2.putText(
+                annotated,
+                label,
+                (x, max(15, y - 5)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (0, 255, 0),
+                2,
+            )
+
+            self._add_face_debug_publisher.publish(
+                self._bridge.cv2_to_imgmsg(annotated, encoding="rgb8")
+            )
+            self.get_logger().info(
+                f"Published add_face debug image for '{name}' to "
+                "/lasr_vision_reid/recognise/debug"
+            )
+        except Exception as e:
+            self.get_logger().warning(f"Failed to publish add_face debug image: {e}")
 
     def _publish_results(
         self, response: Recognise3D.Response, cv_im: Mat, frame_id: str
