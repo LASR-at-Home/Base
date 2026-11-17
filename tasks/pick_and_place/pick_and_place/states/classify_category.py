@@ -23,14 +23,14 @@ CATEGORY_MAP = {
     },
     "snack": {
         "chips", "crackers", "candy", "chocolate bar", "cookie",
-        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "crisps", "crisp packet", "biscuits",
+        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "pringles tube", "crisps", "crisp packet", "biscuits",
     },
     "cleaning": {
         "soap", "sponge", "brush", "cleaner", "detergent", "tissue box",
         "toilet paper", "broom", "mop", "spray bottle", "bucket", "toothpaste",
     },
     "cereal": {
-        "cereal", "cereal box", "oats", "muesli",
+        "cereal", "cereal box", "oats", "muesli", "granola", "granola box",
     },
     "dish": {
         "cup", "fork", "knife", "spoon", "plate", "bowl", "wine glass",

@@ -19,7 +19,7 @@ from geometry_msgs.msg import PointStamped
 from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from builtin_interfaces.msg import Duration
-from pick_and_place.vlm_classifier import classify_crop
+from pick_and_place.vlm_classifier import verify_crop, rename_crop, dino_name, yes_no, DEFAULT_MODEL
 import tf2_ros
 from tf2_geometry_msgs import do_transform_point
 from cv_bridge import CvBridge
@@ -40,8 +40,9 @@ class DetectTuner(Node):
         self.declare_parameter("map_frame", "map")
         self.declare_parameter("head_tilt", -0.6)   # rad; 99.0 to skip
         self.declare_parameter("tilt_once", True)
-        self.declare_parameter("vlm", True)
-        self.declare_parameter("vlm_model", "moondream")
+        self.declare_parameter("names", [""])   # short name per query, same order (the dictionary)
+        self.declare_parameter("vlm", False)    # true: the VLM answers yes/no "is this a <name>?"
+        self.declare_parameter("vlm_model", DEFAULT_MODEL)
 
         self.bridge = CvBridge()
         self._rgb = None
@@ -67,7 +68,8 @@ class DetectTuner(Node):
             f"detect_tuner up. RGB={rgb_t}\n"
             f"  -> RViz: add Image display on /detect_tuner/image\n"
             f"  -> tune live: ros2 param set /detect_tuner box_threshold 0.35\n"
-            f"  -> VLM on/off:  ros2 param set /detect_tuner vlm false")
+            f"  -> names (dictionary, one per query):  -p names:=\"['coke can', ...]\"\n"
+            f"  -> VLM yes/no check:  ros2 param set /detect_tuner vlm true")
 
     def _rgb_cb(self, m):
         self._rgb = m
@@ -156,6 +158,10 @@ class DetectTuner(Node):
         text_thr = float(self.get_parameter("text_threshold").value)
         use_vlm = bool(self.get_parameter("vlm").value)
         vlm_model = self.get_parameter("vlm_model").value
+        names = [str(n) for n in self.get_parameter("names").value]
+        nm = dict(zip(queries, names)) if len(names) == len(queries) and all(names) else {}
+        if names != [""] and not nm:
+            self.get_logger().warn(f"names ignored: need {len(queries)} names (one per query), got {len(names)}")
 
         req = OpenVocabDetect.Request()
         req.image = self._rgb
@@ -182,19 +188,28 @@ class DetectTuner(Node):
         for d in resp.detections:
             if len(d.xywh) < 4:
                 continue
+            label = dino_name(d.name, queries, nm) if nm else d.name
+            if not label:          # the phrase matches no query; the task drops these too
+                continue
             cx, cy, w, h = (float(d.xywh[0]), float(d.xywh[1]),
                             float(d.xywh[2]), float(d.xywh[3]))
             depth, mapxyz = self._project(cx, cy)
-            vlm_name = None
+            ok = None
             vlm_s = None
+            was = None             # the dictionary name, if the VLM replaced it
             if rgb_cv is not None:
                 t0 = time.time()
-                vlm_name = classify_crop(rgb_cv, (cx, cy, w, h), model=vlm_model)
+                ok = verify_crop(rgb_cv, (cx, cy, w, h), label, model=vlm_model)
+                if ok is False:    # same rule as the task: a new name only if the VLM picks AND confirms it
+                    new = rename_crop(rgb_cv, (cx, cy, w, h), label,
+                                      list(nm.values()) if nm else queries, model=vlm_model)
+                    if new:
+                        was, label = label, new
                 vlm_s = time.time() - t0
                 vlm_total += vlm_s
-            dets.append((d.name, vlm_name, float(d.confidence),
-                         (cx, cy, w, h), depth, mapxyz, vlm_s))
-        dets.sort(key=lambda x: x[2], reverse=True)
+            dets.append((label, d.name, ok, float(d.confidence),
+                         (cx, cy, w, h), depth, mapxyz, vlm_s, was))
+        dets.sort(key=lambda x: x[3], reverse=True)
 
         timing = f"detect {det_s:.1f}s"
         if use_vlm:
@@ -204,31 +219,29 @@ class DetectTuner(Node):
             f"box_thr={box_thr}  text_thr={text_thr}  vlm={use_vlm}\n"
             f"    {timing} ===")
 
-        for i, (name, vlm_name, conf, (cx, cy, w, h), depth, mapxyz, vlm_s) in enumerate(dets):
+        for i, (label, raw, ok, conf, (cx, cy, w, h), depth, mapxyz, vlm_s, was) in enumerate(dets):
             dstr = f"{depth:.2f}m" if depth is not None else "n/a"
             mstr = (f"map=({mapxyz[0]:.2f},{mapxyz[1]:.2f},{mapxyz[2]:.2f})"
                     if mapxyz is not None else "map=n/a")
-            label = vlm_name or name
-            if vlm_name:
-                extra = f"  (dino: {name}, vlm {vlm_s:.1f}s)"
-            elif vlm_s is not None:
-                extra = f"  (VLM FAILED after {vlm_s:.1f}s)"
-            else:
-                extra = ""
+            extra = f"  (dino: {raw})" if raw != label else ""
+            if vlm_s is not None:
+                extra += f"  vlm: {yes_no(ok)}"
+                extra += f", renamed (dictionary said {was})" if was else ""
+                extra += f" {vlm_s:.1f}s"
             self.get_logger().info(
                 f"  [{i}] {label:<14} conf={conf:.2f}  "
                 f"cxywh=({cx:.0f},{cy:.0f},{w:.0f},{h:.0f})  depth={dstr}  {mstr}{extra}")
 
         try:
             img = self.bridge.imgmsg_to_cv2(self._rgb, "bgr8")
-            for name, vlm_name, conf, (cx, cy, w, h), depth, _, _ in dets:
-                label = vlm_name or name
+            for label, raw, ok, conf, (cx, cy, w, h), depth, _, vlm_s, was in dets:
                 x1, y1 = int(cx - w / 2), int(cy - h / 2)
                 x2, y2 = int(cx + w / 2), int(cy + h / 2)
                 col = self._color(conf)
                 cv2.rectangle(img, (x1, y1), (x2, y2), col, 2)
                 dstr = f" {depth:.2f}m" if depth is not None else ""
-                cv2.putText(img, f"{label} {conf:.2f}{dstr}", (x1, max(0, y1 - 6)),
+                vstr = (" vlm:renamed" if was else f" vlm:{yes_no(ok)}") if vlm_s is not None else ""
+                cv2.putText(img, f"{label} {conf:.2f}{dstr}{vstr}", (x1, max(0, y1 - 6)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, col, 2)
             out = self.bridge.cv2_to_imgmsg(img, "bgr8")
             out.header = self._rgb.header

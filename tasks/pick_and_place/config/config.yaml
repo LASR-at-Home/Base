@@ -11,6 +11,7 @@
       # "bag of crisps", "red apple", "white paper cup"] -> ["coke", "iced tea", "crisps", "apple", "paper cup"]
       objects: ["red coca cola can", "green sprite can", "pringles can", "biscuit box", "clear plastic cup"]
       object_names: ["coke", "sprite", "pringles", "biscuits", "cup"]   # one per query, same order
+      vlm: false   # true: a local VLM (Ollama qwen2.5vl:3b) answers yes/no "is this a <name>?"; "no" = handled last + renamed in the background only if the VLM picks and confirms another name; needs ollama serve
 
       table:
         pose:

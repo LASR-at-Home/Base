@@ -1,38 +1,43 @@
-"""Name a detected object crop with a local VLM (Ollama, e.g. gemma3:4b).
-Talks to Ollama HTTP API via stdlib urllib — no extra deps, no lasr_vlm venv.
-Ollama must be running at `host`; the model auto-pulls on first use."""
+"""Detection names and an optional yes/no check by a local VLM (Ollama, stdlib urllib, no extra deps).
+
+dino_name(): Grounding DINO returns the phrase it matched ("red coca cola"), sometimes in word
+  pieces ("pring"). Map it to the query it came from, then to that query's short name from the
+  dictionary: "red coca cola can" -> "coke can".
+verify_crop(): ask the VLM "is this a <name>?" -> True / False / None (no answer).
+rename_crop(): after a "no", the listed name the VLM picks for the crop AND confirms, or None.
+moondream is not usable: it ignores the image ("iced tea" for every crop).
+"""
 import json
 import base64
 import urllib.request
 
 import cv2
 
-# Specific product labels the VLM must choose from — EDIT for your items.
-CANDIDATES = [
-    "iced tea", "water bottle", "coke can", "sprite can", "pringles",
-    "red bull", "apple", "banana", "cup", "mug", "bowl", "sponge", "unknown",
-]
-
-_PROMPT = (
-    "You are labelling ONE grocery item for a robot. Look at the image and reply "
-    "with EXACTLY ONE label from this list, lowercase, and nothing else:\n"
-    "{labels}\n"
-    "If none clearly fits, reply 'unknown'."
-)
+DEFAULT_MODEL = "qwen2.5vl:3b"
+CANDIDATES = ["coke can", "paper cup", "water bottle", "granola box", "pringles tube"]
 
 
-def classify_crop(
-    rgb_bgr,
-    box_xywh_center,
-    candidates=None,
-    *,
-    model="gemma3:4b",
-    host="http://localhost:11434",
-    timeout=60.0,
-    pad=0.12,
-):
-    """VLM label for the crop at box (cx,cy,w,h) CENTRE in rgb_bgr, or None."""
-    cands = candidates or CANDIDATES
+def dino_name(phrase, queries, names=None):
+    """The query sharing most words with DINO's phrase, as its short name from `names`
+    (dict query -> name); "" if the phrase matches no query."""
+    words = {w.strip("#") for w in (phrase or "").lower().split()}
+    words = {w for w in words if len(w) >= 3}
+
+    def score(q):
+        qw = q.lower().split()
+        return sum(1 for w in words if any(w == x or (len(w) >= 4 and w in x) for x in qw))
+
+    best = max(queries, key=score, default=None)
+    if best is None or score(best) == 0:
+        return ""
+    return (names or {}).get(best, best)
+
+
+def yes_no(ok):
+    return "yes" if ok else ("no" if ok is False else "?")
+
+
+def _crop_b64(rgb_bgr, box_xywh_center, pad):
     h_img, w_img = rgb_bgr.shape[:2]
     cx, cy, w, h = box_xywh_center
     px, py = w * pad, h * pad
@@ -42,20 +47,17 @@ def classify_crop(
     y2 = int(min(h_img, cy + h / 2 + py))
     if x2 <= x1 or y2 <= y1:
         return None
-    crop = rgb_bgr[y1:y2, x1:x2]
-    ok, buf = cv2.imencode(".jpg", crop)
-    if not ok:
-        return None
-    img_b64 = base64.b64encode(buf.tobytes()).decode("utf-8")
+    ok, buf = cv2.imencode(".jpg", rgb_bgr[y1:y2, x1:x2])
+    return base64.b64encode(buf.tobytes()).decode("utf-8") if ok else None
+
+
+def _ask(img_b64, prompt, model, host, timeout):
     payload = {
         "model": model,
-        "messages": [{
-            "role": "user",
-            "content": _PROMPT.format(labels=", ".join(cands)),
-            "images": [img_b64],
-        }],
+        "messages": [{"role": "user", "content": prompt, "images": [img_b64]}],
         "stream": False,
-        "options": {"temperature": 0.0},
+        # small context = less VRAM, so Ollama keeps the vision part on the GPU next to DINO
+        "options": {"temperature": 0.0, "num_ctx": 2048},
     }
     req = urllib.request.Request(
         host.rstrip("/") + "/api/chat",
@@ -65,15 +67,54 @@ def classify_crop(
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             resp = json.loads(r.read().decode("utf-8"))
-        text = (resp.get("message", {}).get("content", "") or "").strip().lower()
+        return resp.get("message", {}).get("content", "") or ""
     except Exception:
         return None
-    if not text:
+
+
+def verify_crop(rgb_bgr, box_xywh_center, name, *, model=DEFAULT_MODEL,
+                host="http://localhost:11434", timeout=60.0, pad=0.12):
+    """Ask the VLM whether the crop at box (cx,cy,w,h) CENTRE is a `name`: True, False, or None."""
+    if not name:
         return None
-    for c in cands:
-        if text == c:
-            return c
-    for c in cands:
-        if c in text or text in c:
-            return c
-    return text.split("\n")[0][:40]
+    img_b64 = _crop_b64(rgb_bgr, box_xywh_center, pad)
+    if img_b64 is None:
+        return None
+    text = _ask(img_b64, f"Is the object in this image a {name}? Answer only yes or no.",
+                model, host, timeout)
+    t = (text or "").strip().lower().lstrip(" .,'\"`*")
+    if t.startswith("yes"):
+        return True
+    if t.startswith("no"):
+        return False
+    return None
+
+
+def rename_crop(rgb_bgr, box_xywh_center, old, candidates, *, model=DEFAULT_MODEL,
+                host="http://localhost:11434", timeout=60.0):
+    """After a "no" for `old`: the name from `candidates` the VLM picks for this crop and then
+    confirms with "yes". None if it picks nothing, picks `old` again, or does not confirm."""
+    new = classify_crop(rgb_bgr, box_xywh_center, candidates, model=model, host=host, timeout=timeout)
+    if not new or new == (old or "").strip().lower():
+        return None
+    ok = verify_crop(rgb_bgr, box_xywh_center, new, model=model, host=host, timeout=timeout)
+    return new if ok is True else None
+
+
+def classify_crop(rgb_bgr, box_xywh_center, candidates=None, *, model=DEFAULT_MODEL,
+                  host="http://localhost:11434", timeout=60.0, pad=0.12):
+    """The one listed name the VLM gives for the crop, or None."""
+    cands = [c.strip().lower() for c in (candidates or CANDIDATES) if c and c.strip()]
+    cands = [c for c in dict.fromkeys(cands) if c != "unknown"]
+    img_b64 = _crop_b64(rgb_bgr, box_xywh_center, pad) if cands else None
+    if img_b64 is None:
+        return None
+    text = _ask(img_b64, "You are labelling ONE object for a robot. Reply with EXACTLY ONE label "
+                "from this list, lowercase, and nothing else:\n" + ", ".join(cands + ["unknown"])
+                + "\nIf none clearly fits, reply 'unknown'.", model, host, timeout)
+    t = (text or "").strip().lower().split("\n")[0].strip(" .,'\"`*")
+    if t in cands:
+        return t
+    hits = [c for c in cands if c in t]
+    hits = [c for c in hits if not any(c != o and c in o for o in hits)]
+    return hits[0] if len(hits) == 1 else None

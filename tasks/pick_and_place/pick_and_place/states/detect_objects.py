@@ -1,3 +1,4 @@
+import threading
 import time
 import numpy as np
 
@@ -23,7 +24,7 @@ from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from builtin_interfaces.msg import Duration as DurationMsg
 
-from pick_and_place.vlm_classifier import classify_crop
+from pick_and_place.vlm_classifier import verify_crop, rename_crop, yes_no
 
 
 class DetectObjects(yasmin.State):
@@ -58,10 +59,11 @@ class DetectObjects(yasmin.State):
     TEXT_THRESHOLD = 0.30   # 0.10 glued several query names into one phrase
     NMS_IOU = 0.5
 
-    # ── VLM naming (Ollama). DINO finds the boxes; the VLM says what each is.
+    # ── VLM check (Ollama). The name comes from DINO + object_names; the VLM says yes/no,
+    #    and after a "no" may change the name in the background (only if it picks AND confirms one).
     #    Run clip_rerank:=false in the launch — the VLM replaces CLIP here.
     VLM_ENABLE = False
-    VLM_MODEL = "moondream"
+    VLM_MODEL = "qwen2.5vl:3b"   # yes/no check only; moondream ignores the image
     VLM_HOST = "http://localhost:11434"
     VLM_TIMEOUT = 60.0
 
@@ -88,6 +90,10 @@ class DetectObjects(yasmin.State):
         except Exception:
             n = []
         self._names = dict(zip(self._queries, n)) if len(n) == len(self._queries) else {}
+        try:   # config pick_and_place.vlm: true -> the VLM double-checks each name
+            self.VLM_ENABLE = bool(self.node.get_parameter("pick_and_place.vlm").value)
+        except Exception:
+            pass
 
         self._rgb = None
         self._depth = None
@@ -151,6 +157,24 @@ class DetectObjects(yasmin.State):
             return future.result()
         except Exception:
             return None
+
+    def _rename_doubted(self, rgb, items, cands):
+        """Background thread: the VLM said "no" to these objects. For each, the VLM picks a name
+        from the list and must confirm it with "yes"; only then the name changes. The robot
+        handles these objects last, so this usually finishes before it gets to them."""
+        for d3, box in items:
+            old = d3.name
+            try:
+                new = rename_crop(rgb, box, old, cands, model=self.VLM_MODEL,
+                                  host=self.VLM_HOST, timeout=self.VLM_TIMEOUT)
+            except Exception as e:
+                new = None
+                yasmin.YASMIN_LOG_WARN(f"VLM rename of {old} failed: {e}")
+            if new:
+                d3.name = new
+                yasmin.YASMIN_LOG_INFO(f"VLM rename: {old} -> {new} (picked and confirmed)")
+            else:
+                yasmin.YASMIN_LOG_INFO(f"VLM rename: kept {old} (no other name confirmed)")
 
     def _clean_label(self, phrase):
         """The query the detector's phrase is about: the one sharing most words with it (the
@@ -277,16 +301,16 @@ class DetectObjects(yasmin.State):
                     f"VLM: cannot convert RGB ({e}); keeping DINO labels."
                 )
 
-        detected = []
+        detected, doubted = [], []
+        boxes = {}
         for name, conf, (cx, cy, w, h) in kept:
+            ok = None
             if rgb_cv is not None:
-                vlm_name = classify_crop(
-                    rgb_cv, (cx, cy, w, h),
+                ok = verify_crop(
+                    rgb_cv, (cx, cy, w, h), name,
                     model=self.VLM_MODEL, host=self.VLM_HOST, timeout=self.VLM_TIMEOUT,
                 )
-                if vlm_name and vlm_name != name:
-                    yasmin.YASMIN_LOG_INFO(f"VLM: '{name}' -> '{vlm_name}'")
-                    name = vlm_name
+                yasmin.YASMIN_LOG_INFO(f"VLM: is it a {name}? {yes_no(ok)}")
 
             d3 = Detection3D()
             d3.name = name
@@ -295,8 +319,17 @@ class DetectObjects(yasmin.State):
             pt = self._project_3d(cx, cy)
             if pt is not None:
                 d3.point = pt
-            detected.append(d3)
+            (doubted if ok is False else detected).append(d3)
+            boxes[id(d3)] = (cx, cy, w, h)
 
+        # The VLM said "no": the robot deals with these objects last. Meanwhile, in the background,
+        # the VLM picks a name for each from the list; the name changes only if it also confirms it.
+        if doubted:
+            yasmin.YASMIN_LOG_WARN(f"VLM doubts {[d.name for d in doubted]}: handling them last")
+            cands = list(self._names.values()) or list(self._queries)
+            threading.Thread(target=self._rename_doubted, daemon=True,
+                             args=(rgb_cv, [(d, boxes[id(d)]) for d in doubted], cands)).start()
+        detected += doubted
         blackboard["detected_objects"] = detected
         yasmin.YASMIN_LOG_INFO(
             f"Detected {len(detected)} object(s): "
