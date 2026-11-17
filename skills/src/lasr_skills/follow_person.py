@@ -689,7 +689,7 @@ class FollowPerson(StateMachine):
     def __init__(
         self,
         safe_distance: float = 1.0,
-        max_speed: float = 0.7,
+        max_speed: float = 0.4,
         stationary_time: float = 6.0,
         max_lost_attempts: int = 3,
         max_ask_attempts: int = 3,
