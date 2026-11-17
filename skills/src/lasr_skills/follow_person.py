@@ -141,6 +141,50 @@ class TfRobotPose:
 # -----------------------------------------------
 
 
+class HeadDeadband(State):
+    """
+    Skips the (blocking) head re-point when the host is roughly where the head already
+    points, so the detection loop isn't stalled waiting for the head every tick and the
+    camera isn't moving (blurring) for tiny corrections.
+    """
+
+    def __init__(self, pan_threshold: float = math.radians(10.0), range_threshold=0.6):
+        super().__init__(outcomes=["look", "skip"])
+        self.add_input_key("last_known")
+        self.pan_threshold = pan_threshold
+        self.range_threshold = range_threshold
+        self._last = None  # (pan, range, stamp) of the last head goal, base_footprint
+        self.node = yasmin_ros.logger_node
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self.node)
+
+    def execute(self, blackboard):
+        try:
+            t = self.tf_buffer.lookup_transform(
+                "map",
+                "base_footprint",
+                rclpy.time.Time(),
+                timeout=rclpy.duration.Duration(seconds=0.2),
+            ).transform
+        except Exception:
+            return "look"
+        q = t.rotation
+        yaw = math.atan2(2 * (q.w * q.z + q.x * q.y), 1 - 2 * (q.y * q.y + q.z * q.z))
+        px, py = _xy(blackboard["last_known"])
+        dx, dy = px - t.translation.x, py - t.translation.y
+        pan = math.atan2(dy, dx) - yaw
+        pan = math.atan2(math.sin(pan), math.cos(pan))
+        rng = math.hypot(dx, dy)
+        now = time.monotonic()
+        # Re-point anyway if it's been a while (e.g. a recovery scan moved the head).
+        if self._last is not None and now - self._last[2] < 2.0:
+            d_pan = abs(math.atan2(math.sin(pan - self._last[0]), math.cos(pan - self._last[0])))
+            if d_pan < self.pan_threshold and abs(rng - self._last[1]) < self.range_threshold:
+                return "skip"
+        self._last = (pan, rng, now)
+        return "look"
+
+
 class ResetFollowState(State):
     """
     Resets every blackboard key this skill communicates through, so stale values from a
@@ -440,6 +484,14 @@ class EvaluateDetections(State):
         self.robot = TfRobotPose(self.node)
 
     def execute(self, blackboard: Blackboard):
+        tick = time.monotonic()
+        if getattr(self, "_last_tick", None) is not None:
+            self.node.get_logger().info(
+                f"Tracker loop: {1.0 / max(tick - self._last_tick, 1e-3):.1f} Hz",
+                throttle_duration_sec=2.0,
+            )
+        self._last_tick = tick
+
         robot = self.robot.get(timeout=1.0)
         if robot is None:
             return "paused"
@@ -622,9 +674,14 @@ class TrackPerson(StateMachine):
             "GET_PERSON_POINT",
             GetPersonPoint(),
             transitions={
-                "succeeded": "LOOK_AT_LAST_KNOWN",
+                "succeeded": "HEAD_DEADBAND",
                 "failed": "EVALUATE_DETECTIONS",
             },
+        )
+        self.add_state(
+            "HEAD_DEADBAND",
+            HeadDeadband(),
+            transitions={"look": "LOOK_AT_LAST_KNOWN", "skip": "EVALUATE_DETECTIONS"},
         )
         self.add_state(
             "LOOK_AT_LAST_KNOWN",
@@ -689,7 +746,7 @@ class FollowPerson(StateMachine):
     def __init__(
         self,
         safe_distance: float = 1.0,
-        max_speed: float = 0.4,
+        max_speed: float = 0.55,
         stationary_time: float = 6.0,
         max_lost_attempts: int = 3,
         max_ask_attempts: int = 3,

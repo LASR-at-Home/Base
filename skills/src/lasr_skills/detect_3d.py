@@ -98,7 +98,7 @@ class Detect3D(ServiceState):
                     f"Check that {self.image_topic} and {self.depth_image_topic} are publishing and roughly synchronized."
                 )
                 return "failed"
-            time.sleep(0.25)
+            time.sleep(0.01)
 
         image_msg, depth_msg = self.data
 
