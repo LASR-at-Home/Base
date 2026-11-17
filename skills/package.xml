@@ -29,6 +29,10 @@
     <depend>yasmin_viewer</depend>
 
     <depend>cv2_img</depend>
+    <depend>control_msgs</depend>
+    <depend>std_srvs</depend>
+    <depend>nav2_msgs</depend>
+    <exec_depend>lasr_person_following</exec_depend>
 
     <build_depend>ament_virtualenv</build_depend>
     <export>

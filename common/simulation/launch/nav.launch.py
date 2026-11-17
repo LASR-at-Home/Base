@@ -3,8 +3,14 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    TimerAction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -26,7 +32,12 @@ def generate_launch_description():
     with open(map_yaml, "w") as f:
         f.write(content.replace("image: map.pgm", f"image: {map_pgm}"))
 
-    nav_params = os.path.join(pkg_sim, "config", "nav2_params_scan_raw.yaml")
+    nav_params_arg = DeclareLaunchArgument(
+        "nav_params",
+        default_value=os.path.join(pkg_sim, "config", "nav2_params_scan_raw.yaml"),
+        description="Nav2 parameter file",
+    )
+    nav_params = LaunchConfiguration("nav_params")
     rviz_config = os.path.join(pkg_sim, "config", "mapping.rviz")
 
     INITIAL_POSE_X = "9.151"
@@ -214,6 +225,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
+            nav_params_arg,
             tiago,
             nav2_nodes,
             rviz,

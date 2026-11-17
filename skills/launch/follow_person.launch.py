@@ -27,6 +27,16 @@ def generate_launch_description():
         )
     )
 
+    person_following = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_person_following"),
+                "launch",
+                "person_following.launch.py",
+            )
+        )
+    )
+
     microphone = Node(
         package="microphone",
         executable="mic",
@@ -54,5 +64,12 @@ def generate_launch_description():
     )
 
     return LaunchDescription(
-        [load_motions, yolo_service, follow_person, microphone, transcribe_speech]
+        [
+            load_motions,
+            yolo_service,
+            person_following,
+            follow_person,
+            microphone,
+            transcribe_speech,
+        ]
     )

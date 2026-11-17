@@ -177,17 +177,18 @@ class YOLOServiceNode:
         x = (u - cx) * z / fx
         y = (v - cy) * z / fy
 
-        Assumes depth_im is in millimeters.
+        Depth is millimetres for 16UC1 images (real camera) and metres otherwise
+        (32FC1, e.g. simulation).
         Returns: (x, y, z) median point in camera frame, in meters.
         """
         contours = np.array(mask_xy, dtype=np.int32).reshape(-1, 2)
         mask = np.zeros(depth_im.shape[:2], dtype=np.uint8)
         cv2.fillPoly(mask, [contours], color=255)
-        roi = cv2.bitwise_and(depth_im, depth_im, mask=mask)
 
-        v, u = np.where(roi)
-        z = depth_im[v, u] / 1000.0  # convert mm to meters
-        valid = z > 0
+        v, u = np.nonzero(mask)
+        scale = 1e-3 if depth_im.dtype == np.uint16 else 1.0
+        z = depth_im[v, u].astype(np.float64) * scale
+        valid = np.isfinite(z) & (z > 0)
         z = z[valid]
         u = u[valid]
         v = v[valid]

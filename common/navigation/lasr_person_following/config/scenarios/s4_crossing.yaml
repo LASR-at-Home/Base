@@ -1,0 +1,15 @@
+# S4: a second person crosses between the robot and the host near the doorway.
+test_person:
+  start: {x: 2.5, y: -0.8, yaw: 0.0}
+  steps:
+    - {pause: 2.0}
+    - {x: 4.4, y: -1.0, speed: 0.5}
+    - {x: 5.8, y: -1.0, speed: 0.5}
+    - {x: 6.8, y: -2.6, speed: 0.5}
+    - {x: 11.5, y: -2.8, speed: 0.5}
+distractor:
+  start: {x: 3.1, y: 2.5, yaw: -1.5708}
+  steps:
+    - {pause: 1.0}
+    - {x: 3.1, y: -0.5, speed: 0.7}
+    - {x: 2.8, y: 2.5, speed: 0.7}

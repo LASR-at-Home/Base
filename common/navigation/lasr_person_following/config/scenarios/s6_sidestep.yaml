@@ -1,0 +1,15 @@
+# S6: host steps quickly to the side out of view and waits there; then (as if asked to
+# come back) walks to the front of the robot and leads the rest of the way.
+test_person:
+  start: {x: 2.5, y: -0.8, yaw: 0.0}
+  steps:
+    - {pause: 2.0}
+    - {x: 3.0, y: -0.5, speed: 0.6}
+    - {x: 3.0, y: 2.3, speed: 1.0}
+    - {pause: 25.0}
+    - {robot_front: 1.5, speed: 0.6}
+    - {pause: 4.0}
+    - {x: 4.4, y: -1.0, speed: 0.6}
+    - {x: 5.8, y: -1.0, speed: 0.6}
+    - {x: 6.8, y: -2.6, speed: 0.6}
+    - {x: 10.0, y: -2.8, speed: 0.6}
