@@ -9,17 +9,17 @@
       # Open-vocab query words for table detection (common nouns).
       # Gazebo house kitchen table. Real objects: ["red coke can", "green iced tea can",
       # "bag of crisps", "red apple", "white paper cup"] -> ["coke", "iced tea", "crisps", "apple", "paper cup"]
-      objects: ["red coca cola can", "green sprite can", "pringles can", "biscuit box", "clear plastic cup"]
-      object_names: ["coke", "sprite", "pringles", "biscuits", "cup"]   # one per query, same order
+      objects: ["red coca cola can", "white ceramic cup", "clear plastic water bottle", "purple granola cereal box", "green pringles crisps tube", "silver tea spoon"]   # real robot (lab), tuned 2026-11-17
+      object_names: ["coke can", "ceramic cup", "water bottle", "granola box", "pringles tube", "tea spoon"]   # one per query, same order: what the robot says
       vlm: false   # true: a local VLM (Ollama qwen2.5vl:3b) answers yes/no "is this a <name>?"; "no" = handled last + renamed in the background only if the VLM picks and confirms another name; needs ollama serve
+      head_tilt: -0.4   # rad, head tilt while detecting at the table (more negative = looks lower; -0.6 was too low). Live: ros2 param set /pick_and_place pick_and_place.head_tilt -0.3
 
       table:
         pose:
-          position: {x: 2.405, y: -3.01, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.9594, w: 0.2819}
+          position: {x: 5.6, y: 25.705, z: 0.0}   
+          orientation: {x: 0.0, y: 0.0, z: 0.086, w: 0.996}
         observe_pose:
-          position: {x: 3.299, y: -2.068, z: 0.0}
-          orientation: {x: 0.0, y: 0.0, z: -0.9356, w: 0.3531}
+          orientation: {x: 0.0, y: 0.0, z: 0.049, w: 0.999}
         look_point: [5.25, 2.27, 0.78]
         polygon: [3.5, 1.0, 5.5, 1.0, 5.5, 3.5, 3.5, 3.5]
         search_polygon: [5.3, 3.8, 7.8, 3.8, 7.8, 5.9, 5.3, 5.9]
@@ -31,23 +31,29 @@
           size: [1.02, 1.2, 0.9]
           position: [1.2, -3.9, 0.37]
 
+      # ── WAYPOINT: every trip goes through here first (keeps clear of the table top) ──
+      waypoint:
+        pose:
+          position: {x: 5.361, y: 26.817, z: 0.0}   # fix_demo9 (tf2_echo map base_footprint)
+          orientation: {x: 0.0, y: 0.0, z: 0.049, w: 0.999}
+
       # ── DESTINATION 1: dishwasher (tableware + cutlery) ──
       dishwasher:
         pose:
-          position: {x: -0.369876712341527, y: 1.1809765765046163, z: 0.0}              # <-- ВСТАВ pose (ros2 topic echo --once /amcl_pose)
-          orientation: {x: 0.0, y: 0.0, z: 0.9920314752902727, w: 0.1259902854723536}
+          position: {x: 6.079, y: 26.933, z: 0.0}   # fix_demo9 (tf2_echo map base_footprint)
+          orientation: {x: 0.0, y: 0.0, z: 0.365, w: 0.931}
 
       # ── DESTINATION 2: trash bin ──
       trash_bin:
         pose:
-          position: {x: 2.1755595062984496, y: 0.9536759374323881, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: 0.6918191579917108, w: 0.7220708086023423}
+          position: {x: 8.522, y: 27.166, z: 0.0}   # fix_demo9 (tf2_echo map base_footprint)
+          orientation: {x: 0.0, y: 0.0, z: 0.737, w: 0.676}
 
       # ── DESTINATION 3: cabinet (fake: boxes with objects) ──
       cabinet:
         pose:
-          position: {x: -0.6363920463255814, y: -2.107459083686513, z: 0.0}              # <-- ВСТАВ pose
-          orientation: {x: 0.0, y: 0.0, z: -0.8431441386528592, w: 0.5376876058226823}
+          position: {x: 8.235, y: 27.332, z: 0.0}   # fix_demo9 (tf2_echo map base_footprint)
+          orientation: {x: 0.0, y: 0.0, z: 0.740, w: 0.672}
 
         # Shelves — used by ScanShelves in the NEXT deliverable.
         # shelf_order is the iteration list; shelves.<id> holds per-shelf config.
@@ -74,13 +80,13 @@
             z_max: 0.6
 
       grasp:
-        enable: true
+        enable: false   # real-robot demo: the person carries the object
         use_moveit: false
         publish_box: true
 
       # ── Place on a shelf (sim: house.world Bookshelf; map frame) ──
       place:
-        enable: true
+        enable: false
         all_objects: true        # every grasped object goes to the shelf (sim demo)
         observe_pose:            # 1.10 m in front of the bookshelf, facing it
           position: {x: -4.879, y: 2.279, z: 0.0}

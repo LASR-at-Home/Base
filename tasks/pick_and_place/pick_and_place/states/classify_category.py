@@ -9,34 +9,7 @@ import time
 
 
 
-CATEGORY_MAP = {
-    "fruit": {
-        "apple", "banana", "orange",
-    },
-    "vegetable": {
-        "carrot", "tomato", "cucumber", "lettuce", "onion", "broccoli",
-        "cabbage", "pepper", "zucchini", "radish", "corn", "potato", "garlic",
-    },
-    "beverage": {
-        "bottle", "water bottle", "juice", "milk",
-        "soda can", "coffee cup", "energy drink", "thermos", "coke", "red bull", "iced tea", "coke can", "iced tea can", "sprite",
-    },
-    "snack": {
-        "chips", "crackers", "candy", "chocolate bar", "cookie",
-        "snack bag", "biscuit", "granola bar", "popcorn", "pringles", "pringles tube", "crisps", "crisp packet", "biscuits",
-    },
-    "cleaning": {
-        "soap", "sponge", "brush", "cleaner", "detergent", "tissue box",
-        "toilet paper", "broom", "mop", "spray bottle", "bucket", "toothpaste",
-    },
-    "cereal": {
-        "cereal", "cereal box", "oats", "muesli", "granola", "granola box",
-    },
-    "dish": {
-        "cup", "fork", "knife", "spoon", "plate", "bowl", "wine glass",
-        "mug", "chopsticks", "paper cup",
-    },
-}
+from pick_and_place.categories import CATEGORY_MAP  # shared with detect_tuner
 
 
 class ClassifyCategory(yasmin.State):

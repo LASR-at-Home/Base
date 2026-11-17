@@ -376,6 +376,9 @@ class AddTableCollision(yasmin.State):
 
     # main
     def execute(self, blackboard) -> str:
+        if not bool(self._param("pick_and_place.grasp.enable", True)):
+            yasmin.YASMIN_LOG_INFO("grasp.enable=false: no table collision box needed.")
+            return "succeeded"
         detect = bool(self._param("pick_and_place.table.collision.detect", True))
 
         if detect:

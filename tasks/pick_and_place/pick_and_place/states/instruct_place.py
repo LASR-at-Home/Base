@@ -1,3 +1,5 @@
+import time
+
 import yasmin
 
 from lasr_skills import Say
@@ -5,19 +7,17 @@ from lasr_skills import Say
 
 class InstructPlace(yasmin.State):
     """
-    Instructs the human operator where to place the selected object.
-
-    The destination phrase comes from DecideDestination (the dishwasher / the
-    trash bin / the cabinet). For cabinet placements, ChooseShelf additionally
-    provides a shelf id (chosen_shelf) and an optional hint (chosen_shelf_str
-    e.g. "near the cereal"). Dishwasher / trash placements carry no shelf hint.
+    At the destination: asks the person to put the object there
+    ("on the shelf" for the cabinet, "in the dishwasher", "in the trash bin").
 
     Blackboard inputs:
         selected_object_name : str
         destination_str      : str
-        chosen_shelf         : str
+        chosen_shelf         : str   (not spoken: no shelf perception in this demo)
         chosen_shelf_str     : str
     """
+
+    WAIT_S = 5.0   # time to put the object down before the robot drives back
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -27,31 +27,15 @@ class InstructPlace(yasmin.State):
         self.add_input_key("chosen_shelf_str")
 
     def execute(self, blackboard) -> str:
-        name             = blackboard["selected_object_name"]
-        destination_str  = blackboard["destination_str"] or "its place"
-        chosen_shelf     = blackboard["chosen_shelf"]
-        chosen_shelf_str = blackboard["chosen_shelf_str"]
+        name            = blackboard["selected_object_name"]
+        destination_str = blackboard["destination_str"] or "its place"
+        where = "on the shelf" if destination_str == "the cabinet" else f"in {destination_str}"
 
-        # Build an optional shelf hint (cabinet only).
-        hint_parts = []
-        if chosen_shelf:
-            hint_parts.append(f"on {chosen_shelf}")
-        if chosen_shelf_str:
-            hint_parts.append(chosen_shelf_str)
-        hint = (", " + ", ".join(hint_parts)) if hint_parts else ""
+        yasmin.YASMIN_LOG_INFO(f"Instructing place: {name} {where}")
+        text = f"Please put the {name} {where}."
 
-        yasmin.YASMIN_LOG_INFO(
-            f"Instructing place: {name} in {destination_str}{hint}"
-        )
-
-        text = (
-            f"Please place the {name} in {destination_str}{hint}. "
-        )
-
-        say = Say(text=text)
-        outcome = say.execute(blackboard)
-
+        outcome = Say(text=text).execute(blackboard)
+        time.sleep(self.WAIT_S)
         if outcome in ("succeeded", "aborted"):
             return "succeeded"
-
         return "failed"

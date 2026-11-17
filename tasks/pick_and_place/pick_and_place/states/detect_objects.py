@@ -25,6 +25,7 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from builtin_interfaces.msg import Duration as DurationMsg
 
 from pick_and_place.vlm_classifier import verify_crop, rename_crop, yes_no
+from pick_and_place import referee_view
 
 
 class DetectObjects(yasmin.State):
@@ -48,15 +49,15 @@ class DetectObjects(yasmin.State):
 
     HEAD_PAN_JOINT = "head_1_joint"
     HEAD_TILT_JOINT = "head_2_joint"
-    HEAD_TILT_DOWN = -0.45
+    HEAD_TILT_DOWN = -0.4     # default; config pick_and_place.head_tilt overrides it (-0.6 looked too low)
 
     RGB_TOPIC = "/head_front_camera/rgb/image_raw"
     DEPTH_TOPIC = "/head_front_camera/depth/image_raw"
     INFO_TOPIC = "/head_front_camera/rgb/camera_info"
 
     DEFAULT_QUERIES = ["cup", "can", "bottle", "bowl", "apple"]
-    BOX_THRESHOLD = 0.25
-    TEXT_THRESHOLD = 0.30   # 0.10 glued several query names into one phrase
+    BOX_THRESHOLD = 0.35    # tuned on the real robot (tuner), 2026-11-17
+    TEXT_THRESHOLD = 0.35   # 0.10 glued several query names into one phrase; 0.35 tuned on the robot
     NMS_IOU = 0.5
 
     # ── VLM check (Ollama). The name comes from DINO + object_names; the VLM says yes/no,
@@ -70,6 +71,7 @@ class DetectObjects(yasmin.State):
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
         self.add_output_key("detected_objects")
+        self.add_input_key("handled_names")   # names dealt with earlier this run
 
         self.node = yasmin_ros.logger_node
         self.bridge = CvBridge()
@@ -95,6 +97,8 @@ class DetectObjects(yasmin.State):
         except Exception:
             pass
 
+        self._found_before = False   # an earlier round found objects
+        self._empty = 0              # empty looks in a row since then
         self._rgb = None
         self._depth = None
         self._info = None
@@ -113,6 +117,7 @@ class DetectObjects(yasmin.State):
         self._tf_listener = tf2_ros.TransformListener(self._tf, self.node)
 
         self._ovd = self.node.create_client(OpenVocabDetect, "open_vocab/detect")
+        referee_view.start(self.node)   # /referee_view exists from the start
         self._head = ActionClient(
             self.node, FollowJointTrajectory,
             "/head_controller/follow_joint_trajectory",
@@ -129,12 +134,23 @@ class DetectObjects(yasmin.State):
         self._info = m
 
     # ── head ──
+    def _tilt(self):
+        """Head tilt for the table: config pick_and_place.head_tilt, read every time (settable live)."""
+        try:
+            v = self.node.get_parameter("pick_and_place.head_tilt").value
+            if v is not None:
+                return float(v)
+        except Exception:
+            pass
+        return self.HEAD_TILT_DOWN
+
     def _look_down(self):
         if not self._head.wait_for_server(timeout_sec=5.0):
             yasmin.YASMIN_LOG_WARN("head controller unavailable; skipping look-down")
             return
         pt = JointTrajectoryPoint()
-        pt.positions = [-0.3, self.HEAD_TILT_DOWN]
+        tilt = self._tilt()
+        pt.positions = [0.0, tilt]   # straight ahead (the Gazebo table needed -0.3)
         pt.time_from_start = DurationMsg(sec=2)
         traj = JointTrajectory()
         traj.joint_names = [self.HEAD_PAN_JOINT, self.HEAD_TILT_JOINT]
@@ -142,7 +158,7 @@ class DetectObjects(yasmin.State):
         goal = FollowJointTrajectory.Goal()
         goal.trajectory = traj
         self._head.send_goal_async(goal)
-        yasmin.YASMIN_LOG_INFO("Tilting head down to look at the table…")
+        yasmin.YASMIN_LOG_INFO(f"Tilting head to {tilt:.2f} rad to look at the table…")
         time.sleep(3.0)
 
     # ── helpers ──
@@ -251,6 +267,26 @@ class DetectObjects(yasmin.State):
         except Exception:
             return None
 
+    # ── one more look (WaitForPickup) ──
+    def detect_once(self, timeout=30.0):
+        """Detect on the newest frame: no head move, no VLM, no 3D. Returns (frame, [(name, conf,
+        (cx, cy, w, h))]) after the name dictionary and NMS, or (None, None) if unavailable."""
+        frame = self._rgb
+        if frame is None or not self._ovd.wait_for_service(timeout_sec=5.0):
+            return None, None
+        req = OpenVocabDetect.Request()
+        req.image = frame
+        req.queries = list(self._queries)
+        req.box_threshold = float(self.BOX_THRESHOLD)
+        req.text_threshold = float(self.TEXT_THRESHOLD)
+        resp = self._wait_future(self._ovd.call_async(req), timeout=timeout)
+        if resp is None:
+            return None, None
+        raw = [(d.name, float(d.confidence), (d.xywh[0], d.xywh[1], d.xywh[2], d.xywh[3]))
+               for d in resp.detections if len(d.xywh) >= 4]
+        cleaned = [(l, c, b) for l, c, b in ((self._clean_label(n), c, b) for n, c, b in raw) if l]
+        return frame, self._nms(cleaned)
+
     # ── main ──
     def execute(self, blackboard):
         self._look_down()
@@ -290,6 +326,12 @@ class DetectObjects(yasmin.State):
         # boxes whose name matches no query ("", "##ng") are dropped
         cleaned = [(l, c, b) for l, c, b in ((self._clean_label(n), c, b) for n, c, b in raw) if l]
         kept = self._nms(cleaned)
+        try:   # already handled this run (taken away, or never picked up): not offered again
+            done = set(blackboard["handled_names"] or [])
+        except Exception:
+            done = set()
+        if done:
+            kept = [k for k in kept if k[0] not in done]
 
         # VLM naming: convert the RGB once, then let the VLM name each kept crop.
         rgb_cv = None
@@ -335,4 +377,16 @@ class DetectObjects(yasmin.State):
             f"Detected {len(detected)} object(s): "
             f"{[(d.name, round(d.confidence, 2)) for d in detected]}"
         )
+        try:   # every detection drawn on the frame it was found on -> /referee_view
+            referee_view.show(self.node, req.image, detected)
+        except Exception as e:
+            yasmin.YASMIN_LOG_WARN(f"referee view: {e}")
+        if detected:
+            self._found_before, self._empty = True, 0
+        elif self._found_before:   # back at the table and nothing left?
+            self._empty += 1
+            if self._empty >= 2:   # looked twice: the table is clear
+                yasmin.YASMIN_LOG_INFO("The table is clear: nothing left to sort.")
+                return "succeeded"   # empty list -> SELECT_OBJECT -> FINISH
+            yasmin.YASMIN_LOG_INFO("Nothing found; looking once more to be sure.")
         return "succeeded" if detected else "failed"

@@ -1,3 +1,5 @@
+import time
+
 import yasmin
 
 from lasr_skills import Say
@@ -5,14 +7,16 @@ from lasr_skills import Say
 
 class InstructPick(yasmin.State):
     """
-    Instructs the human operator to pick up the selected object, and announces
-    the robot's classification + intended destination (Communicating Perception).
+    Asks the person to take the selected object and follow the robot to its destination
+    (the robot does not grasp in this demo).
 
     Blackboard inputs:
         selected_object_name : str
         object_category      : str
-        destination_str      : str   — e.g. "the dishwasher"
+        destination_str      : str   - e.g. "the dishwasher"
     """
+
+    WAIT_S = 3.0   # time to pick the object up before the robot drives off
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -28,17 +32,10 @@ class InstructPick(yasmin.State):
         yasmin.YASMIN_LOG_INFO(
             f"Instructing pick: {name} ({category}) -> {destination_str}"
         )
+        text = f"Please grab the {name} and follow me to {destination_str}."
 
-        text = (
-            f"I have selected the {name}. "
-            f"I classified it as a {category} item, so it goes to {destination_str}. "
-            f"Please pick it up and hold it ready."
-        )
-
-        say = Say(text=text)
-        outcome = say.execute(blackboard)
-
+        outcome = Say(text=text).execute(blackboard)
+        time.sleep(self.WAIT_S)
         if outcome in ("succeeded", "aborted"):
             return "succeeded"
-
         return "failed"

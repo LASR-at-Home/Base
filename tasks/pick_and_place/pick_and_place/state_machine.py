@@ -9,6 +9,8 @@ from yasmin_viewer import YasminViewerPub
 
 from lasr_skills import Say, GoToLocation
 from pick_and_place.states.place_object import PlaceObject, ShelfLocation
+from pick_and_place.states.announce_objects import AnnounceObjects
+from pick_and_place.states.wait_for_pickup import WaitForPickup
 
 from pick_and_place.states import (
     Start,
@@ -62,6 +64,7 @@ class PickAndPlace(yasmin.StateMachine):
 
     def __init__(self):
         super().__init__(outcomes=["succeeded", "failed"], handle_sigint=True)
+        detector = DetectObjects()   # shared by DETECT_OBJECTS and WAIT_FOR_PICKUP
 
         # ── Entry ─────────────────────────────────────────────────────────────
         self.add_state(
@@ -93,11 +96,18 @@ class PickAndPlace(yasmin.StateMachine):
         # ── Detect all objects on the table (done ONCE) ───────────────────────
         self.add_state(
             "DETECT_OBJECTS",
-            DetectObjects(),
+            detector,
             transitions={
-                "succeeded": "SELECT_OBJECT",
+                "succeeded": "ANNOUNCE_OBJECTS",
                 "failed":    "DETECT_OBJECTS",  # retry until objects found
             },
+        )
+
+        # ── Say what is on the table and where each object goes (once) ────────
+        self.add_state(
+            "ANNOUNCE_OBJECTS",
+            AnnounceObjects(),
+            transitions={"succeeded": "SELECT_OBJECT"},
         )
 
         # ── Select next object and visualise for referee ──────────────────────
@@ -146,18 +156,24 @@ class PickAndPlace(yasmin.StateMachine):
             "INSTRUCT_PICK",
             InstructPick(),
             transitions={
-                "succeeded": "GRASP",
+                "succeeded": "WAIT_FOR_PICKUP",
                 "failed":    "INSTRUCT_PICK",  # retry instruction
             },
         )
+        # ── Wait until the person has really taken it (announce-only mode) ───
+        self.add_state(
+            "WAIT_FOR_PICKUP",
+            WaitForPickup(detector),
+            transitions={"succeeded": "GRASP"},
+        )
         self.add_state(
             "GRASP", GraspObject(),
-            transitions={"succeeded": "SHELF_LOCATION", "failed": "GO_TO_DESTINATION"},
+            transitions={"succeeded": "SHELF_LOCATION", "failed": "VIA_WAYPOINT_OUT"},
         )
         # ── Holding it: put it on a free spot of the shelf (else the old announce) ─
         self.add_state(
             "SHELF_LOCATION", ShelfLocation(),
-            transitions={"shelf": "GO_TO_SHELF", "other": "GO_TO_DESTINATION"},
+            transitions={"shelf": "GO_TO_SHELF", "other": "VIA_WAYPOINT_OUT"},
         )
         self.add_state(
             "GO_TO_SHELF", GoToLocation(),  # reads blackboard["location"]
@@ -165,9 +181,15 @@ class PickAndPlace(yasmin.StateMachine):
         )
         self.add_state(
             "PLACE", PlaceObject(),
-            transitions={"succeeded": "GO_TO_TABLE", "failed": "INSTRUCT_PLACE"},
+            transitions={"succeeded": "VIA_WAYPOINT_BACK", "failed": "INSTRUCT_PLACE"},
         )
         # ── Navigate to the chosen destination (pose set by DecideDestination)─
+        # ── Safe waypoint first, clear of the table top ──────────────────────
+        self.add_state(
+            "VIA_WAYPOINT_OUT",
+            GoToLocation(location_param="pick_and_place.waypoint.pose"),
+            transitions={"succeeded": "GO_TO_DESTINATION", "failed": "GO_TO_DESTINATION"},
+        )
         self.add_state(
             "GO_TO_DESTINATION",
             GoToLocation(),  # reads blackboard["location"]
@@ -182,17 +204,23 @@ class PickAndPlace(yasmin.StateMachine):
             "INSTRUCT_PLACE",
             InstructPlace(),
             transitions={
-                "succeeded": "GO_TO_TABLE",
+                "succeeded": "VIA_WAYPOINT_BACK",
                 "failed":    "INSTRUCT_PLACE",  # retry instruction
             },
         )
 
         # ── Navigate back to table for next object ────────────────────────────
+        # ── Back through the safe waypoint, then the table ───────────────────
+        self.add_state(
+            "VIA_WAYPOINT_BACK",
+            GoToLocation(location_param="pick_and_place.waypoint.pose"),
+            transitions={"succeeded": "GO_TO_TABLE", "failed": "GO_TO_TABLE"},
+        )
         self.add_state(
             "GO_TO_TABLE",
             GoToLocation(location_param="pick_and_place.table.pose"),
             transitions={
-                "succeeded": "SELECT_OBJECT",  # loop back for next object
+                "succeeded": "DETECT_OBJECTS",  # look at the table again: what is left
                 "failed":    "GO_TO_TABLE",     # retry navigation
             },
         )
@@ -239,6 +267,7 @@ def main():
 
     # Initialise all blackboard keys used across the machine
     bb["detected_objects"]     = []
+    bb["handled_names"]        = []
     bb["selected_object"]      = None
     bb["selected_object_name"] = ""
     bb["object_name"]          = ""

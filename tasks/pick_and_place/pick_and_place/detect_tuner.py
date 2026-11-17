@@ -20,6 +20,12 @@ from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from builtin_interfaces.msg import Duration
 from pick_and_place.vlm_classifier import verify_crop, rename_crop, dino_name, yes_no, DEFAULT_MODEL
+from pick_and_place.categories import announcement
+from rclpy.parameter import Parameter
+try:
+    from tts_msgs.action import TTS
+except ImportError:      # no TTS messages here: the text is only logged
+    TTS = None
 import tf2_ros
 from tf2_geometry_msgs import do_transform_point
 from cv_bridge import CvBridge
@@ -43,6 +49,8 @@ class DetectTuner(Node):
         self.declare_parameter("names", [""])   # short name per query, same order (the dictionary)
         self.declare_parameter("vlm", False)    # true: the VLM answers yes/no "is this a <name>?"
         self.declare_parameter("vlm_model", DEFAULT_MODEL)
+        self.declare_parameter("say", False)               # true: say what it sees + where each goes, once
+        self.declare_parameter("trash_category", "snack")  # same as config pick_and_place.trash_category
 
         self.bridge = CvBridge()
         self._rgb = None
@@ -64,12 +72,14 @@ class DetectTuner(Node):
         self._tfl = tf2_ros.TransformListener(self._tf, self)
         self._head = ActionClient(
             self, FollowJointTrajectory, "/head_controller/follow_joint_trajectory")
+        self._tts = ActionClient(self, TTS, "/tts_engine/tts") if TTS is not None else None
         self.get_logger().info(
             f"detect_tuner up. RGB={rgb_t}\n"
             f"  -> RViz: add Image display on /detect_tuner/image\n"
             f"  -> tune live: ros2 param set /detect_tuner box_threshold 0.35\n"
             f"  -> names (dictionary, one per query):  -p names:=\"['coke can', ...]\"\n"
-            f"  -> VLM yes/no check:  ros2 param set /detect_tuner vlm true")
+            f"  -> VLM yes/no check:  ros2 param set /detect_tuner vlm true\n"
+            f"  -> say what it sees:  ros2 param set /detect_tuner say true")
 
     def _rgb_cb(self, m):
         self._rgb = m
@@ -232,6 +242,11 @@ class DetectTuner(Node):
                 f"  [{i}] {label:<14} conf={conf:.2f}  "
                 f"cxywh=({cx:.0f},{cy:.0f},{w:.0f},{h:.0f})  depth={dstr}  {mstr}{extra}")
 
+        if bool(self.get_parameter("say").value):     # once: reset, then speak
+            self.set_parameters([Parameter("say", Parameter.Type.BOOL, False)])
+            left_to_right = [x[0] for x in sorted(dets, key=lambda x: x[4][0])]
+            self._say(announcement(left_to_right, str(self.get_parameter("trash_category").value)))
+
         try:
             img = self.bridge.imgmsg_to_cv2(self._rgb, "bgr8")
             for label, raw, ok, conf, (cx, cy, w, h), depth, _, vlm_s, was in dets:
@@ -248,6 +263,19 @@ class DetectTuner(Node):
             self._pub.publish(out)
         except Exception as e:
             self.get_logger().warn(f"annotate/publish failed: {e}")
+
+    def _say(self, text):
+        self.get_logger().info(f"SAY: {text}")
+        if self._tts is None:
+            self.get_logger().warn("tts_msgs not installed: not speaking")
+            return
+        if not self._tts.wait_for_server(timeout_sec=2.0):
+            self.get_logger().warn("/tts_engine/tts not available: not speaking")
+            return
+        g = TTS.Goal()
+        g.input = text
+        g.locale = "en_GB"
+        self._tts.send_goal_async(g)
 
     def run(self):
         if (self.get_parameter("tilt_once").value

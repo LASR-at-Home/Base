@@ -6,6 +6,7 @@ import rclpy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from rclpy.qos import QoSProfile, DurabilityPolicy, ReliabilityPolicy, HistoryPolicy
+from pick_and_place import referee_view
 
 
 class SelectAndVisualiseObject(yasmin.State):
@@ -33,15 +34,12 @@ class SelectAndVisualiseObject(yasmin.State):
         self.add_output_key("selected_object")
         self.add_output_key("selected_object_name")
         self.add_output_key("object_name")
+        self.add_input_key("handled_names")
+        self.add_output_key("handled_names")
         self.node = yasmin_ros.logger_node
         self._bridge = CvBridge()
 
-        # Latched publisher so the referee view stays visible after publish
-        qos = QoSProfile(
-            depth=1,
-            durability=DurabilityPolicy.TRANSIENT_LOCAL,
-        )
-        self._referee_pub = self.node.create_publisher(Image, "/referee_view", qos)
+        # /referee_view is published by pick_and_place.referee_view (shared with DetectObjects)
         self._last_image = None
         cam_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT,
                              history=HistoryPolicy.KEEP_LAST)
@@ -72,6 +70,10 @@ class SelectAndVisualiseObject(yasmin.State):
         blackboard["selected_object"]      = selected
         blackboard["selected_object_name"] = selected.name
         blackboard["object_name"] = selected.name
+        try:   # DetectObjects will not offer it again this run
+            blackboard["handled_names"] = list(blackboard["handled_names"] or []) + [selected.name]
+        except Exception:
+            blackboard["handled_names"] = [selected.name]
         yasmin.YASMIN_LOG_INFO(
             f"Selected object: {selected.name} ({len(detected)} remaining)."
         )
@@ -88,46 +90,12 @@ class SelectAndVisualiseObject(yasmin.State):
         return "succeeded"
 
     def _publish_visualisation(self, detection) -> None:
+        # Redraw the frame DetectObjects ran on: every box, this one highlighted. No new
+        # camera frame is grabbed, so the box always matches the picture.
         try:
-            # Grab the latest RGB image directly from the camera topic
-            success, image_msg = rclpy.wait_for_message.wait_for_message(
-                msg_type=Image,
-                node=self.node,
-                topic="/head_front_camera/rgb/image_raw",
-                time_to_wait=5.0,
-            )
-
-            if not success:
-                yasmin.YASMIN_LOG_WARN("Could not get camera image for visualisation.")
-                return
-
-            label      = detection.name
-            xywh       = detection.xywh
-            confidence = detection.confidence
-
-            cv_im = self._bridge.imgmsg_to_cv2(image_msg, desired_encoding="rgb8")
-
-            cv2.rectangle(
-                cv_im,
-                (int(xywh[0]), int(xywh[1])),
-                (int(xywh[0] + xywh[2]), int(xywh[1] + xywh[3])),
-                (0, 255, 0),
-                2,
-            )
-            cv2.putText(
-                cv_im,
-                f"{label} {confidence:.2f}",
-                (int(xywh[0]), int(xywh[1] - 10)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 255, 0),
-                2,
-            )
-
-            self._referee_pub.publish(
-                self._bridge.cv2_to_imgmsg(cv_im, encoding="rgb8")
-            )
-            yasmin.YASMIN_LOG_INFO("Published visualisation to /referee_view.")
-
+            if referee_view.select(self.node, detection):
+                yasmin.YASMIN_LOG_INFO("Published visualisation to /referee_view.")
+            else:
+                yasmin.YASMIN_LOG_WARN("No detection frame to visualise yet.")
         except Exception as e:
             yasmin.YASMIN_LOG_WARN(f"Could not publish visualisation: {e}")
