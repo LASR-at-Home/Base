@@ -26,7 +26,7 @@ def generate_launch_description():
     gpsr_service_node = Node(
         package="GPSR",
         executable="service",
-        name="gpsr_service",
+        name="gpsr",  # must match the top-level key in params.yaml
         output="screen",
         parameters=[params],
     )

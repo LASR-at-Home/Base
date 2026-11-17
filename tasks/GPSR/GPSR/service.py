@@ -67,7 +67,7 @@ class GPSR_sm(yasmin.StateMachine):
 
         # Input method for service (keyboard or microphone)
         input_mode = self.node.get_parameter("input_mode").value.strip().lower()
-        if input_mode == "microphone":
+        if input_mode in ("microphone", "mic"):
             self.add_state(
                 "SET_PROMPT",
                 yasmin.CbState(outcomes=["succeeded"], callback=self.setPrompt),
@@ -84,27 +84,29 @@ class GPSR_sm(yasmin.StateMachine):
                 remappings={"tts_phrase": "instruction_text"},
             )
 
-            self.add_state(
-                "CHECK_TRANSCRIPT",
-                yasmin.CbState(
-                    outcomes=["valid", "invalid"],
-                    callback=self.checkTranscript,
-                ),
-                transitions={
-                    "valid": "QUERY_LLM",
-                    "invalid": "COUNT_SPEECH_FAILURE",
-                },
-            )
-
         else:
             self.add_state(
                 "REQUEST_AND_WAIT_FOR_COMMAND",
                 KeyboardInputState(),
                 transitions={
-                    "succeeded": "QUERY_LLM",
+                    # Through CHECK_TRANSCRIPT so that `placeholders` is set for
+                    # the "Command heard: {}" Say that runs alongside the planner
+                    "succeeded": "CHECK_TRANSCRIPT",
                     "aborted": "REQUEST_AND_WAIT_FOR_COMMAND",
                 },
             )
+
+        self.add_state(
+            "CHECK_TRANSCRIPT",
+            yasmin.CbState(
+                outcomes=["valid", "invalid"],
+                callback=self.checkTranscript,
+            ),
+            transitions={
+                "valid": "QUERY_LLM",
+                "invalid": "COUNT_SPEECH_FAILURE",
+            },
+        )
 
         # LLM Query (Planner)
         plan_con = yasmin.Concurrence(
