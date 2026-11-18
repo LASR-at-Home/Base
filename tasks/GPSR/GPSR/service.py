@@ -18,16 +18,16 @@ from threading import Thread
 from rclpy.executors import MultiThreadedExecutor as Executor
 from GPSR.states import (
     DispatchSkill,
-    KeyboardInputState,
     ListenState,
     QueryLLM,
 )
 from GPSR.tts import say
 
 from std_msgs.msg import Empty
-from std_srvs.srv import SetBool
+from lasr_helper_interfaces.srv import GPSRQuery
 
 from GPSR.planner import PLAN_FAILED_TOKEN
+from GPSR.validation import is_yes
 
 from lasr_skills import (
     Say,
@@ -57,17 +57,17 @@ class GPSR_sm(yasmin.StateMachine):
     not loop to collect further commands or store plans for later.
     """
 
-    def __init__(self, node, dispatch: bool = False):
+    def __init__(self, node, dispatch: bool = False, command: str = ""):
         super().__init__(outcomes=["succeeded", "failed"])
 
         self.node = node
         self.dispatch = dispatch
+        # A command passed in the service call replaces the microphone
+        self.command = command.strip()
         self.understand_attempts = 0
         self.operator_attempts = 0
 
-        # Input method for service (keyboard or microphone)
-        input_mode = self.node.get_parameter("input_mode").value.strip().lower()
-        if input_mode in ("microphone", "mic"):
+        if not self.command:  # no command given: listen on the microphone
             self.add_state(
                 "SET_PROMPT",
                 yasmin.CbState(outcomes=["succeeded"], callback=self.setPrompt),
@@ -84,17 +84,50 @@ class GPSR_sm(yasmin.StateMachine):
                 remappings={"tts_phrase": "instruction_text"},
             )
 
+            # Speech recognition errors are caught here, before planning: the robot
+            # repeats what it heard and only plans it if the operator says yes
+            self.add_state(
+                "SET_CONFIRM_PROMPT",
+                yasmin.CbState(outcomes=["succeeded"], callback=self.setConfirmPrompt),
+                transitions={"succeeded": "CONFIRM_COMMAND"},
+            )
+
+            self.add_state(
+                "CONFIRM_COMMAND",
+                AskAndListen(),
+                transitions={
+                    "succeeded": "CHECK_CONFIRMATION",
+                    "failed": "CHECK_CONFIRMATION",
+                },
+                remappings={
+                    "tts_phrase": "confirm_text",
+                    "transcribed_speech": "confirmation",
+                },
+            )
+
+            self.add_state(
+                "CHECK_CONFIRMATION",
+                yasmin.CbState(
+                    outcomes=["yes", "no"], callback=self.checkConfirmation
+                ),
+                transitions={
+                    "yes": "QUERY_LLM",
+                    "no": "COUNT_SPEECH_FAILURE",
+                },
+            )
+            after_transcript = "SET_CONFIRM_PROMPT"
+
         else:
             self.add_state(
                 "REQUEST_AND_WAIT_FOR_COMMAND",
-                KeyboardInputState(),
+                yasmin.CbState(outcomes=["succeeded"], callback=self.useCommand),
                 transitions={
                     # Through CHECK_TRANSCRIPT so that `placeholders` is set for
                     # the "Command heard: {}" Say that runs alongside the planner
                     "succeeded": "CHECK_TRANSCRIPT",
-                    "aborted": "REQUEST_AND_WAIT_FOR_COMMAND",
                 },
             )
+            after_transcript = "QUERY_LLM"  # given text needs no confirmation
 
         self.add_state(
             "CHECK_TRANSCRIPT",
@@ -103,7 +136,7 @@ class GPSR_sm(yasmin.StateMachine):
                 callback=self.checkTranscript,
             ),
             transitions={
-                "valid": "QUERY_LLM",
+                "valid": after_transcript,
                 "invalid": "COUNT_SPEECH_FAILURE",
             },
         )
@@ -250,14 +283,40 @@ class GPSR_sm(yasmin.StateMachine):
             },
         )
 
+    def useCommand(self, blackboard):
+        blackboard["transcribed_speech"] = self.command
+        return "succeeded"
+
     def setPrompt(self, blackboard):
         blackboard["instruction_text"] = "I am ready for your command. Please state it."
         return "succeeded"
+
+    def setConfirmPrompt(self, blackboard):
+        blackboard["command_confirmed"] = False
+        blackboard["confirm_text"] = (
+            f"I heard: {blackboard['placeholders']}. Is that correct? Please say yes or no."
+        )
+        return "succeeded"
+
+    def checkConfirmation(self, blackboard):
+        """'yes' only for a clear yes; anything else (no, unclear, silence) asks again."""
+        try:
+            answer = str(blackboard["confirmation"])
+        except Exception:
+            answer = ""
+        self.node.get_logger().info(f"Confirmation answer: '{answer}'")
+        if is_yes(answer):
+            blackboard["command_confirmed"] = True
+            return "yes"
+        return "no"
 
     def checkDispatch(self, blackboard):
         return "dispatch" if self.dispatch else "no_dispatch"
 
     def countSpeechFailure(self, blackboard):
+        if self.command:
+            return "failed"
+
         self.understand_attempts += 1
 
         if self.understand_attempts <= 3:
@@ -280,6 +339,8 @@ class GPSR_sm(yasmin.StateMachine):
                 return "no_command"
 
             if say_text == PLAN_FAILED_TOKEN:
+                if self.command:
+                    return "failed"
                 self.understand_attempts += 1
                 if self.understand_attempts <= 3:
                     return "request_rephrase"
@@ -303,7 +364,11 @@ class GPSR_sm(yasmin.StateMachine):
             announcement = ""
             if steps and steps[0].get("skill") == "say":
                 announcement = steps[0]["args"]["text"]
-            if command:
+            confirmed = (
+                "command_confirmed" in blackboard.keys()
+                and blackboard["command_confirmed"]
+            )
+            if command and not confirmed:  # already read back when confirming
                 say(self.node, f"I heard: {command}.", blackboard)
             if announcement and announcement != PLAN_FAILED_TOKEN:
                 say(self.node, announcement, blackboard)
@@ -335,12 +400,16 @@ class GPSR_service(Node):
     def __init__(self, node):
         super().__init__("gpsr_service")
         self.node = node
-        self.srv = self.create_service(SetBool, "/gpsr/single_query", self.callback)
+        self.srv = self.create_service(GPSRQuery, "/gpsr/single_query", self.callback)
 
-    def callback(self, request: SetBool.Request, response: SetBool.Response):
-        self.get_logger().info(f"Incoming request: data={request.data}")
+    def callback(self, request: GPSRQuery.Request, response: GPSRQuery.Response):
+        command = request.command.data
+        self.get_logger().info(
+            f"Incoming request: command='{command or '<microphone>'}', "
+            f"dispatch_plan={request.dispatch_plan}"
+        )
 
-        sm = GPSR_sm(self.node, dispatch=request.data)
+        sm = GPSR_sm(self.node, dispatch=request.dispatch_plan, command=command)
         outcome = sm()
 
         response.success = outcome == "succeeded"

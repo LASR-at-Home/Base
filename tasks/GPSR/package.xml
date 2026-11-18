@@ -14,6 +14,7 @@
   <depend>lasr_speech_recognition_interfaces</depend>
   <depend>lasr_speech_recognition_whisper</depend>
   <depend>robot_ui</depend>
+  <depend>lasr_helper_interfaces</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

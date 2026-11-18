@@ -10,6 +10,7 @@ gpsr:
     cloud_timeout_sec: 40.0
     simulation: true              # true = use gtts on PC, false = use robot TTS
     input_mode: "keyboard"        # "keyboard" or "microphone"
+    skip_entrance: false           # Full task (sm): true = no door detection / entrance_point, start at the instruction point (lab)
     object_detection_confidence: 0.5  # YOLO confidence for find/count objects (lower to catch non-COCO objects)
     whisper:
       energy_threshold: 400   

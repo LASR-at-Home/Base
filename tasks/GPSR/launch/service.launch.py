@@ -17,8 +17,6 @@ from GPSR.world import vocabulary_prompt
 
 
 def generate_launch_description():
-    input_mode = LaunchConfiguration("input_mode")
-
     pkg_gpsr = get_package_share_directory("GPSR")
 
     params = os.path.join(pkg_gpsr, "config", "params.yaml")
@@ -31,7 +29,8 @@ def generate_launch_description():
         parameters=[params],
     )
     delayed_gpsr_service = TimerAction(
-        period=5.0, actions=[gpsr_service_node]  # Delay in seconds (adjust as needed)
+        period=5.0,  # Delay in seconds (adjust as needed)
+        actions=[gpsr_service_node],
     )
 
     sim = DeclareLaunchArgument("sim", default_value="False")
@@ -65,17 +64,25 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
-                "initial_prompt": vocabulary_prompt()
-            }  # people / objects / locations from config/*.yaml
+                # people / objects / locations from config/*.yaml
+                "initial_prompt": vocabulary_prompt(),
+                "model": LaunchConfiguration("whisper_model"),
+                "mic_device": LaunchConfiguration("mic_device"),
+            }
         ],
     )
 
     return LaunchDescription(
         [
             DeclareLaunchArgument(
-                "input_mode",
-                default_value="mic",
-                description='Command input source: "keyboard" or "mic"',
+                "whisper_model",
+                default_value="small.en",
+                description="Whisper model: small.en (fast) or medium.en (more accurate, more GPU memory)",
+            ),
+            DeclareLaunchArgument(
+                "mic_device",
+                default_value="default",
+                description="Microphone: index or part of its name (see list_microphones.py)",
             ),
             sim,
             whisper_server,

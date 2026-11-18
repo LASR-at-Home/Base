@@ -1,0 +1,7 @@
+# Command to plan. If empty, the command is taken from the microphone.
+std_msgs/String command
+# true = plan and execute the skills, false = plan only (robot does not move)
+bool dispatch_plan
+---
+bool success
+string message

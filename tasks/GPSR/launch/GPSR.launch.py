@@ -5,105 +5,66 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
-    ExecuteProcess,
     IncludeLaunchDescription,
     TimerAction,
 )
-from launch.conditions import IfCondition
-from launch.launch_description_sources import (
-    AnyLaunchDescriptionSource,
-    PythonLaunchDescriptionSource,
-)
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.launch_description_sources import AnyLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+
+from GPSR.world import vocabulary_prompt
 
 
 def generate_launch_description():
     input_mode = LaunchConfiguration("input_mode")
 
-    pkg_sim = get_package_share_directory("simulation")
     pkg_gpsr = get_package_share_directory("GPSR")
-
     params = os.path.join(pkg_gpsr, "config", "params.yaml")
 
-    navigation = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(pkg_sim, "launch", "nav.launch.py"))
+    sim = DeclareLaunchArgument("sim", default_value="False")
+    yolo_service = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_vision_yolo"),
+                "launch",
+                "service_launch.xml",
+            )
+        ),
+        launch_arguments={
+            "sim": LaunchConfiguration("sim"),
+            # seg model for Detect3D, pose model for the gesture service
+            "preload": "['yolo11n-seg.pt', 'yolo11n-pose.pt']",
+        }.items(),
     )
 
-    rviz = TimerAction(
-        period=15.0,
-        actions=[
-            Node(
-                package="rviz2",
-                executable="rviz2",
-                name="rviz2",
-                arguments=["-d", os.path.join(pkg_sim, "config", "mapping.rviz")],
-                parameters=[{"use_sim_time": True}],
-                output="screen",
+    # ADded new
+    gesture_service = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_vision_gesture"),
+                "launch",
+                "gesture_service.launch.xml",
             )
-        ],
+        )
     )
 
-    map_server_deactivate = TimerAction(
-        period=20.0,
-        actions=[
-            ExecuteProcess(
-                cmd=["ros2", "lifecycle", "set", "/map_server", "deactivate"],
-                output="screen",
-            )
-        ],
-    )
-    map_server_cleanup = TimerAction(
-        period=21.0,
-        actions=[
-            ExecuteProcess(
-                cmd=["ros2", "lifecycle", "set", "/map_server", "cleanup"],
-                output="screen",
-            )
-        ],
-    )
-    map_server_configure = TimerAction(
-        period=22.0,
-        actions=[
-            ExecuteProcess(
-                cmd=["ros2", "lifecycle", "set", "/map_server", "configure"],
-                output="screen",
-            )
-        ],
-    )
-    map_server_activate = TimerAction(
-        period=23.0,
-        actions=[
-            ExecuteProcess(
-                cmd=["ros2", "lifecycle", "set", "/map_server", "activate"],
-                output="screen",
-            )
-        ],
+    # Added new
+    vlm = Node(
+        package="lasr_vlm",
+        executable="vlm_service",
+        name="lasr_vlm_service",
+        output="screen",
     )
 
-    initial_pose = TimerAction(
-        period=24.0,
-        actions=[
-            ExecuteProcess(
-                cmd=[
-                    "ros2",
-                    "topic",
-                    "pub",
-                    "--once",
-                    "/initialpose",
-                    "geometry_msgs/msg/PoseWithCovarianceStamped",
-                    (
-                        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
-                        '"position": {"x": 9.151, "y": -6.340, "z": 0.0}, '
-                        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {round(math.sin(2.204 / 2), 6)}, "w": {round(math.cos(2.204 / 2), 6)}}}'
-                        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
-                    ),
-                ],
-                output="screen",
+    load_motions = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("skills"),
+                "launch",
+                "load_motions.launch.py",
             )
-        ],
+        )
     )
-
     robot_ui = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
             os.path.join(
@@ -114,58 +75,47 @@ def generate_launch_description():
         )
     )
 
-    whisper_server = ExecuteProcess(
-        cmd=[
-            "ros2",
-            "run",
-            "lasr_speech_recognition_whisper",
-            "transcribe_microphone_server",
-            "--no_warmup",
-            "--energy_threshold",
-            "6500",
-            "--device",
-            "cpu",
-        ],
+    whisper_server = Node(
+        package="lasr_speech_recognition_whisper",
+        executable="transcribe_microphone_server",
+        name="whisper_mic_server",
         output="screen",
-        condition=IfCondition(
-            PythonExpression(
-                ["'", input_mode, "' == 'mic' or '", input_mode, "' == 'microphone'"]
-            )
-        ),
-    )
-
-    state_machine = TimerAction(
-        period=30.0,
-        actions=[
-            Node(
-                package="GPSR",
-                executable="sm",
-                name="gpsr",
-                output="screen",
-                parameters=[
-                    params,
-                    {"input_mode": input_mode},
-                ],
-            )
+        parameters=[
+            {
+                # people / objects / locations from config/*.yaml
+                "initial_prompt": vocabulary_prompt(),
+                "model": LaunchConfiguration("whisper_model"),
+                "mic_device": LaunchConfiguration("mic_device"),
+            }
         ],
     )
 
     return LaunchDescription(
         [
+
+            DeclareLaunchArgument(
+                "whisper_model",
+                default_value="small.en",
+                description="Whisper model: small.en (fast) or medium.en (more accurate, more GPU memory)",
+            ),
+            DeclareLaunchArgument(
+                "mic_device",
+                default_value="default",
+                description="Microphone: index or part of its name (see list_microphones.py)",
+            ),
             DeclareLaunchArgument(
                 "input_mode",
-                default_value="keyboard",
+                default_value="mic",
                 description='Command input source: "keyboard" or "mic"',
             ),
-            navigation,
-            rviz,
-            map_server_deactivate,
-            map_server_cleanup,
-            map_server_configure,
-            map_server_activate,
-            initial_pose,
-            robot_ui,
+            sim,
             whisper_server,
-            state_machine,
+            load_motions,
+            yolo_service,
+            gesture_service,  # find_person / count_people by gesture
+            vlm,  # get_person_info / find_person by clothes
         ]
     )
+
+
+# ros2 run GPSR sm --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml
