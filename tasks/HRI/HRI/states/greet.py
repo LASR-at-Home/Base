@@ -160,8 +160,6 @@ class GreetGuest(yasmin.StateMachine):
             remappings={"transcribed_speech": "guest_transcription"},
         )
 
-        transition = "GET_ATTRIBUTE_STR" if guest_id == "guest2" else "SAY_WELCOME"
-
         self.add_state(
             "SAY_WAIT",
             Say(
@@ -174,72 +172,85 @@ class GreetGuest(yasmin.StateMachine):
             },
         )
 
-        self.add_state(
-            "GET_NAME_DRINK_FACE",
-            conc_name_drink_face,
-            transitions={
-                "succeeded": transition,
-                "failed": "failed",
-                "failed_vision": "failed",
-                "failed_speech": transition,
-                "failed_face": "failed",
-                "failed_attributes": "failed",
-            },
-        )
+        if guest_id == 'guest1':
+            self.add_state(
+                "GET_NAME_DRINK_FACE",
+                conc_name_drink_face,
+                transitions={
+                    "succeeded": "SAY_WELCOME",
+                    "failed": "failed",
+                    "failed_vision": "failed",
+                    "failed_speech": "SAY_WELCOME",
+                    "failed_face": "failed",
+                    "failed_attributes": "failed",
+                },
+            )
 
-        self.add_state(
-            "SAY_WELCOME",
-            Say(format_str="Welcome to the party {}. Please follow me to be seated."),
-            transitions={
-                "succeeded": "STOP_EYE_TRACKING_1",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
+            self.add_state(
+                "SAY_WELCOME",
+                Say(format_str="Welcome to the party {}. Please follow me to be seated."),
+                transitions={
+                    "succeeded": "STOP_EYE_TRACKING_1",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
 
-        self.add_state(
-            "STOP_EYE_TRACKING_1",
-            StopEyeTracker(),
-            transitions={
-                "succeeded": "succeeded",
-                "failed": "failed",
-            },
-        )
+            self.add_state(
+                "STOP_EYE_TRACKING_1",
+                StopEyeTracker(),
+                transitions={
+                    "succeeded": "succeeded",
+                    "failed": "failed",
+                },
+            )
+        else:
+            self.add_state(
+                "GET_NAME_DRINK_FACE",
+                conc_name_drink_face,
+                transitions={
+                    "succeeded": "GET_ATTRIBUTE_STR",
+                    "failed": "failed",
+                    "failed_vision": "failed",
+                    "failed_speech": "GET_ATTRIBUTE_STR",
+                    "failed_face": "failed",
+                    "failed_attributes": "failed",
+                },
+            )
+            self.add_state(
+                "GET_ATTRIBUTE_STR",
+                attribute,
+                transitions={"succeeded": "SAY_ATTRIBUTE", "failed": "failed"},
+            )
 
-        self.add_state(
-            "GET_ATTRIBUTE_STR",
-            attribute,
-            transitions={"succeeded": "SAY_ATTRIBUTE", "failed": "failed"},
-        )
+            self.add_state(
+                "SAY_ATTRIBUTE",
+                Say(),
+                transitions={
+                    "succeeded": "STOP_EYE_TRACKING_2",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
 
-        self.add_state(
-            "SAY_ATTRIBUTE",
-            Say(),
-            transitions={
-                "succeeded": "STOP_EYE_TRACKING_2",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
+            self.add_state(
+                "STOP_EYE_TRACKING_2",
+                StopEyeTracker(),
+                transitions={
+                    "succeeded": "SAY_WELCOME_2",
+                    "failed": "failed",
+                },
+            )
 
-        self.add_state(
-            "STOP_EYE_TRACKING_2",
-            StopEyeTracker(),
-            transitions={
-                "succeeded": "SAY_WELCOME_2",
-                "failed": "failed",
-            },
-        )
-
-        self.add_state(
-            "SAY_WELCOME_2",
-            Say(text="Please follow me to be seated."),
-            transitions={
-                "succeeded": "succeeded",
-                "aborted": "failed",
-                "canceled": "failed",
-            },
-        )
+            self.add_state(
+                "SAY_WELCOME_2",
+                Say(text="Please follow me to be seated."),
+                transitions={
+                    "succeeded": "succeeded",
+                    "aborted": "failed",
+                    "canceled": "failed",
+                },
+            )
 
     def get_guest1_attributes(self, blackboard):
         attribute_str = ""

@@ -78,6 +78,18 @@ class HRI(yasmin.StateMachine):
             "SAY_START",  # SM1: Waits for Door to open, then goes to start
             Say(text="Start of H R I task."),
             transitions={
+                "succeeded": "SAY_WAITING_DOORBELL",
+                "canceled": "failed",
+                "aborted": "failed",
+            },
+        )
+
+        self.add_state(
+            "SAY_WAITING_DOORBELL",
+            Say(
+                text="I am waiting for the doorbell."
+            ),
+            transitions={
                 "succeeded": "WAIT_FOR_DOORBELL",
                 "canceled": "failed",
                 "aborted": "failed",
