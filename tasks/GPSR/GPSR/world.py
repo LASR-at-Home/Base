@@ -241,19 +241,42 @@ def build_world(node) -> dict:
 
 
 def vocabulary_prompt(node=None) -> str:
-    """Comma-separated people, object and location names from the config yaml files.
+    """Whisper `initial_prompt` built from the people, objects and locations in config.
 
-    Used as the Whisper `initial_prompt` so speech recognition is biased towards the
-    words that are actually declared for the current arena.
+    Whisper treats the prompt as the text spoken just before the audio, so it is
+    written as an example robot command followed by the vocabulary, which biases
+    recognition towards the words declared for the current arena (a bare word list
+    tends to make Whisper output lists).
     """
-    words = list(load_people(node).keys())
-    for name, info in load_objects(node).items():
-        words.append(normalise_name(name))
-        words.extend(normalise_name(a) for a in (info or {}).get("aliases") or [])
-    words.extend(normalise_name(name) for name in load_locations(node).keys())
-    seen, unique = set(), []
-    for word in words:
-        if word and word.lower() not in seen:
-            seen.add(word.lower())
-            unique.append(word)
-    return ", ".join(unique)
+    locations = load_locations(node)
+    objects = load_objects(node)
+    rooms = room_names(locations)
+    places = [n for n in locations if n not in rooms]
+    object_words = []
+    for name, info in objects.items():
+        object_words.append(normalise_name(name))
+        object_words.extend(normalise_name(a) for a in (info or {}).get("aliases") or [])
+    categories = []
+    for info in objects.values():
+        category = normalise_name((info or {}).get("category"))
+        if category and category not in categories:
+            categories.append(category)
+
+    def unique(words):
+        seen, out = set(), []
+        for word in words:
+            if word and word.lower() not in seen:
+                seen.add(word.lower())
+                out.append(word)
+        return ", ".join(out)
+
+    example_place = next((p for p in places if locations[p].get("placeable")), "table")
+    example_object = normalise_name(next(iter(objects), "object"))
+    return (
+        f"Robot, go to the {example_place}, find the {example_object} and bring it to me. "
+        f"People: {unique(str(p).capitalize() for p in load_people(node))}. "
+        f"Rooms: {unique(rooms)}. "
+        f"Places: {unique(places)}. "
+        f"Objects: {unique(object_words)}. "
+        f"Categories: {unique(categories)}."
+    )

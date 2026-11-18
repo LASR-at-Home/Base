@@ -1,0 +1,68 @@
+# Dispatcher test cases: fixed skill steps run WITHOUT the LLM planner.
+#
+#   ros2 run GPSR dispatch_skill                   # list the cases
+#   ros2 run GPSR dispatch_skill find_bottle       # run one case
+#   ros2 run GPSR dispatch_skill nav find_bottle   # run several in order
+#   ros2 run GPSR dispatch_skill --steps '[{"skill": "say", "args": {"text": "hello"}}]'
+#
+# Steps use the same format the planner produces. Rebuild after editing (or use
+# colcon build --symlink-install). Objects are placed as in objects.yaml:
+#   study table: pringles | computer desk: spoon, paper cup
+#   tv stand: cereal      | dining table: coke, water bottle
+
+cases:
+  # --- navigation / speech ---
+  say:
+    - {skill: say, args: {text: "Hello, I am testing my speech."}}
+  nav:
+    - {skill: go_to_location, args: {location: dining table}}
+    - {skill: go_to_location, args: {location: computer desk}}
+    - {skill: go_to_location, args: {location: instruction point}}
+
+  # --- objects ---
+  find_bottle:
+    - {skill: find_object, args: {object: water bottle, location: dining table}}
+  find_cup:
+    - {skill: find_object, args: {object: paper cup, location: computer desk}}
+  find_category:
+    - {skill: find_object, args: {object: dish, location: computer desk}}
+  find_coke:          # coke can - not a COCO class, likely needs a lower confidence
+    - {skill: find_object, args: {object: coke, location: dining table}}
+  count_drinks:       # expect 2
+    - {skill: count_objects, args: {object: drinks, location: dining table}}
+  count_dishes:       # expect 2
+    - {skill: count_objects, args: {object: dishes, location: computer desk}}
+  biggest_drink:      # expect water bottle
+    - {skill: find_object_by_property, args: {property: biggest, object: drink, location: dining table}}
+  lightest_dish:
+    - {skill: find_object_by_property, args: {property: lightest, object: dish, location: computer desk}}
+
+  # --- manipulation (human assisted) ---
+  pick_and_give:
+    - {skill: find_object, args: {object: water bottle, location: dining table}}
+    - {skill: pick_up, args: {object: water bottle}}
+    - {skill: go_to_location, args: {location: instruction point}}
+    - {skill: give_to_person, args: {object: water bottle}}
+  pick_and_place:
+    - {skill: find_object, args: {object: paper cup, location: computer desk}}
+    - {skill: pick_up, args: {object: paper cup}}
+    - {skill: place_object, args: {object: paper cup, location: tv stand}}
+
+  # --- people (needs a helper) ---
+  find_waving:
+    - {skill: find_person, args: {gesture: waving, location: living room}}
+  find_name:
+    - {skill: find_person, args: {name: charlie, location: office}}
+  find_clothes:
+    - {skill: find_person, args: {clothes: blue, location: living room}}
+  describe_person:
+    - {skill: get_person_info, args: {location: sofa}}
+  count_people:
+    - {skill: count_people, args: {location: living room}}
+  count_sitting:
+    - {skill: count_people, args: {pose: sitting, location: living room}}
+  guide:
+    - {skill: guide_person, args: {name: robin, start: sofa, end: study table}}
+  follow:
+    - {skill: find_person, args: {location: dining table}}
+    - {skill: follow_person, args: {}}

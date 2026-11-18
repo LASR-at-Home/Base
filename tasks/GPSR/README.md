@@ -1,80 +1,203 @@
 # GPSR Task
 
-General Purpose Service Robot task for RoboCup@Home. The robot listens to a natural language command, plans a sequence of skills via LLM, and executes them.
+General Purpose Service Robot task for RoboCup@Home. The robot takes a natural-language command (microphone or keyboard), plans a sequence of skills with a local LLM, and executes them.
 
-## Quick start — planner test (simulation, keyboard input)
-
-### 1. Set params
-
-Make sure [config/params.yaml](config/params.yaml) has:
-
-```yaml
-gpsr:
-  ros__parameters:
-    simulation: true        # If using simualtion (uses gtts instead)
-    input_mode: "keyboard"  # or "microphone"/"mic"
+```
+command --> transcript check --> [mic: "Is that correct?"] --> LLM planner --> plan check --> dispatcher --> skills
 ```
 
-### 2. Start Ollama (first run, if you've already done you don't need to rerun these commands)
+There are three ways to run it:
+
+| What | Runs | Use it to test |
+|---|---|---|
+| **Dispatcher** (`dispatch_skill`) | Fixed skill steps, no LLM | Individual skills |
+| **Service** (`service`) | One command → plan → (optionally) execute | Planner + skills, one command at a time |
+| **State machine** (`sm`) | The full competition task: 3 commands, then executes them | The whole task |
+
+---
+
+## 1. Setup
+
+### Build
+
+`GPSR` depends on code in other packages (`skills`, `lasr_vision_interfaces`, `lasr_vision_gesture`, ...). After pulling changes, rebuild those too, not just `GPSR`:
+
+```bash
+cd ~/LASR/ros2_ws
+colcon build 
+source install/setup.bash
+```
+
+GPSR reads the **installed** copy of `config/*.yaml`. With `--symlink-install` config edits apply straight away; without it, rebuild `GPSR` after every config change.
+
+### Ollama models (once)
 
 ```bash
 ollama serve
-ollama pull gemma3   # only first time
-ollama create gemma3-4b-8k -f <path>/Base/tasks/GPSR/external/Modelfile # Once only you can later use `gemma3-4b-8k` like a normal model
+ollama pull gemma3:4b                                                     # VLM
+ollama create gemma3-4b-8k -f <path>/Base/tasks/GPSR/external/Modelfile   # planner
 ```
 
-### 3. Build
+### Robot
+
+1. Start navigation with the map of the arena you are in (lab: `lasr_map`).
+2. Localise the robot in RViz (*2D Pose Estimate*). Every skill navigates by the poses in `locations.yaml`, so bad localisation breaks everything.
+
+### Parameters ([config/params.yaml](config/params.yaml))
+
+| Parameter | Lab value | Meaning |
+|---|---|---|
+| `simulation` | `false` | `false` = robot TTS, `true` = gtts on the PC speaker |
+| `input_mode` | `"keyboard"` | State machine only: `"keyboard"` or `"microphone"` (the service picks per call) |
+| `skip_entrance` | `true` | Full task only: `true` skips door detection and `entrance_point` and starts at the instruction point. **Set `false` in the arena.** |
+| `object_detection_confidence` | `0.5` | YOLO confidence for object skills. Lower it if objects are missed |
+| `instruction_point` / `entrance_point` | | Poses used by the full task. `entrance_point` still has arena values |
+| `use_cloud`, `llm_*`, `cloud_*` | | Local Ollama vs cloud LLM |
+
+`input_mode` can be overridden per run without editing the file (see below).
+
+---
+
+## 2. Running
+
+Keep these two running for everything below.
+
+**Terminal A**: LLM:
+```bash
+ollama serve
+```
+
+**Terminal B**: YOLO, gesture service, VLM, Whisper, arm/head motions:
+```bash
+ros2 launch GPSR GPSR.launch.py
+# optional: whisper_model:=medium.en   (more accurate, more GPU memory)
+```
+
+### 2.1 Dispatcher: test skills without the LLM
+
+Runs the named cases from [config/dispatch_tests.yaml](config/dispatch_tests.yaml) (one or more per skill, written for the lab object layout).
 
 ```bash
-# from workspace root (Base/)
-colcon build --packages-select GPSR
-source install/setup.bash
-
-ros2 launch GPSR GPSR_tiago.launch.py   # In a terminal
-ros2 launch simulation nav.launch.py    # If testing simulation in another terminal.
+ros2 run GPSR dispatch_skill                       # list the cases
+ros2 run GPSR dispatch_skill say nav               # start here
+ros2 run GPSR dispatch_skill find_bottle count_drinks biggest_drink
+ros2 run GPSR dispatch_skill pick_and_give pick_and_place
+ros2 run GPSR dispatch_skill find_waving describe_person count_sitting guide follow   # needs a helper
+ros2 run GPSR dispatch_skill --steps '[{"skill": "say", "args": {"text": "hello"}}]'
 ```
 
-### 4. Run
+If a skill fails here, the problem is in the skill or its ROS service, not in the planner.
 
- - #### 1. Running the Full Task
-    > Ensure `simulation` is `false` and `input_mode` is `microphone`.
-  
-    To launch the state machine 
-      ```
-        ros2 run GPSR sm --ros-args --params-file tasks/GPSR/config/params.yaml
-      ```
-    In a new terminal run the following to start the Task
-      ```
-        ros2 topic pub /gpsr/start std_msgs/msg/Empty --once
-      ```
+### 2.2 Service: one command through the planner
 
-  - #### 2. Using the Service
-    To launch the state machine 
-      ```
-        ros2 run GPSR service --ros-args --params-file tasks/GPSR/config/params.yaml
-      ```
+**Terminal C**: the service:
+```bash
+ros2 run GPSR service
+```
 
-    To call the service (in terminal)
-      ```
-        ros2 service call /gpsr/single_query std_srvs/srv/SetBool '{"data": true}'
-      ```
-    > The `data` refers to whether to dispatch the skills or not. (default to false) 
+**Terminal D**: trigger one command per call (`/gpsr/single_query`, type `lasr_helper_interfaces/srv/GPSRQuery`):
+```bash
+# Typed command (no microphone), plan only (robot does not move)
+ros2 service call /gpsr/single_query lasr_helper_interfaces/srv/GPSRQuery \
+  '{command: {data: "Go to the dining table"}, dispatch_plan: false}'
+
+# Typed command, plan and execute
+ros2 service call /gpsr/single_query lasr_helper_interfaces/srv/GPSRQuery \
+  '{command: {data: "Bring me the water bottle"}, dispatch_plan: true}'
+
+# No command: the robot listens on the microphone
+ros2 service call /gpsr/single_query lasr_helper_interfaces/srv/GPSRQuery '{dispatch_plan: false}'
+```
+
+- **Typed command** (`command.data` not empty): used as if typed. There is no yes/no confirmation and no rephrase retries. If the command is rejected the call returns `success: false`.
+- **Microphone** (`command.data` empty, the default): speak after *"I am ready for your command"*, then answer **yes** or **no** when the robot reads it back.
+
+Start with `dispatch_plan: false` and check the planned steps in the log before letting the robot move.
+
+`input_mode` in `params.yaml` is not used by the service, only by the state machine (2.3).
+
+Alternatively, `ros2 launch GPSR service.launch.py` starts the service node together with Ollama, YOLO, Whisper and the motions (no gesture / VLM services, no `robot_ui`), so Terminal A and B are not needed.
+
+### 2.3 State machine: the full task
+
+**Terminal C**:
+```bash
+ros2 run GPSR sm --ros-args --params-file src/Base/tasks/GPSR/config/params.yaml
+```
+
+**Terminal D**: start the task:
+```bash
+ros2 topic pub /gpsr/start std_msgs/msg/Empty --once
+```
+
+The robot goes to the instruction point (after door detection and `entrance_point` when `skip_entrance: false`). It asks for **3 commands**, plans and reads back each one, then executes them all, returning to the instruction point after each.
+
+### Example commands (lab layout)
+
+| Skill | Command |
+|---|---|
+| `go_to_location` | Go to the dining table |
+| `find_object` | Find the water bottle on the dining table |
+| `count_objects` | How many drinks are on the dining table |
+| `find_object_by_property` | What is the biggest drink on the dining table |
+| `pick_up` + `give_to_person` | Bring me the water bottle |
+| `place_object` | Take the paper cup from the computer desk and put it on the tv stand |
+| `find_person` | Find the waving person in the living room |
+| `get_person_info` | Describe the person at the sofa |
+| `count_people` | How many sitting people are in the living room |
+| `guide_person` | Guide Robin from the sofa to the study table |
+| `follow_person` | Follow the person at the dining table |
+| `say` | Tell me your team name |
+
+Commands shorter than 3 words are rejected.
+
+### What to look for in the logs
+
+| Log line | Meaning |
+|---|---|
+| `Command rejected before planning: ...` | No command verb, or nothing known (location / object / person) mentioned |
+| `Confirmation answer: '...'` | What Whisper heard for the yes/no |
+| `Plan rejected: unknown location ...` | The LLM planned something that is not in the config |
+| `=== PLAN [LOCAL] ...` + `[1] skill(args)` | The plan that will be executed |
 
 
-## Config files
+## 3. Configuration
 
 | File | Purpose |
-|------|---------|
-| `config/params.yaml` | Runtime parameters (LLM host, input mode, simulation flag) |
-| `config/skills.yaml` | Available skill signatures shown to the LLM |
-| `config/locations.yaml` | Named 3D poses for navigation |
-| `config/objects.yaml` | Object inventory (category, location, size) |
-| `config/people.yaml` | Known people identities |
-| `config/general_knowledge.yaml` | Arena context for the LLM |
+|---|---|
+| [params.yaml](config/params.yaml) | Runtime parameters (see above) |
+| [locations.yaml](config/locations.yaml) | Rooms (have a `polygon`) and sub-locations (`room`, `placeable`) with navigation poses |
+| [objects.yaml](config/objects.yaml) | Objects: `category`, default `location`, `size`, `aliases`, `detect_as` (YOLO classes the object is detected as) |
+| [people.yaml](config/people.yaml) | Known people |
+| [general_knowledge.yaml](config/general_knowledge.yaml) | Facts for answering questions |
+| [skills.yaml](config/skills.yaml) | Skill signatures shown to the LLM |
+| [dispatch_tests.yaml](config/dispatch_tests.yaml) | Dispatcher test cases |
 
-## Skill mapping status
+Nothing about the arena is hardcoded: room membership, the planner's object list, the plan checks and the Whisper vocabulary are all built from these files.
 
-The GPSR dispatcher (`GPSR/states/dispatch_skill.py`) currently executes the following skills in the real ROS runtime:
+### Changing arena
+
+1. Update `locations.yaml` (poses, `room`, `placeable`, room polygons) and `objects.yaml` (`location` must be a key in `locations.yaml`).
+2. Update `instruction_point` / `entrance_point` in `params.yaml` and set `skip_entrance`.
+3. Regenerate the command-generator data:
+   ```bash
+   python3 scripts/export_command_generator_data.py
+   ```
+
+### Command generator
+
+[command_generator_data/](command_generator_data/) holds the data for the [RoboCup@Home CommandGenerator](https://github.com/RoboCupAtHome/CommandGenerator), in the same layout as the competition repos and exported from the config files. See its [README](command_generator_data/README.md).
+
+```bash
+athome-generator -d command_generator_data          # interactive
+athome-generator-gpsr-ui -d command_generator_data  # web UI
+```
+
+---
+
+## 4. Skill mapping status
+
+Implemented in [dispatch_skill.py](GPSR/states/dispatch_skill.py).
 
 | Skill | Status | Notes | Tested |
 |------|------|------|------|
@@ -88,43 +211,34 @@ The GPSR dispatcher (`GPSR/states/dispatch_skill.py`) currently executes the fol
 | `give_to_person` | placeholder | Human-assisted handover via `HandoverObject`. | Both |
 | `find_object` | reworked | Goes to `location`, searches with head motions (centre, then down), looks at the best match. Returns `failed` if not seen. | No (was SIM only) |
 | `follow_person` | yes | Uses the existing `FollowPerson` skill. | No |
-| `count_objects` | new | Goes to `location`, counts detections matching the object name/alias/category, says the count. | No |
+| `count_objects` | new | Goes to `location`, counts detections matching the object name / alias / category / `detect_as`, says the count. | No |
 | `count_people` | new | Counts people by gesture, pose (via gesture service), clothes (VLM shirt colour per person crop) or all people. | No |
 | `find_object_by_property` | new | biggest/smallest/thinnest from pixel bbox area, heaviest/lightest from `objects.yaml` `size` (tie-break by pixel area). | No |
 | `answer_question` | no-op | Returns `succeeded`. The planner already adds a `say` step with the answer. | Both |
 
-*All skills need to be retested regardless!*
+*All skills need to be retested.*
 
-## Dispatcher change log
+### Still to check
 
-- `_detect_faces` never ran its `Detect3D` state (always returned False). It now runs it and checks `detections_3d.detected_objects`.
-- `_describe_person` bypasses `DescribePeople` and calls `GetVlmAttributes` directly with the latest camera image. `DescribePeople`'s `GetImage` writes `img_msg` while the VLM state reads `image_raw`, so it fails in the `skills` package.
-- Replaced `Blackboard.get(key, default)` with `bb[key]` / `key in bb.keys()`, as the rest of the repo does.
-- `_find_object` rewritten: respects the `location` arg, an empty object means "any non-person object", and underscores are spoken as spaces. Detection is **unfiltered** and matched by class name, `objects.yaml` alias or category, because the yolo service silently detects all classes when given an unknown class name.
-- `Detect3D` instances are cached per filter in the dispatcher (they create camera subscribers in `__init__` that are never destroyed).
-- Any step outcome other than `succeeded` (`failed`, `aborted`, `canceled`, exceptions) counts as a failure. The dispatcher says it is moving on and continues with the next step.
-- Unknown skills now log an error and return `failed` instead of silently succeeding.
-- `main()` calls `yasmin_ros.set_ros_loggers(node)`, needed by skills that use `yasmin_ros.logger_node`.
-- New: `count_objects`, `count_people`, `find_object_by_property`.
-- `answer_question` is a no-op (no LLM `Agent` dependency in the dispatcher).
+- **Object detection:** `yolo11n-seg.pt` is a COCO model. Objects that are not COCO classes (cans, tubes, boxes) are only found through `detect_as` and often score below the 0.5 confidence. Several objects can share a class (coke / pringles / paper cup → `cup`).
+- `find_person` by gesture, name, clothes and fallback; `/gesture/detect` needs `lasr_vision_gesture` and the yolo pose model.
+- `get_person_info` and `count_people` by clothes: only `shirt_color` is matched; the crop assumes `rgb8`/`bgr8` images.
+- Object skills use the `look_centre` / `look_down_centre` head motions (needs `play_motion2`).
+- `guide_person` and `follow_person` end to end; manipulation placeholders with the real arm.
 
-Blackboard keys written by the dispatcher: `object_point`, `found_object`, `object_detections`, `count`, `gesture_locations`, `detections_3d`, `image_raw`, `attributes`.
+---
 
-## To test
+## 5. Implementation notes
 
-- **Detection model:** the dispatcher uses `yolo11n-seg.pt` (COCO). Task objects like `red_bull` are never detected until a custom model is set (`self._yolo_model` in `DispatchSkill.__init__`). Class-name/alias/category matching only works for objects the model knows.
-- `find_person` by gesture, name, clothes and fallback; confirm `/gesture/detect` is up (`lasr_vision_gesture` + yolo pose model) and that `standing` is a valid gesture (it is not in the gesture README).
-- `get_person_info` and `count_people` with clothes (needs `/vlm/describe_people`; only `shirt_color` is matched; crop assumes 8-bit `rgb8`/`bgr8` images).
-- `find_object`, `count_objects`, `find_object_by_property`: head motions (`look_centre`, `look_down_centre`) need the `play_motion2` server; in simulation they may block if it is absent.
-- `find_object_by_property`: every object in `objects.yaml` is `small`, so heaviest/lightest is effectively decided by pixel area, which assumes similar distance from the camera.
-- `guide_person` and `follow_person` end to end.
-- Manipulation placeholders (`pick_up`, `place_object`, `give_to_person`) with the real arm.
+**Command / plan checks** ([validation.py](GPSR/validation.py)): a command must contain a command verb and mention a known location, object, category, person or generic entity ("me", "person", ...). It is checked before planning. Plans are rejected if they use an unknown skill, location or object. Both lead to "could you rephrase". In microphone mode the robot also asks for a yes/no confirmation before planning.
 
-## Important notes
+**Dispatcher:**
+- Object detection runs unfiltered (the yolo service detects every class if the filter contains an unknown name). Detections are matched against the target's name, aliases, category and `detect_as`.
+- Any step outcome other than `succeeded` counts as a failure. The dispatcher says it is moving on and continues with the next step. Unknown skills fail.
+- `Detect3D` instances are cached per filter: they create camera subscribers that are never destroyed.
+- `_describe_person` calls `GetVlmAttributes` directly with the latest camera image (`DescribePeople` writes `img_msg` but the VLM state reads `image_raw`).
+- Blackboard keys written: `object_point`, `found_object`, `object_detections`, `count`, `gesture_locations`, `detections_3d`, `image_raw`, `attributes`.
 
-- **Not run on hardware yet.** These changes were written by reading the `skills` / `common` APIs; nothing has run in the container or on the robot.
-- Known issues in the `skills` package, deliberately not changed here: `Detect3D._create_req` returns the string `"failed"` on a 30 s timeout instead of a request (raises rather than failing cleanly), and `GoToLocation` creates a new `BasicNavigator` (a new node) on every call, which leaks over long plans.
-- A TF failure inside the yolo service returns an empty response, which looks the same as "nothing seen".
-- You can test the dispatcher by launching GPSR directly and running the dispatch node alone:
-    - Edit `bb["steps"]` in `main()` of `GPSR/states/dispatch_skill.py` (commented example steps for each skill are there).
-    - Then run `ros2 run GPSR dispatch_skill --ros-args --params-file tasks/GPSR/config/params.yaml`.
+**yasmin:** the container builds yasmin from `main` (6.x at the time of writing). yasmin 6 rejects state machines with unreachable states, so optional states (e.g. the entrance sequence) are only added when used.
+
+**Known issues in `skills` (not changed here):** `Detect3D._create_req` returns the string `"failed"` on a 30 s timeout instead of a request. `GoToLocation` creates a new `BasicNavigator` node on every call, which leaks over long plans. A TF failure inside the yolo service returns an empty response, which looks the same as "nothing seen".

@@ -5,6 +5,7 @@ import yasmin
 
 from GPSR.agent import Agent
 from GPSR.planner import PLAN_FAILED_TOKEN, SkillSelectorError, clean_transcription
+from GPSR.validation import check_command, validate_plan
 from GPSR.world import build_world
 
 
@@ -35,6 +36,13 @@ class QueryLLM(yasmin.State):
                 )
         self.node.get_logger().info(f"Query: '{command}'")
 
+        # Reject garbled / off-topic transcriptions before spending time planning
+        ok, reason = check_command(command, self.world)
+        if not ok:
+            self.node.get_logger().warn(f"Command rejected before planning: {reason}")
+            blackboard["steps"] = [{"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}]
+            return "succeeded"
+
         try:
             plan = self.agent.plan(
                 self.world,
@@ -47,6 +55,16 @@ class QueryLLM(yasmin.State):
 
         source = plan.get("source", "local")
         steps = plan["steps"]
+
+        # Reject plans that use locations / objects / skills the robot does not know
+        problems = validate_plan(steps, self.world)
+        if problems:
+            self.node.get_logger().warn(
+                "Plan rejected: " + "; ".join(problems)
+                + " | plan: " + ", ".join(s.get("skill", "?") for s in steps)
+            )
+            blackboard["steps"] = [{"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}]
+            return "succeeded"
 
         # For local: separate announce call. For cloud: announcement already in steps.
         if source != "cloud":

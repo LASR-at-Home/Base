@@ -795,44 +795,67 @@ class GPSRNode(Node):
         self._spin_thread.start()
 
 
+def _load_test_cases() -> dict:
+    """config/dispatch_tests.yaml -> {case name: [steps]}."""
+    import yaml
+    from GPSR.world import _pkg_config
+
+    path = _pkg_config(None, "dispatch_tests.yaml")
+    try:
+        with open(path) as f:
+            return (yaml.safe_load(f) or {}).get("cases") or {}
+    except OSError:
+        return {}
+
+
 def main():
+    """Run skill steps directly, without the LLM planner (see config/dispatch_tests.yaml)."""
+    import json
+    import os
+    import sys
+
+    from ament_index_python.packages import get_package_share_directory
+    from rclpy.utilities import remove_ros_args
+
+    args = remove_ros_args(sys.argv)[1:]
+    cases = _load_test_cases()
+
+    if args[:1] == ["--steps"] and len(args) == 2:
+        steps = json.loads(args[1])
+        label = "--steps"
+    elif args and all(a in cases for a in args):
+        steps = [step for name in args for step in cases[name]]
+        label = " + ".join(args)
+    else:
+        unknown = [a for a in args if a not in cases]
+        if unknown:
+            print(f"Unknown test case(s): {unknown}")
+        print("Usage: ros2 run GPSR dispatch_skill <case> [<case> ...]")
+        print("       ros2 run GPSR dispatch_skill --steps '<json list of steps>'")
+        print("Cases (config/dispatch_tests.yaml):")
+        for name, case_steps in cases.items():
+            print(f"  {name:16} " + ", ".join(s.get("skill", "?") for s in case_steps))
+        return
+
+    # Load params.yaml unless one was given, as the service does
+    if "--params-file" not in sys.argv:
+        sys.argv += [
+            "--ros-args",
+            "--params-file",
+            os.path.join(get_package_share_directory("GPSR"), "config", "params.yaml"),
+        ]
+
     rclpy.init()
     node = GPSRNode()
     yasmin_ros.set_ros_loggers(node)
-
-    input_mode = node.get_parameter("input_mode").value.strip().lower()
-    simulation = node.get_parameter("simulation").value
-    node.get_logger().info(
-        f"Starting GPSR state machine (input_mode={input_mode}, simulation={simulation})..."
-    )
+    node.get_logger().info(f"Dispatching test '{label}':")
+    for i, step in enumerate(steps, 1):
+        node.get_logger().info(f"  [{i}] {step.get('skill')}({step.get('args', {})})")
 
     try:
         bb = Blackboard()
-        bb["steps"] = [
-            # {"skill": "go_to_location", "args": {"location": "laundry"}},
-            # {"skill": "go_to_location", "args": {"location": "shelf"}},
-            {
-                "skill": "find_object",
-                "args": {"object": "coke", "location": "dining table"},
-            },
-            {"skill": "pick_up", "args": {"object": "coke"}},
-            # {"skill": "go_to_location", "args": {"location": "living room"}},
-            # {"skill": "go_to_location", "args": {"location": "coffee table"}},
-            {"skill": "place_object", "args": {"location": "tv stand"}},
-            # {"skill": "count_objects", "args": {"object": "drink", "location": "cabinet"}},
-            # {"skill": "count_people", "args": {"location": "living room"}},
-            # {"skill": "count_people", "args": {"pose": "sitting", "location": "living room"}},
-            # {"skill": "count_people", "args": {"gesture": "waving", "location": "kitchen"}},
-            # {"skill": "count_people", "args": {"clothes": "red", "location": "kitchen"}},
-            # {
-            #     "skill": "find_object_by_property",
-            #     "args": {"property": "biggest", "object": "fruit", "location": "dinner table"},
-            # },
-            # {"skill": "answer_question", "args": {}},
-        ]
-
+        bb["steps"] = steps
         outcome = DispatchSkill(node)(bb)
-
         yasmin.YASMIN_LOG_INFO(outcome)
     except Exception as e:
         yasmin.YASMIN_LOG_WARN(e)

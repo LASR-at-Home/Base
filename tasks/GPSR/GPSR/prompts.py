@@ -60,7 +60,8 @@ Output schema:
 
 RULES:
 - selected_skills contains ONLY the skill names (e.g. "find_object", "go_to_location"), never arguments or signatures (never "find_object(apple, kitchen)").
-- can_do=false ONLY when NO skill matches the kind of action (e.g. cooking, flying).
+- can_do=false when NO skill matches the kind of action (e.g. cooking, flying).
+- can_do=false when the command is garbled or does not make sense as an instruction (a speech recognition error): no clear action, or words that do not fit together. Never invent a meaning. A single misheard word in an otherwise clear command is fine (e.g. "export" for "escort").
 - pick_up and place_object are ONLY for inanimate objects. If the command explicitly asks to physically pick up or place a PERSON as if they were an object (e.g. "pick up the person", "put the person on the sofa"), set can_do=false. Moving, escorting, transporting, or taking a person to a location is guide_person — never can_do=false.
 - Missing locations/objects/people are NOT a reason for can_do=false — the planner handles those and manages the different cases.
 - Any question, greeting, or request for information: can_do=true, selected_skills=["say"].
@@ -181,6 +182,12 @@ JSON: {{"can_do": true, "reason": "answer with known info", "selected_skills": [
 
 Command: introduce yourself
 JSON: {{"can_do": true, "reason": "just speak", "selected_skills": ["say"]}}
+
+Command: the table and bring of the was at the
+JSON: {{"can_do": false, "reason": "garbled, no clear instruction", "selected_skills": []}}
+
+Command: go to the dining and the spoon it hello the
+JSON: {{"can_do": false, "reason": "garbled, words do not form an instruction", "selected_skills": []}}
 
 Command: answer the door
 JSON: {{"can_do": false, "reason": "no skill for answering a door", "selected_skills": []}}

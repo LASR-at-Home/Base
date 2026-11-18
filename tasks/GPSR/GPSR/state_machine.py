@@ -22,6 +22,7 @@ from GPSR.tts import say
 from std_msgs.msg import Empty
 
 from GPSR.planner import PLAN_FAILED_TOKEN
+from GPSR.validation import is_yes
 
 from lasr_skills import (
     Say,
@@ -55,6 +56,11 @@ class GPSR(yasmin.StateMachine):
         self.plans = []
         self.exec_index = 0
 
+        input_mode = str(self._param("input_mode", "microphone")).strip().lower()
+        self.use_mic = input_mode in ("microphone", "mic")
+        # Lab testing: no door to detect / no entrance pose, start at the instruction point
+        skip_entrance = bool(self._param("skip_entrance", False))
+
         self.add_state(
             "WAIT_START",
             yasmin_ros.MonitorState(
@@ -64,31 +70,37 @@ class GPSR(yasmin.StateMachine):
                 msg_type=Empty,
             ),
             transitions={
-                "succeeded": "START_CON",
+                "succeeded": "GO_TO_INSTRUCT_POINT" if skip_entrance else "START_CON",
                 "failed": "WAIT_START",
                 "canceled": "failed",
             },
         )
 
-        self.add_state(
-            "START_CON",
-            self.setup(),
-            transitions={"succeeded": "WAIT_3", "failed": "START_CON"},
-        )
-        self.add_state(
-            "WAIT_3",
-            Wait(3),
-            transitions={
-                "succeeded": "ENTER_DOOR",
-                "failed": "ENTER_DOOR",
-            },
-        )
+        # Only added when used: yasmin (6.x) rejects state machines with
+        # unreachable states
+        if not skip_entrance:
+            self.add_state(
+                "START_CON",
+                self.setup(),
+                transitions={"succeeded": "WAIT_3", "failed": "START_CON"},
+            )
+            self.add_state(
+                "WAIT_3",
+                Wait(3),
+                transitions={
+                    "succeeded": "ENTER_DOOR",
+                    "failed": "ENTER_DOOR",
+                },
+            )
 
-        self.add_state(
-            "ENTER_DOOR",
-            GoToLocation(location_param="entrance_point"),
-            transitions={"succeeded": "GO_TO_INSTRUCT_POINT", "failed": "ENTER_DOOR"},
-        )
+            self.add_state(
+                "ENTER_DOOR",
+                GoToLocation(location_param="entrance_point"),
+                transitions={
+                    "succeeded": "GO_TO_INSTRUCT_POINT",
+                    "failed": "ENTER_DOOR",
+                },
+            )
 
         self.add_state(
             "GO_TO_INSTRUCT_POINT",
@@ -105,15 +117,53 @@ class GPSR(yasmin.StateMachine):
             transitions={"next": "REQUEST_AND_WAIT_FOR_COMMAND", "finish": "NEXT_PLAN"},
         )
 
-        self.add_state(
-            "REQUEST_AND_WAIT_FOR_COMMAND",
-            AskAndListen(),
-            transitions={
-                "succeeded": "CHECK_TRANSCRIPT",
-                "failed": "CHECK_TRANSCRIPT",
-            },
-            remappings={"tts_phrase": "instruction_text"},
-        )
+        if self.use_mic:
+            self.add_state(
+                "REQUEST_AND_WAIT_FOR_COMMAND",
+                AskAndListen(),
+                transitions={
+                    "succeeded": "CHECK_TRANSCRIPT",
+                    "failed": "CHECK_TRANSCRIPT",
+                },
+                remappings={"tts_phrase": "instruction_text"},
+            )
+
+            # Speech recognition errors are caught before planning: the robot
+            # repeats what it heard and only plans it if the operator says yes
+            self.add_state(
+                "SET_CONFIRM_PROMPT",
+                yasmin.CbState(outcomes=["succeeded"], callback=self.setConfirmPrompt),
+                transitions={"succeeded": "CONFIRM_COMMAND"},
+            )
+            self.add_state(
+                "CONFIRM_COMMAND",
+                AskAndListen(),
+                transitions={
+                    "succeeded": "CHECK_CONFIRMATION",
+                    "failed": "CHECK_CONFIRMATION",
+                },
+                remappings={
+                    "tts_phrase": "confirm_text",
+                    "transcribed_speech": "confirmation",
+                },
+            )
+            self.add_state(
+                "CHECK_CONFIRMATION",
+                yasmin.CbState(outcomes=["yes", "no"], callback=self.checkConfirmation),
+                transitions={"yes": "QUERY_LLM", "no": "COUNT_SPEECH_FAILURE"},
+            )
+            after_transcript = "SET_CONFIRM_PROMPT"
+        else:
+            # Type commands in the terminal running `ros2 run GPSR sm`
+            self.add_state(
+                "REQUEST_AND_WAIT_FOR_COMMAND",
+                KeyboardInputState(),
+                transitions={
+                    "succeeded": "CHECK_TRANSCRIPT",
+                    "aborted": "REQUEST_AND_WAIT_FOR_COMMAND",
+                },
+            )
+            after_transcript = "QUERY_LLM"
 
         self.add_state(
             "CHECK_TRANSCRIPT",
@@ -122,7 +172,7 @@ class GPSR(yasmin.StateMachine):
                 callback=self.checkTranscript,
             ),
             transitions={
-                "valid": "QUERY_LLM",
+                "valid": after_transcript,
                 "invalid": "COUNT_SPEECH_FAILURE",
             },
         )
@@ -343,6 +393,32 @@ class GPSR(yasmin.StateMachine):
 
         return start_con_sm
 
+    def _param(self, name, default):
+        if self.node.has_parameter(name):
+            value = self.node.get_parameter(name).value
+            if value is not None:
+                return value
+        return default
+
+    def setConfirmPrompt(self, blackboard):
+        blackboard["command_confirmed"] = False
+        blackboard["confirm_text"] = (
+            f"I heard: {blackboard['placeholders']}. Is that correct? Please say yes or no."
+        )
+        return "succeeded"
+
+    def checkConfirmation(self, blackboard):
+        """'yes' only for a clear yes; anything else (no, unclear, silence) asks again."""
+        try:
+            answer = str(blackboard["confirmation"])
+        except Exception:
+            answer = ""
+        yasmin.YASMIN_LOG_INFO(f"Confirmation answer: '{answer}'")
+        if is_yes(answer):
+            blackboard["command_confirmed"] = True
+            return "yes"
+        return "no"
+
     def checkRequest(self, blackboard):
         if self.instruction_count == 1:
             blackboard["instruction_text"] = (
@@ -427,7 +503,11 @@ class GPSR(yasmin.StateMachine):
             announcement = ""
             if steps and steps[0].get("skill") == "say":
                 announcement = steps[0]["args"]["text"]
-            if command:
+            confirmed = (
+                "command_confirmed" in blackboard.keys()
+                and blackboard["command_confirmed"]
+            )
+            if command and not confirmed:  # already read back when confirming
                 say(self.node, f"I heard: {command}.", blackboard)
             if announcement and announcement != PLAN_FAILED_TOKEN:
                 say(self.node, announcement, blackboard)
