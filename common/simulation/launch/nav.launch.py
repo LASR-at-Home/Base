@@ -39,9 +39,17 @@ def generate_launch_description():
         launch_arguments={"world": world}.items(),
     )
 
-    # 2. Once TIAGo is spawned (its lidar is publishing), start navigation
+    # 2. Wait until TIAGo is ready for navigation: its controllers are up, its arm is
+    # tucked (PAL's arm_tucker node has finished) and its lidar is publishing.
+    # Moving or navigating before that is what makes it fall or flail its arm.
     sim_ready = ExecuteProcess(
-        cmd="ros2 topic echo --once --qos-reliability best_effort /scan_raw".split(),
+        cmd=[
+            "bash",
+            "-c",
+            "timeout 120 bash -c 'until ros2 node list 2>/dev/null | grep -q /arm_tucker; do sleep 1; done'; "
+            "while ros2 node list 2>/dev/null | grep -q /arm_tucker; do sleep 1; done; "
+            "ros2 topic echo --once --qos-reliability best_effort /scan_raw",
+        ],
         output="log",
     )
 
@@ -114,8 +122,6 @@ def generate_launch_description():
         output="screen",
     )
 
-    # Teleport TIAGo to its start pose (retrying until Gazebo's service answers),
-    # then give AMCL the same pose once it is active
     teleport_msg = (
         f"{{state: {{name: tiago, reference_frame: world, pose: {{"
         f"position: {{x: {x}, y: {y}, z: 0.01}}, "
@@ -127,13 +133,23 @@ def generate_launch_description():
         f'"orientation": {{"x": 0.0, "y": 0.0, "z": {qz}, "w": {qw}}}'
         '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
     )
+    # 3. Teleport TIAGo to its start pose (retrying until Gazebo's service answers)
     place_robot = ExecuteProcess(
         cmd=[
             "bash",
             "-c",
             "until ros2 service call /gazebo/set_entity_state "
             f"gazebo_msgs/srv/SetEntityState '{teleport_msg}' | grep -q 'success=True'; "
-            "do sleep 2; done; "
+            "do sleep 2; done",
+        ],
+        output="screen",
+    )
+
+    # 5. Give AMCL the same pose once it is active
+    initial_pose = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-c",
             "until ros2 lifecycle get /amcl 2>/dev/null | grep -q '^active'; do sleep 1; done; "
             "ros2 topic pub -r 1 -t 5 /initialpose "
             f"geometry_msgs/msg/PoseWithCovarianceStamped '{initial_pose_msg}'",
@@ -141,11 +157,20 @@ def generate_launch_description():
         output="screen",
     )
 
-    nav = RegisterEventHandler(
-        OnProcessExit(
-            target_action=sim_ready,
-            on_exit=[*localisation, *navigation, rviz, place_robot],
-        )
+    # sim -> sim_ready -> place_robot -> navigation (4) + initial_pose (5)
+    return LaunchDescription(
+        [
+            world_arg,
+            sim,
+            sim_ready,
+            RegisterEventHandler(
+                OnProcessExit(target_action=sim_ready, on_exit=[place_robot])
+            ),
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=place_robot,
+                    on_exit=[*localisation, *navigation, rviz, initial_pose],
+                )
+            ),
+        ]
     )
-
-    return LaunchDescription([world_arg, sim, sim_ready, nav])
