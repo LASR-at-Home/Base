@@ -307,6 +307,21 @@ class SeatGuest(StateMachine):
             ]
         )
 
+        seating_area = {
+            "top_left": self._node.get_parameter("seating_area.top_left").value,
+            "top_right": self._node.get_parameter("seating_area.top_right").value,
+            "bottom_right": self._node.get_parameter("seating_area.bottom_right").value,
+            "bottom_left": self._node.get_parameter("seating_area.bottom_left").value,
+        }
+        self.seating_area = ShapelyPolygon(
+            [
+                seating_area["top_left"],
+                seating_area["top_right"],
+                seating_area["bottom_right"],
+                seating_area["bottom_left"],
+            ]
+        )
+
 
 try:
     from rclpy.executors import EventsExecutor as Executor
