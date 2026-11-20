@@ -53,3 +53,10 @@ hri:   # the `hri` Node's Parameters
       top_right:    [0.035197436809539795, -2.8783228397369385]
       bottom_right: [0.12551675736904144, -2.4067370891571045]
       bottom_left:  [1.6207497119903564, -2.8115131855010986]
+
+
+    seating_area:
+      top_left: [ 0.0, 0.0 ]
+      top_right: [ 0.0, 0.0 ]
+      bottom_right: [ 0.0, 0.0 ]
+      bottom_left: [ 0.0, 0.0 ]
