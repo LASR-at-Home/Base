@@ -396,7 +396,7 @@ class IterateThroughPoints(yasmin.StateMachine):
             transitions={
                 "succeeded": "SLEEP",
                 "aborted": "SLEEP",
-                "canceled": "failed",
+                "canceled": "SLEEP",
                 "timeout": "SLEEP",
             },
         )

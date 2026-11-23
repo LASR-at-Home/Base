@@ -304,10 +304,10 @@ class SeatGuest(StateMachine):
         )
 
         seating_area = {
-            "top_left": self._node.get_parameter("seating_area.top_left").value,
-            "top_right": self._node.get_parameter("seating_area.top_right").value,
-            "bottom_right": self._node.get_parameter("seating_area.bottom_right").value,
-            "bottom_left": self._node.get_parameter("seating_area.bottom_left").value,
+            "top_left": np.array(self._node.get_parameter("seating_area.top_left").value),
+            "top_right": np.array(self._node.get_parameter("seating_area.top_right").value),
+            "bottom_right": np.array(self._node.get_parameter("seating_area.bottom_right").value),
+            "bottom_left": np.array(self._node.get_parameter("seating_area.bottom_left").value),
         }
         self.seating_area = ShapelyPolygon(
             [
@@ -346,38 +346,38 @@ def main():
 
     yasmin_ros.set_ros_loggers(node)
 
-    try:
-        sm = SeatGuest(id="guest1")
-        bb = Blackboard()
+    # try:
+    sm = SeatGuest(id="guest1")
+    bb = Blackboard()
 
-        bb["guest_data"] = {
-            "host": {
-                "name": "Fadi",
-                "drink": "Fanta",
-                "detection": False,
-                "seating_detection": False,
-            },
-            "guest1": {
-                "name": "Aldrich",
-                "drink": "Coke",
-                "detection": False,
-                "seating_detection": False,
-            },
-            "guest2": {
-                "name": "",
-                "drink": "",
-                "detection": False,
-                "seating_detection": False,
-            },
-        }
+    bb["guest_data"] = {
+        "host": {
+            "name": "Fadi",
+            "drink": "Fanta",
+            "detection": False,
+            "seating_detection": False,
+        },
+        "guest1": {
+            "name": "Aldrich",
+            "drink": "Coke",
+            "detection": False,
+            "seating_detection": False,
+        },
+        "guest2": {
+            "name": "",
+            "drink": "",
+            "detection": False,
+            "seating_detection": False,
+        },
+    }
 
-        YasminViewerPub(sm, "HRI_SM3")
+    YasminViewerPub(sm, "HRI_SM3")
 
-        outcome = sm(bb)
+    outcome = sm(bb)
 
-        yasmin.YASMIN_LOG_INFO(outcome)
-    except Exception as e:
-        yasmin.YASMIN_LOG_WARN(e)
+    yasmin.YASMIN_LOG_INFO(outcome)
+    # except Exception as e:
+    #     yasmin.YASMIN_LOG_WARN(e)
 
     # Shutdown ROS 2 if it's running
     if rclpy.ok():
