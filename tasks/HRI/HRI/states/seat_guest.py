@@ -347,7 +347,7 @@ def main():
     yasmin_ros.set_ros_loggers(node)
 
     try:
-        sm = SeatGuest(learn_host=False)
+        sm = SeatGuest(id="guest1")
         bb = Blackboard()
 
         bb["guest_data"] = {
