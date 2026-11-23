@@ -181,17 +181,13 @@ class SeatGuest(StateMachine):
 
         self.add_state(
             "DETECT_ALL_PEOPLE_SOFA",
-            Detect3DInArea(
-                area_polygon=self.sofa_area,
-                filter=["person"],
-                model="yolo11n-seg.pt",
-                z_min=-10,
-                z_max=50,
-                confidence=0.8,
-                target_frame="map",
+            DetectAllInPolygon(
+                polygon=self.seating_area,
+                object_filter=["person"],
+                min_confidence=0.8,
             ),
             transitions={"succeeded": "PROCESS_DETECTIONS", "failed": "failed"},
-            remappings={"detections_3d": "people_detections"},
+            remappings={"detected_objects": "people_detections"},
         )
 
         self.add_state(
