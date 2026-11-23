@@ -36,6 +36,9 @@ cases:
     - {skill: find_object_by_property, args: {property: biggest, object: drink, location: dining table}}
   lightest_dish:
     - {skill: find_object_by_property, args: {property: lightest, object: dish, location: computer desk}}
+  count_at_placement:  # polygon-filtered count at a placement location, then speak the stored count
+    - {skill: count_objects, args: {object: drinks, location: dining table}}
+    - {skill: say, args: {text: "There are {count} drinks on the dining table."}}
 
   # --- manipulation (human assisted) ---
   pick_and_give:
@@ -59,6 +62,9 @@ cases:
     - {skill: get_person_info, args: {location: sofa}}
   count_people:
     - {skill: count_people, args: {location: living room}}
+  count_people_room:   # only people inside the living room polygon, then speak the stored count
+    - {skill: count_people, args: {location: living room}}
+    - {skill: say, args: {text: "I found {count} people in the living room."}}
   count_sitting:
     - {skill: count_people, args: {pose: sitting, location: living room}}
   guide:

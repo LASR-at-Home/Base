@@ -29,6 +29,7 @@ from lasr_skills import (
     PlayMotion,
 )
 from lasr_skills.describe_people import GetVlmAttributes
+from shapely.geometry import Polygon as ShapelyPolygon, Point as ShapelyPoint
 
 import time
 from typing import List, Union, Optional
@@ -267,6 +268,25 @@ class DispatchSkill(yasmin.State):
             if key.strip().lower().replace("_", " ") == norm:
                 return key
         return None
+
+    # Make the search polygon from the room or sub-location's four corners in locations.yaml.
+    # Return None if there is no polygon.
+    def _location_polygon(self, location_name):
+        key = self._resolve_location(location_name)
+        loc = self.locations.get(key) if key else None
+        if not loc or "polygon" not in loc:
+            return None
+        p = loc["polygon"]
+        return ShapelyPolygon(
+            [p["top_left"], p["top_right"], p["bottom_right"], p["bottom_left"]]
+        )
+
+    @staticmethod
+    def _in_polygon(detections, polygon):
+        """Keep detections whose map (x, y) is inside `polygon`; no polygon = keep all."""
+        if polygon is None:
+            return detections
+        return [d for d in detections if polygon.contains(ShapelyPoint(d.point.x, d.point.y))]
 
     def _go_to_location(self, location_name):
         key = self._resolve_location(location_name)
@@ -521,7 +541,7 @@ class DispatchSkill(yasmin.State):
         return list(self.task_bb["detections_3d"].detected_objects)
 
     def _search_objects(
-        self, target: str = "", first_match: bool = False
+        self, target: str = "", first_match: bool = False, polygon=None
     ) -> Optional[list]:
         """Look centre, then down, detecting objects at each head pose.
 
@@ -540,7 +560,9 @@ class DispatchSkill(yasmin.State):
             detections = self._detect()
             if detections is None:
                 continue
-            matches = [d for d in detections if self._matches_object(d.name, target)]
+            matches = self._in_polygon(
+                [d for d in detections if self._matches_object(d.name, target)], polygon
+            )
             if best is None or len(matches) > len(best):
                 best = matches
             if first_match and matches:
@@ -590,7 +612,7 @@ class DispatchSkill(yasmin.State):
             if self._go_to_location(location) != "succeeded":
                 return "failed"
 
-        matches = self._search_objects(target)
+        matches = self._search_objects(target, polygon=self._location_polygon(location))
         self._play_motion("look_centre")
         if matches is None:
             self._say("I could not count the objects.")
@@ -599,79 +621,60 @@ class DispatchSkill(yasmin.State):
         count = len(matches)
         self.task_bb["count"] = count
         self.task_bb["object_detections"] = matches
-        label = f"{target} item" if target else "item"
-        self._say(f"I counted {count} {label}{'' if count == 1 else 's'}.")
+        self._say(f"I counted {count} {target}.")
         return "succeeded"
 
     def _count_people(self, args: dict[str, Any]):
         location = self._first_arg(args, "location")
-        gesture = self._first_arg(args, "gesture").lower().replace(" ", "_")
-        pose = self._first_arg(args, "pose").lower().replace(" ", "_")
+        gesture = self._first_arg(args, "gesture") or self._first_arg(args, "pose")
+        gesture = gesture.lower().replace(" ", "_")
         clothes = self._normalise(self._first_arg(args, "clothes"))
 
         if location:
             if self._go_to_location(location) != "succeeded":
                 return "failed"
+        polygon = self._location_polygon(location)
 
-        # The gesture service checks one gesture per call and its locations cannot be
-        # matched to VLM descriptions, so only one filter is applied:
-        # gesture, else pose, else clothes.
-        requested = gesture or pose
-        ignored = [f for f in (gesture and pose, requested and clothes) if f]
-        if ignored:
-            self.node.get_logger().warning(
-                f"count_people applies one filter at a time, ignoring: {ignored}"
-            )
-
-        if requested:
-            # Poses (sitting / standing / lying_down) are gestures of the gesture service
-            requested_clean = requested.replace("_", " ")
-            if requested not in VALID_GESTURES:
-                self._say(f"I cannot recognise people who are {requested_clean}.")
+        if gesture:
+            if gesture not in VALID_GESTURES:
+                self._say("I cannot recognise that gesture.")
                 return "failed"
             try:
-                outcome = DetectGesture(gesture=requested)(self.task_bb)
+                outcome = DetectGesture(gesture=gesture)(self.task_bb)
             except Exception as exc:
                 self.node.get_logger().error(f"Detect Gestures failed: {exc}")
                 outcome = "failed"
             if outcome != "succeeded":
                 self._say("I could not count the people.")
                 return "failed"
-            count = len(self.task_bb["gesture_locations"])
-            suffix = f" with gesture {requested_clean}"
+            people = self._in_polygon(self.task_bb["gesture_locations"], polygon)
+            suffix = " with gesture " + gesture.replace("_", " ")
         else:
             people = self._detect(["person"])
             if people is None:
                 self._say("I could not count the people.")
                 return "failed"
+            people = self._in_polygon(people, polygon)
+            suffix = ""
             if clothes:
-                # Best effort: each detected person is cropped out of the detection
-                # image and described by the VLM, which only reports a shirt colour,
-                # so `clothes` can only be matched on the colour of the top.
                 image = self.task_bb["image_raw"]
-                count, described = 0, 0
-                for person in people:
-                    attributes = self._describe_person(
-                        self._crop_image(image, person.xywh)
-                    )
-                    if attributes is None:
-                        continue
-                    described += 1
-                    shirt_color = str(attributes.get("shirt_color", "")).strip().lower()
-                    if shirt_color and shirt_color != "unknown":
-                        if shirt_color in clothes or clothes in shirt_color:
-                            count += 1
-                if people and not described:
-                    self._say("I could not check what the people are wearing.")
-                    return "failed"
-                suffix = f" wearing {clothes}"
-            else:
-                count = len(people)
-                suffix = ""
+                people = [p for p in people if self._wears(image, p, clothes)]
+                suffix = " wearing " + clothes
 
+        count = len(people)
         self.task_bb["count"] = count
-        self._say(f"I counted {count} {'person' if count == 1 else 'people'}{suffix}.")
+        word = "person" if count == 1 else "people"
+        self._say(f"I counted {count} {word}{suffix}.")
         return "succeeded"
+
+    def _wears(self, image, person, clothes):
+        attrs = self._describe_person(self._crop_image(image, person.xywh))
+        if not attrs:
+            return False
+        colour = str(attrs.get("shirt_color", "")).strip().lower()
+        if colour in ("", "unknown"):
+            return False
+        return colour in clothes or clothes in colour
 
     def _find_object_by_property(self, args: dict[str, Any]):
         location = self._first_arg(args, "location")
@@ -728,7 +731,9 @@ class DispatchSkill(yasmin.State):
     def _execute_step(self, skill, args: Optional[dict] = None):
         args = args or {}
         if skill == "say":  # CHECKED
-            return self._say(args.get("text", ""))
+            text = args.get("text", "")
+            count = self.task_bb["count"] if "count" in self.task_bb.keys() else "unknown"
+            return self._say(text.replace("{count}", str(count)))
         if skill == "go_to_location":  # CHECKED
             return self._go_to_location(args.get("location", ""))
         if skill == "guide_person":  # SHOULD WORK (only uses go_to_location)
