@@ -34,7 +34,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo "[run] resetting robot"
-if ! ros2 run lasr_person_following reset_episode > "$LOG/reset.log" 2>&1; then
+# hard timeout: a robot stuck in the sim must not hang a whole batch
+if ! timeout 300 ros2 run lasr_person_following reset_episode > "$LOG/reset.log" 2>&1; then
     echo '{"error": "reset failed"}'
     exit 1
 fi

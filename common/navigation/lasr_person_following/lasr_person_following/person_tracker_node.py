@@ -68,8 +68,15 @@ def torso_histogram(bgr: np.ndarray, xywh, xyseg) -> np.ndarray:
     restricted to the segmentation mask and to pixels with enough colour/brightness."""
     x, y, w, h = xywh
     H, W = bgr.shape[:2]
+    # Head cut off by the top of the image (person very close): the crop would land on a
+    # different body part, so no appearance rather than a misleading one.
+    if y <= 2:
+        return None
+    # Feet cut off at the bottom (common when following): measure the torso from the top
+    # of the box, scaled by the full body height estimated from the box width.
+    full_h = max(h, int(3.5 * w)) if y + h >= H - 2 else h
     x0, x1 = max(0, x + w // 4), min(W, x + 3 * w // 4)
-    y0, y1 = max(0, y + int(0.2 * h)), min(H, y + int(0.55 * h))
+    y0, y1 = max(0, y + int(0.2 * full_h)), min(H, y + int(0.55 * full_h))
     if x1 - x0 < 4 or y1 - y0 < 4:
         return None
     crop = bgr[y0:y1, x0:x1]
@@ -127,6 +134,7 @@ class PersonTrackerNode(Node):
         d("start_enabled", False)
         d("surface_offset", 0.12)  # m: mask points lie on the body surface, push to centre
         d("stationary_time", 4.0)
+        d("reid_relaxed", True)  # see HostParams.reid_relaxed_enabled
 
         p = lambda n: self.get_parameter(n).value  # noqa: E731
         self.fixed_frame = p("fixed_frame")
@@ -134,7 +142,8 @@ class PersonTrackerNode(Node):
 
         self.tracker = MultiTracker(TrackerParams())
         self.host = HostTracker(self.tracker, HostParams(
-            lock_max_range=p("lock_max_range"), stationary_time=p("stationary_time")))
+            lock_max_range=p("lock_max_range"), stationary_time=p("stationary_time"),
+            reid_relaxed_enabled=p("reid_relaxed")))
         self.enabled = p("start_enabled")
         self.lock = threading.RLock()
         self.bridge = CvBridge()

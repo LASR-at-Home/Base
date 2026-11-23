@@ -138,7 +138,7 @@ class TrackerParams:
     appearance_gate_distance: float = 1.5
     appearance_gate_similarity: float = 0.7
     # An established track may not take a detection that clearly looks like someone else.
-    appearance_veto: float = 0.4  # similarity below this is never associated
+    appearance_veto: float = 0.3  # similarity below this is never associated
     appearance_veto_min_hits: int = 5
     confirm_hits: int = 3
     tentative_timeout: float = 0.6  # s without update before a tentative track is dropped
@@ -253,10 +253,10 @@ class HostParams:
     # (further away -> ask the host to come back instead of guessing)
     # relaxed rule, used only if the strict one finds nobody: the single moving person in
     # view (someone standing still is more likely a bystander) that roughly looks right
-    reid_relaxed_enabled: bool = False  # not yet validated in simulation (see README)
+    reid_relaxed_enabled: bool = True
     reid_relaxed_similarity: float = 0.7
     reid_relaxed_radius: float = 6.0
-    reid_relaxed_min_speed: float = 0.3
+    reid_relaxed_min_speed: float = 0.4
     reid_predict_time: float = 2.0  # s of last velocity used to predict where they went
     reid_timeout: float = 30.0  # s after which any matching person may be re-identified
     appearance_rate: float = 0.05
@@ -264,6 +264,7 @@ class HostParams:
     stationary_speed: float = 0.15  # m/s
     stationary_time: float = 3.0  # s
     min_travel: float = 1.0  # m walked before "stationary" may trigger
+    stationary_seen_within: float = 1.5  # s: must have been detected this recently
 
 
 @dataclass
@@ -357,8 +358,21 @@ class HostTracker:
         if track.last_update > (self.last_seen or -1):
             self.last_seen = track.last_update
             self._learn_appearance(track)
+            hx, hy = track.position
             for other in self.tracker.confirmed():
-                if other.id != track.id and other.last_update >= track.last_update - 0.3:
+                # detected in the same camera frame as the host, somewhere else: definitely
+                # a different person (the host's own new track after a glitch is not)
+                if (other.id != track.id and other.last_update == track.last_update
+                        and math.hypot(other.position[0] - hx, other.position[1] - hy) > 1.0):
+                    self.others.add(other.id)
+        else:
+            # host briefly unseen: anyone detected meanwhile further away than the host
+            # could have walked is someone else
+            reach = 2.0 + 2.0 * max(0.0, t - track.last_update)  # generous: walking + noise
+            hx, hy = track.position
+            for other in self.tracker.confirmed():
+                if (other.id != track.id and other.last_update > track.last_update
+                        and math.hypot(other.position[0] - hx, other.position[1] - hy) > reach):
                     self.others.add(other.id)
         pos = track.position
         self.last_pos = pos
@@ -461,13 +475,17 @@ class HostTracker:
         return cands[0] if len(cands) == 1 else None
 
     def _stationary(self, track: Track, t: float, visible: bool) -> Tuple[bool, float]:
-        if not visible or track.speed > self.p.stationary_speed:
+        # Only movement restarts the clock: a standing host often drops out of detection
+        # for a moment (turning round, partly out of view), which must not reset it.
+        if track.speed > self.p.stationary_speed:
             self.still_since = None
             return False, 0.0
         if self.still_since is None:
             self.still_since = t
         still_for = t - self.still_since
-        stationary = still_for >= self.p.stationary_time and self.travelled >= self.p.min_travel
+        recently_seen = t - track.last_update <= self.p.stationary_seen_within
+        stationary = (still_for >= self.p.stationary_time and self.travelled >= self.p.min_travel
+                      and recently_seen)
         return stationary, still_for
 
 

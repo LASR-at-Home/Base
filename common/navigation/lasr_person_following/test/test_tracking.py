@@ -300,3 +300,63 @@ def test_relaxed_reid_takes_single_moving_person_not_static_lookalike():
         t += DT
     assert est.status == HostStatus.TRACKING
     assert est.position[1] < 0.0  # the walker, not the twin at y=3
+
+
+def test_host_reappearing_as_new_track_is_not_marked_as_someone_else():
+    """A glitch makes the host's detection start a second track for a moment while the
+    host's track is still updated; once the old track dies, the new one is the host."""
+    rng, tracker, host = make()
+    t = lock_on(tracker, host, rng)
+    for _ in range(30):
+        tracker.step([det(rng, (2.0, 0.0), t, HOST_LOOK, noise=0.03)], t)
+        host.update(t)
+        t += DT
+    for _ in range(15):  # host walks past the robot, out of view for 1.5 s
+        tracker.step([], t)
+        host.update(t)
+        t += DT
+    t0 = t
+    for i in range(60):  # seen again 3 m further on, walking away
+        pos = walk((5.0, 0.0), (0.6, 0.0), t - t0)
+        tracker.step([det(rng, pos, t, HOST_LOOK, noise=0.03)], t)
+        est = host.update(t)
+        t += DT
+    assert est.status == HostStatus.TRACKING
+    assert est.position[0] > 5.0
+
+
+def test_stationary_survives_detection_gaps():
+    """A host standing still but detected only intermittently is still declared stationary."""
+    rng, tracker, host = make()
+    t = lock_on(tracker, host, rng)
+    t0 = t
+    for _ in range(40):  # walk 2.4 m
+        tracker.step([det(rng, walk((1.5, 0.0), (0.6, 0.0), t - t0), t, HOST_LOOK)], t)
+        host.update(t)
+        t += DT
+    stop = walk((1.5, 0.0), (0.6, 0.0), t - t0)
+    first = None
+    for i in range(100):  # standing; seen in only 1 of every 10 frames (1 s gaps)
+        tracker.step([det(rng, stop, t, HOST_LOOK, noise=0.03)] if i % 10 == 0 else [], t)
+        est = host.update(t)
+        if est.stationary and first is None:
+            first = i * DT
+        t += DT
+    assert first is not None and first < 7.0
+
+
+def test_lookalike_seen_far_away_while_host_unseen_is_never_reidentified():
+    """While the host is briefly unseen, an identical-looking person appears far further
+    away than the host could have walked: they must never become the host."""
+    rng, tracker, host = make()
+    t = lock_on(tracker, host, rng)
+    for _ in range(30):
+        tracker.step([det(rng, (2.0, 0.0), t, HOST_LOOK, noise=0.03)], t)
+        host.update(t)
+        t += DT
+    twin = (2.5, 4.5)
+    for _ in range(80):  # host gone; the twin stands 4.5 m away, jittering a little
+        tracker.step([det(rng, twin, t, HOST_LOOK, noise=0.08)], t)
+        est = host.update(t)
+        t += DT
+    assert est.status == HostStatus.LOST

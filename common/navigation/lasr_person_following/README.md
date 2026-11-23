@@ -62,7 +62,10 @@ Tracker details (`tracking.py`, unit tested in `test/test_tracking.py`):
 * a track coasts 3 s without detections before it is dropped
 * re-identification after a loss needs: confirmed track, appearance similarity ≥ 0.75 and
   clearly better than any other candidate, within 3 m of where the host was last seen or
-  was heading, and **not** a person that was ever visible at the same time as the host
+  was heading, and **not** a person ever detected in the same frame as the host and >1 m
+  from them. If nobody qualifies, a relaxed rule (`reid_relaxed`, on by default) takes the
+  only *moving* person within 6 m who looks similar (≥ 0.7) and walks the host's way
+* "stationary" (arrival) is restarted only by movement, not by short detection gaps
 
 ### follow_manager
 | | |
@@ -72,12 +75,14 @@ Tracker details (`tracking.py`, unit tested in `test/test_tracking.py`):
 
 Main parameters: `follow_distance` (1.0 m), `follow_max_speed` (0.7 m/s),
 `controller_node` / `controller_speed_params` / `smoother_node` (which Nav2 parameters
-to raise), `use_trail_path` (true).
+to raise), `use_trail_path` (true), `global_frame` (`odom`: following is relative to the
+host, so it keeps working when AMCL jumps; `map` is the alternative).
 
 ## Running
 
 ```bash
 ros2 launch lasr_person_following person_following.launch.py   # tracker + manager
+# options: global_frame:=map|odom (default odom), reid_relaxed:=true|false (default true)
 ```
 Needs the YOLO service (`lasr_vision_yolo service_launch.xml`) and Nav2. `HRI.launch.py`
 and `skills follow_person.launch.py` include it.
@@ -102,6 +107,7 @@ to match a different controller plugin.
 cd src/Base/common/navigation/lasr_person_following/scripts
 ./start_sim_stack.sh              # headless Gazebo + Nav2 + YOLO + stubs (needs no GPU)
 ./run_sim_tests.sh mytest         # all scenarios; or: ./run_sim_tests.sh mytest s1_basic
+FOLLOW_ARGS="global_frame:=map" ./run_sim_tests.sh maptest   # launch options under test
 ```
 Results (summary, CSV, plot) land in `$OUT` (default `/tmp/follow_eval`).
 
@@ -121,26 +127,3 @@ Sim quirks: the camera only renders if gzserver can reach the X display (hence t
 ~0.6 m, which occasionally makes the controller clip the doorway (the stuck watchdog
 recovers).
 
-## Status (simulation, 2026-11-17)
-
-Last full batch with the current defaults (`full1`, FollowPerson skill end to end):
-
-| Scenario | Result | Mean gap while walking | In 0.9–2.0 m band | Final gap |
-|---|---|---|---|---|
-| S1 basic (0.5 m/s, doorway) | pass | 1.72 m | 75% | 0.92 m |
-| S2 turns | fail: AMCL lost localisation (3.9 m error) | | | |
-| S3 stop-and-go (3 s pause not taken as arrival) | pass | 1.89 m | 67% | 0.92 m |
-| S4 crossing distractor | pass, no ID switch | 1.58 m | 89% | 0.91 m |
-| S5 passing distractor | fail: robot blocked by distractor, host lost | | | |
-| S6 sidestep + come back | fail in batch (passed in an earlier run) | | | |
-| S7 fast walker (1.0 m/s) | pass (robot max 0.7 m/s, so it trails) | 3.84 m | – | 1.41 m |
-
-S2 also passed in separate runs (mean gap 1.78–1.88 m, 75–80% in band). Tracking error is
-~0.1 m median; arrival is detected 4.0 s after the host stops, with the robot ~1.0 m away.
-
-Not yet validated (off by default):
-* `follow_manager global_frame:=odom`: following independent of AMCL jumps (the S2
-  failures were AMCL losing localisation in this sim)
-* `HostParams.reid_relaxed_enabled`: re-identify a single moving look-alike walking the
-  host's way when the strict appearance match fails (helps S5/S6; an earlier version
-  without the direction check confused the S5 distractor)

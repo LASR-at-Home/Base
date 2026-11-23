@@ -8,7 +8,8 @@ PREFIX=${1:-run}; shift
 SCEN_DIR=$WS/install/lasr_person_following/share/lasr_person_following/config/scenarios
 SCENARIOS=("$@")
 [ ${#SCENARIOS[@]} -eq 0 ] && SCENARIOS=($(ls "$SCEN_DIR" | sed 's/\.yaml$//'))
-FOLLOWER="ros2 launch lasr_person_following person_following.launch.py use_sim_time:=true & sleep 3; ros2 run skills follow_person; wait"
+# extra launch arguments for person_following, e.g. FOLLOW_ARGS="global_frame:=odom reid_relaxed:=true"
+FOLLOWER="ros2 launch lasr_person_following person_following.launch.py use_sim_time:=true ${FOLLOW_ARGS:-} & sleep 3; ros2 run skills follow_person; wait"
 for sc in "${SCENARIOS[@]}"; do
   run=${PREFIX}_${sc%%_*}
   echo "== $sc"
@@ -16,7 +17,8 @@ for sc in "${SCENARIOS[@]}"; do
     (cd "$WS"; $APPTAINER bash -c "$ROS_SETUP; ESTIMATE_TOPIC=/person_tracker/host_point MAX_DURATION=180 START_DELAY=12 \
       $WS/install/lasr_person_following/share/lasr_person_following/scripts/run_scenario.sh $SCEN_DIR/$sc.yaml '$FOLLOWER' $run $OUT") > "$OUT/last_run.txt" 2>&1
     grep -q '"error": "reset failed"' "$OUT/last_run.txt" || break
-    echo "   reset failed: restarting the sim stack"; "$(dirname "$0")/start_sim_stack.sh" > /dev/null
+    echo "   reset failed: restarting the sim stack"
+    "$(dirname "$0")/start_sim_stack.sh" | tail -1 | grep -q READY || "$(dirname "$0")/start_sim_stack.sh" > /dev/null
   done
   tr -d '\n ' < "$OUT/$run/summary.json"; echo
   grep -h -E "FollowPerson: (host stationary|host lost)|PROCESS_RESPONSE' :|no progress" "$OUT/$run/follower.log" | sed 's/.*\]: //' | cut -c1-150

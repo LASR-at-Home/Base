@@ -57,11 +57,13 @@ class FollowManagerNode(Node):
         super().__init__("follow_manager")
         d = self.declare_parameter
         d("host_state_topic", "/person_tracker/host_state")
-        # "odom" would make following independent of AMCL jumps (following is relative to
-        # the host); not yet validated in simulation, so "map" stays the default
-        d("global_frame", "map")
+        # odom, not map: following is relative to the host, so the trail, the robot pose and
+        # FollowPath stay correct even if AMCL jumps (NavigateToPose goals are converted by
+        # Nav2 with the current localisation, which keeps them right relative to the robot)
+        d("global_frame", "odom")
         d("robot_frame", "base_footprint")
         d("odom_frame", "odom")
+        d("planner_frame", "map")  # Nav2's global frame, for NavigateToPose goals
         d("follow_distance", 1.0)  # m of trail between robot goal and host
         d("close_margin", 0.5)  # slow host within follow_distance + this: only turn
         # (must exceed Nav2's xy goal tolerance, or the robot never counts as settled)
@@ -468,8 +470,7 @@ class FollowManagerNode(Node):
             return None
         way = [robot[:2]] + pts[k + 1:] + [goal[:2]]
         path = Path()
-        path.header.frame_id = self.global_frame
-        path.header.stamp = self.get_clock().now().to_msg()
+        path.header.frame_id = self.global_frame  # zero stamp: latest transform
         for (ax, ay), (bx, by) in zip(way, way[1:]):
             seg = math.hypot(bx - ax, by - ay)
             yaw = math.atan2(by - ay, bx - ax)
@@ -518,13 +519,38 @@ class FollowManagerNode(Node):
             if self.goal_handle is not None and self.goal_kind == "path":
                 self.goal_handle.cancel_goal_async()
                 self.goal_handle = None
-            fut = self.nav.send_goal_async(NavigateToPose.Goal(pose=ps))
+            nav_pose = self._to_planner_frame(ps)
+            if nav_pose is None:
+                return
+            fut = self.nav.send_goal_async(NavigateToPose.Goal(pose=nav_pose))
             self.goal_kind = "navigate"
         fut.add_done_callback(self._goal_response)
         self.last_goal = goal
         self.last_goal_time = now
         self.nav_state = "pending"
         self._publish_trail()
+
+    def _to_planner_frame(self, ps):
+        """NavigateToPose goals go to Nav2 in its planner frame (map), converted with the
+        latest transform: Nav2 converts at the goal's stamp, which fails when AMCL's
+        map->odom is published only sparsely ("extrapolation into the past")."""
+        target = self.get_parameter("planner_frame").value
+        if ps.header.frame_id == target:
+            return ps
+        t = self._lookup(target, ps.header.frame_id)
+        if t is None:
+            return None
+        yaw = _yaw(t.rotation)
+        c, s = math.cos(yaw), math.sin(yaw)
+        x, y = ps.pose.position.x, ps.pose.position.y
+        gyaw = _yaw(ps.pose.orientation) + yaw
+        out = PoseStamped()
+        out.header.frame_id = target
+        out.header.stamp = self.get_clock().now().to_msg()
+        out.pose.position.x = t.translation.x + c * x - s * y
+        out.pose.position.y = t.translation.y + s * x + c * y
+        out.pose.orientation.z, out.pose.orientation.w = math.sin(gyaw / 2), math.cos(gyaw / 2)
+        return out
 
     def _goal_response(self, fut):
         gh = fut.result()
