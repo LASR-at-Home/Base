@@ -16,9 +16,12 @@
 //        (kg, default 2) can be grasped, including ones spawned later. -->
 //   <object>coke_kitchen</object>
 //   <max_mass>2.0</max_mass>
+//   <!-- Released when the fingers open this much further (m), or open
+//        fully if the object is nearly as wide as the open gripper -->
 //   <release_distance>0.005</release_distance>
 // </plugin>
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <string>
@@ -81,6 +84,10 @@ private:
       finger_links_.insert(joint->GetChild()->GetName());
       palm_ = joint->GetParent();
     }
+    max_opening_ = 0.0;
+    for (const auto & joint : finger_joints_) {
+      max_opening_ += joint->UpperLimit(0) / finger_joints_.size();
+    }
     gzmsg << "[grasp_assist] Watching " << finger_links_.size()
           << " fingers on " << palm_->GetName() << "\n";
     return true;
@@ -117,9 +124,16 @@ private:
     }
 
     if (joint_) {
-      if (FingerOpening() > attach_opening_ + release_distance_) {
+      if (FingerOpening() > release_opening_) {
         Detach();
       }
+      return;
+    }
+
+    // A fully open gripper is not closing on anything: touches then come from
+    // the fingers sweeping into an object (e.g. a motion that ignores it)
+    if (FingerOpening() >= max_opening_ - kFullyOpenMargin) {
+      grip_steps_.clear();
       return;
     }
 
@@ -176,9 +190,16 @@ private:
     }
 
     attached_ = object->GetModel()->GetName();
-    attach_opening_ = FingerOpening();
+    // Release once the fingers open release_distance further, or (for objects
+    // nearly as wide as the open gripper, e.g. a drinks can) once they are
+    // almost fully open: they can't open release_distance further then.
+    const double attach_opening = FingerOpening();
+    release_opening_ = std::max(
+      std::min(attach_opening + release_distance_, max_opening_ - kFullyOpenMargin),
+      attach_opening + kMinReleaseMove);
     grip_steps_.clear();
-    gzmsg << "[grasp_assist] Attached " << attached_ << "\n";
+    gzmsg << "[grasp_assist] Attached " << attached_ << " at finger opening "
+          << attach_opening << ", released above " << release_opening_ << "\n";
   }
 
   void Detach()
@@ -193,6 +214,11 @@ private:
   }
 
   static constexpr int kStepsToAttach = 20;  // 20 ms at a 1 kHz physics rate
+  // Fingers within this of their upper limit count as fully open (m): the
+  // "open" motion stops 1 mm short of it (0.044 of 0.045)
+  static constexpr double kFullyOpenMargin = 0.002;
+  // But they must open at least this far beyond the grasp to release (m)
+  static constexpr double kMinReleaseMove = 0.001;
 
   gazebo::physics::WorldPtr world_;
   gazebo::event::ConnectionPtr update_;
@@ -210,7 +236,8 @@ private:
 
   std::map<std::string, int> grip_steps_;
   std::string attached_;
-  double attach_opening_ = 0.0;
+  double release_opening_ = 0.0;
+  double max_opening_ = 0.0;
   gazebo::physics::JointPtr joint_;
 };
 
