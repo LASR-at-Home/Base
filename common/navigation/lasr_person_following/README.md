@@ -6,37 +6,31 @@ host" in HRI and `follow_person` in GPSR.
 
 ## How it works
 
+Simple version: it assumes nobody walks between the robot and the host and nothing blocks
+the robot. Other people may be around; the robot must never switch to them.
+
 ```
  RGB + depth ──► person_tracker  (always running; detects only while enabled)
                   ├─ /yolo/detect3d, called asynchronously on the newest frame
                   ├─ Kalman filter per person (odom frame), gated Hungarian association
-                  │  (position + torso colour histogram), tentative/confirmed/coasting tracks
-                  ├─ host: locked on request, re-identified by appearance after a loss
+                  │  (position + torso colour histogram)
+                  ├─ host: locked on request; after a loss taken back only if clearly
+                  │  them (otherwise stays lost)
                   └─ head: PointHead goals keep the host in view (fire and forget)
                          │ ~/host_state (JSON), ~/host_pose, ~/host_point, ~/markers
                          ▼
-                 follow_manager  (Nav2 only, never cmd_vel)
-                  ├─ on the host's trail  → FollowPath with the trail itself
-                  │                          (takes the host's route, e.g. mid-doorway)
-                  ├─ off the trail         → NavigateToPose to a point on the trail
-                  ├─ host slow and close   → turn on the spot to face them
-                  ├─ host lost             → drive to where they were last seen
-                  ├─ stuck watchdog        → clear costmaps + Nav2 BackUp
+                 follow_manager  (Nav2 NavigateToPose only, never cmd_vel)
+                  ├─ host far or walking → goal 1 m short of where they will be in 2 s
+                  │                         (never closer than 0.5 m to them)
+                  ├─ host close, standing → turn on the spot to face them
+                  ├─ host lost            → drive to where they were last seen
                   └─ raises Nav2 speed limits while following, restores them after
                          ▼
                  FollowPerson (yasmin state machine in `skills`)
                   lock host → follow → host stood still → "Have we arrived?"
                      yes → succeeded        no → follow again
-                  lost → wait / head sweep / turn round (Nav2 Spin) → ask to come back
+                  lost → wait 8 s to see them again → "please come back" → lock again
 ```
-
-### Why this design
-The previous follower ran detection, association, head pointing and navigation in one
-blocking yasmin loop, so it reacted at ~1 Hz, had no motion model or identity, and gave
-up after a single missed frame. Its five `Detect3D` states each kept their own full-rate
-camera subscriptions, which starved the executor so badly that in simulation no frame was
-ever processed. Here perception runs continuously in its own node, people are tracked with
-a motion model and appearance, and the state machine only makes decisions.
 
 ## Nodes
 
@@ -63,26 +57,28 @@ Tracker details (`tracking.py`, unit tested in `test/test_tracking.py`):
 * re-identification after a loss needs: confirmed track, appearance similarity ≥ 0.75 and
   clearly better than any other candidate, within 3 m of where the host was last seen or
   was heading, and **not** a person ever detected in the same frame as the host and >1 m
-  from them. If nobody qualifies, a relaxed rule (`reid_relaxed`, on by default) takes the
-  only *moving* person within 6 m who looks similar (≥ 0.7) and walks the host's way
+  from them (or seen meanwhile further away than the host could have walked). If nobody
+  qualifies the host stays lost and is asked to come back: never guess
 * "stationary" (arrival) is restarted only by movement, not by short detection gaps
 
 ### follow_manager
 | | |
 |---|---|
 | `~/start`, `~/stop` (Trigger) | start/stop following (stop cancels the Nav2 goal) |
-| `~/status` (String, JSON) | `mode` (`following/facing/turning/to_last_seen/recovering`), `settled`, distance |
+| `~/status` (String, JSON) | `mode` (`idle/following/facing/to_last_seen`), `settled`, distance, `nav` |
 
-Main parameters: `follow_distance` (1.0 m), `follow_max_speed` (0.7 m/s),
-`controller_node` / `controller_speed_params` / `smoother_node` (which Nav2 parameters
-to raise), `use_trail_path` (true), `global_frame` (`odom`: following is relative to the
-host, so it keeps working when AMCL jumps; `map` is the alternative).
+Main parameters: `follow_distance` (1.0 m), `lookahead` (2.0 s: Nav2's controller slows
+down near its goal, so the goal is aimed ahead of a walking host), `min_distance` (0.5 m),
+`follow_max_speed`
+(0.7 m/s), `controller_node` / `controller_speed_params` / `smoother_node` (which Nav2
+parameters to raise). Following is computed in `odom` (does not jump when AMCL corrects);
+goals go to Nav2 in `map`.
 
 ## Running
 
 ```bash
 ros2 launch lasr_person_following person_following.launch.py   # tracker + manager
-# options: global_frame:=map|odom (default odom), reid_relaxed:=true|false (default true)
+# options: follow_distance:=1.0
 ```
 Needs the YOLO service (`lasr_vision_yolo service_launch.xml`) and Nav2. `HRI.launch.py`
 and `skills follow_person.launch.py` include it.
@@ -105,9 +101,9 @@ to match a different controller plugin.
 
 ```bash
 cd src/Base/common/navigation/lasr_person_following/scripts
-./start_sim_stack.sh              # headless Gazebo + Nav2 + YOLO + stubs (needs no GPU)
+./start_sim_stack.sh              # headless Gazebo + Nav2 + YOLO + stubs (GPU via --nv if present)
 ./run_sim_tests.sh mytest         # all scenarios; or: ./run_sim_tests.sh mytest s1_basic
-FOLLOW_ARGS="global_frame:=map" ./run_sim_tests.sh maptest   # launch options under test
+FOLLOW_ARGS="follow_distance:=1.2" ./run_sim_tests.sh d12   # launch options under test
 ```
 Results (summary, CSV, plot) land in `$OUT` (default `/tmp/follow_eval`).
 
@@ -121,9 +117,10 @@ Results (summary, CSV, plot) land in `$OUT` (default `/tmp/follow_eval`).
 * `reset_episode`: puts the robot back at the start with Nav2 (Gazebo's `reset_world`
   breaks this sim's physics)
 
-Sim quirks: the camera only renders if gzserver can reach the X display (hence the
-`/run/user` bind); `LIBGL_ALWAYS_SOFTWARE=1` without an NVIDIA GPU; the sim runs at
+The tests need `simulation` (house world, `nav_params` launch argument) and
+`lasr_vision_yolo` (metre depth from the sim's 32FC1 camera; an older build divides it by
+1000 and puts every person at the camera) built from this branch. Sim quirks: the camera only renders if gzserver can reach the X display
+(hence the `/run/user` bind); `LIBGL_ALWAYS_SOFTWARE=1` without an NVIDIA GPU; the sim runs at
 ~0.4–0.8× real time, so all timings are in sim time; AMCL in this map drifts up to
-~0.6 m, which occasionally makes the controller clip the doorway (the stuck watchdog
-recovers).
+~0.6 m.
 

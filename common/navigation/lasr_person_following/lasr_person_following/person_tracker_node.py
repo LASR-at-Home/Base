@@ -134,7 +134,6 @@ class PersonTrackerNode(Node):
         d("start_enabled", False)
         d("surface_offset", 0.12)  # m: mask points lie on the body surface, push to centre
         d("stationary_time", 4.0)
-        d("reid_relaxed", True)  # see HostParams.reid_relaxed_enabled
 
         p = lambda n: self.get_parameter(n).value  # noqa: E731
         self.fixed_frame = p("fixed_frame")
@@ -142,8 +141,7 @@ class PersonTrackerNode(Node):
 
         self.tracker = MultiTracker(TrackerParams())
         self.host = HostTracker(self.tracker, HostParams(
-            lock_max_range=p("lock_max_range"), stationary_time=p("stationary_time"),
-            reid_relaxed_enabled=p("reid_relaxed")))
+            lock_max_range=p("lock_max_range"), stationary_time=p("stationary_time")))
         self.enabled = p("start_enabled")
         self.lock = threading.RLock()
         self.bridge = CvBridge()

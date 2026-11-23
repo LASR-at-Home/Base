@@ -1,5 +1,6 @@
 #!/bin/bash
-# Starts (or restarts) everything the follow tests need, headless:
+# Starts (or restarts) everything the follow tests need, headless (uses the GPU via
+# apptainer --nv when there is one, see sim_env.sh):
 #   Gazebo + Nav2 (nav.launch.py) with the follow-test Nav2 params, sim stubs
 #   (point_head_action, transcribe_speech), the YOLO service and play_motion motions.
 # Prints READY when done. Usage: start_sim_stack.sh
@@ -30,7 +31,7 @@ for i in $(seq 1 120); do [ "$(grep -c 'Managed nodes are active' "$OUT/sim.log"
 sleep 10
 pkill -f "lib/rviz2/[r]viz2"  # rviz is useless headless and costs a lot of CPU
 nohup $APPTAINER bash -c "$ROS_SETUP; ros2 run lasr_person_following sim_stubs" > "$OUT/stubs.log" 2>&1 &
-# 4 torch threads: more oversubscribes the CPU next to gzserver (16 threads: 800 ms/frame)
+# without a GPU: 4 torch threads, more oversubscribes the CPU next to gzserver
 nohup $APPTAINER bash -c "$ROS_SETUP; cd $WS; OMP_NUM_THREADS=4 ros2 launch lasr_vision_yolo service_launch.xml" > "$OUT/yolo.log" 2>&1 &
 nohup $APPTAINER bash -c "$ROS_SETUP; ros2 launch skills load_motions.launch.py" > "$OUT/motions.log" 2>&1 &
 for i in $(seq 1 60); do grep -q "YOLO service started" "$OUT/yolo.log" && grep -q "Sim stubs ready" "$OUT/stubs.log" && break; sleep 2; done

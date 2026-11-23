@@ -276,11 +276,11 @@ def test_reidentify_host_who_walked_on_past_the_robot():
     assert est.status == HostStatus.TRACKING
 
 
-def test_relaxed_reid_takes_single_moving_person_not_static_lookalike():
-    """After a loss, the only *moving* person in view that roughly looks like the host is
-    taken, even with a weaker appearance match; a static look-alike is not."""
+def test_weak_or_far_lookalikes_are_not_taken_after_a_loss():
+    """After a loss, neither a static twin nor a weaker-matching walker further away than
+    the host could plausibly be is taken: the host stays lost (and is asked to come back)
+    rather than risk following someone else."""
     rng, tracker, host = make()
-    host.p = HostParams(reid_relaxed_enabled=True)
     t = lock_on(tracker, host, rng)
     for _ in range(40):
         tracker.step([det(rng, (1.5, 0.0), t, HOST_LOOK, noise=0.03)], t)
@@ -298,8 +298,7 @@ def test_relaxed_reid_takes_single_moving_person_not_static_lookalike():
                       det(rng, walk((5.0, -1.0), (0.6, 0.0), t - t0), t, seen_from_front, noise=0.03)], t)
         est = host.update(t)
         t += DT
-    assert est.status == HostStatus.TRACKING
-    assert est.position[1] < 0.0  # the walker, not the twin at y=3
+    assert est.status == HostStatus.LOST
 
 
 def test_host_reappearing_as_new_track_is_not_marked_as_someone_else():
@@ -316,13 +315,13 @@ def test_host_reappearing_as_new_track_is_not_marked_as_someone_else():
         host.update(t)
         t += DT
     t0 = t
-    for i in range(60):  # seen again 3 m further on, walking away
-        pos = walk((5.0, 0.0), (0.6, 0.0), t - t0)
+    for i in range(60):  # seen again 1.5 m further on, walking away
+        pos = walk((3.5, 0.0), (0.6, 0.0), t - t0)
         tracker.step([det(rng, pos, t, HOST_LOOK, noise=0.03)], t)
         est = host.update(t)
         t += DT
     assert est.status == HostStatus.TRACKING
-    assert est.position[0] > 5.0
+    assert est.position[0] > 3.5
 
 
 def test_stationary_survives_detection_gaps():
@@ -360,3 +359,21 @@ def test_lookalike_seen_far_away_while_host_unseen_is_never_reidentified():
         est = host.update(t)
         t += DT
     assert est.status == HostStatus.LOST
+
+
+def test_sudden_appearance_change_on_the_spot_keeps_host_track():
+    """The host's appearance changes abruptly (e.g. the torso moved the camera and the
+    crop now lands elsewhere) while they stand where predicted: same track, still host."""
+    rng, tracker, host = make()
+    t = lock_on(tracker, host, rng)
+    for _ in range(30):
+        tracker.step([det(rng, (1.5, 0.0), t, HOST_LOOK, noise=0.03)], t)
+        host.update(t)
+        t += DT
+    host_id = host.host_id
+    for _ in range(60):
+        tracker.step([det(rng, (1.5, 0.0), t, OTHER_LOOK, noise=0.03)], t)
+        est = host.update(t)
+        t += DT
+    assert est.status == HostStatus.TRACKING
+    assert est.track_id == host_id

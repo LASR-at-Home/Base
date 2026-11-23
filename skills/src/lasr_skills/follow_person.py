@@ -5,21 +5,21 @@ The heavy lifting runs continuously in the `lasr_person_following` nodes (launch
 `lasr_person_following person_following.launch.py`, plus the YOLO service and Nav2):
 
     person_tracker   YOLO detections -> Kalman multi-person tracker -> which one is the host
-                     (appearance re-identification), keeps the head pointed at the host
-    follow_manager   streams Nav2 NavigateToPose goals along the host's trail (no cmd_vel)
+                     (never switches to someone else), keeps the head pointed at the host
+    follow_manager   streams Nav2 NavigateToPose goals to stay behind the host (no cmd_vel)
 
 This state machine only makes the high-level decisions:
 
     lock onto the person in front -> follow -> host stationary -> "have we arrived?"
         yes -> succeeded
         no  -> keep following
-    host lost -> wait for re-identification / look around -> ask them to come back
+    host lost -> drive to where they were last seen and wait for them to be seen again
+              -> not seen: ask them to come back and stand in front of the robot
 
 Outcomes: "succeeded" (arrived), "failed" (could not find / keep the host).
 """
 
 import json
-import math
 import re
 import threading
 import time
@@ -31,11 +31,6 @@ import yasmin_ros
 from yasmin import Blackboard, State, StateMachine
 from yasmin_viewer import YasminViewerPub
 
-from control_msgs.action import PointHead
-from nav2_msgs.action import Spin
-from geometry_msgs.msg import Point, PointStamped
-from rclpy.action import ActionClient
-from rclpy.duration import Duration
 from std_msgs.msg import String
 from std_srvs.srv import SetBool, Trigger
 
@@ -75,8 +70,6 @@ class FollowInterface:
             "start": node.create_client(Trigger, f"{MANAGER}/start"),
             "stop": node.create_client(Trigger, f"{MANAGER}/stop"),
         }
-        self.head = ActionClient(node, PointHead, "/head_controller/point_head_action")
-        self.spin = ActionClient(node, Spin, "/spin")
 
     def _host_cb(self, msg):
         with self._lock:
@@ -116,19 +109,6 @@ class FollowInterface:
             cli.remove_pending_request(fut)
             yasmin.YASMIN_LOG_WARN(f"FollowPerson: no response from {cli.srv_name}, retrying")
         return None
-
-    def point_head(self, pan: float, distance: float = 2.5, height: float = 1.1):
-        if not self.head.wait_for_server(timeout_sec=1.0):
-            return
-        goal = PointHead.Goal()
-        goal.target = PointStamped()
-        goal.target.header.frame_id = "base_footprint"
-        goal.target.point = Point(x=distance * math.cos(pan), y=distance * math.sin(pan), z=height)
-        goal.pointing_frame = "head_2_link"
-        goal.pointing_axis.x = 1.0
-        goal.max_velocity = 1.0
-        goal.min_duration = Duration(seconds=0.5).to_msg()
-        self.head.send_goal_async(goal)
 
 
 class CallService(State):
@@ -223,77 +203,25 @@ class MonitorFollow(State):
         return "failed"
 
 
-class RecoverHost(State):
-    """The tracker lost the host; it re-identifies them by appearance as soon as they are
-    in view again. Search, checking after every step:
-        1. follow_manager keeps driving to where they were last seen (`wait` s)
-        2. stop and sweep the head left/right
-        3. turn the base all the way round in 90 degree steps (Nav2 spin)
-    Found -> following resumes."""
+class WaitForReturn(State):
+    """The tracker lost the host. follow_manager keeps driving to where they were last
+    seen; the tracker takes them back as soon as it is sure it sees them again.
+    "found" if that happens within `timeout` seconds."""
 
-    def __init__(self, wait: float = 4.0, sweep=(0.0, 0.9, -0.9, 0.0), dwell: float = 2.0,
-                 spin_steps: int = 4):
+    def __init__(self, timeout: float = 8.0):
         super().__init__(outcomes=["found", "not_found"])
-        self.wait = wait
-        self.sweep = sweep
-        self.dwell = dwell
-        self.spin_steps = spin_steps
-
-    def _spin(self, api, angle: float) -> None:
-        if not api.spin.wait_for_server(timeout_sec=3.0):
-            yasmin.YASMIN_LOG_WARN("FollowPerson: Nav2 spin not available")
-            return
-        fut = api.spin.send_goal_async(Spin.Goal(target_yaw=angle, time_allowance=Duration(seconds=15).to_msg()))
-        end = time.monotonic() + 5.0
-        while not fut.done() and time.monotonic() < end:
-            time.sleep(0.05)
-        if not fut.done() or fut.result() is None or not fut.result().accepted:
-            yasmin.YASMIN_LOG_WARN("FollowPerson: Nav2 spin goal not accepted")
-            return
-        res = fut.result().get_result_async()
-        end = time.monotonic() + 20.0
-        while not res.done() and time.monotonic() < end:
-            if self._found(api):
-                fut.result().cancel_goal_async()
-                return
-            time.sleep(0.05)
-
-    def _found(self, api):
-        host = api.host_state()
-        return host is not None and host["status"] in ("tracking", "coasting")
-
-    def _wait(self, api, seconds):
-        end = time.monotonic() + seconds
-        while time.monotonic() < end and not self.is_canceled():
-            if self._found(api):
-                return True
-            time.sleep(0.1)
-        return False
+        self.timeout = timeout
 
     def execute(self, blackboard):
         api = FollowInterface.get()
-        yasmin.YASMIN_LOG_WARN("FollowPerson: host lost, trying to recover")
-        if self._wait(api, self.wait):
-            return "found"
-        api.call("stop")  # the search below moves the robot itself
-        api.call("head_tracking", False)
-        found = False
-        try:
-            for pan in self.sweep:
-                api.point_head(pan)
-                if self._wait(api, self.dwell):
-                    found = True
-                    break
-            for _ in range(0 if found else self.spin_steps):
-                self._spin(api, math.pi / 2)
-                if self._wait(api, 1.0):
-                    found = True
-                    break
-        finally:
-            api.call("head_tracking", True)
-        if found:
-            api.call("start")
-            return "found"
+        yasmin.YASMIN_LOG_WARN("FollowPerson: host lost, waiting to see them again")
+        end = time.monotonic() + self.timeout
+        while time.monotonic() < end and not self.is_canceled():
+            host = api.host_state()
+            if host is not None and host["status"] in ("tracking", "coasting"):
+                yasmin.YASMIN_LOG_INFO("FollowPerson: host found again")
+                return "found"
+            time.sleep(0.1)
         return "not_found"
 
 
@@ -307,6 +235,8 @@ class FollowPerson(StateMachine):
         max_lost_attempts: times to ask the host to come back before giving up.
         max_ask_attempts: unanswered/unclear arrival questions before assuming arrival.
         max_wait_attempts: 15 s waits for someone to stand in front before giving up.
+        lost_wait: seconds to wait for a lost host to be seen again before asking them
+            to come back.
     Other keyword arguments (from the previous implementation) are accepted and ignored.
     """
 
@@ -316,6 +246,7 @@ class FollowPerson(StateMachine):
         max_lost_attempts: int = 3,
         max_ask_attempts: int = 3,
         max_wait_attempts: int = 4,
+        lost_wait: float = 8.0,
         **_unused,
     ):
         super().__init__(outcomes=["succeeded", "failed"])
@@ -327,6 +258,8 @@ class FollowPerson(StateMachine):
         self._ask_attempts = 0
         self._wait_attempts = 0
         any_outcome = lambda nxt: {"succeeded": nxt, "aborted": nxt, "canceled": nxt}  # noqa: E731
+        # the torso/head motions are cosmetic here: never hang on one
+        any_motion_outcome = lambda nxt: {**any_outcome(nxt), "timeout": nxt}  # noqa: E731
 
         self.add_state(
             "INIT",
@@ -340,7 +273,8 @@ class FollowPerson(StateMachine):
             transitions={"succeeded": "POST_NAV", "failed": "failed"},
         )
         # torso up: better view while the host gets into position
-        self.add_state("POST_NAV", PlayMotion("post_navigation"), transitions=any_outcome("WAIT_FOR_HOST"))
+        self.add_state("POST_NAV", PlayMotion("post_navigation", timeout=15.0),
+                       transitions=any_motion_outcome("WAIT_FOR_HOST"))
         self.add_state(
             "WAIT_FOR_HOST",
             WaitForHost(timeout=15.0),
@@ -362,7 +296,8 @@ class FollowPerson(StateMachine):
             CallService([("head_tracking", False)]),
             transitions={"succeeded": "PRE_NAV", "failed": "PRE_NAV"},
         )
-        self.add_state("PRE_NAV", PlayMotion("pre_navigation"), transitions=any_outcome("SAY_FOLLOW"))
+        self.add_state("PRE_NAV", PlayMotion("pre_navigation", timeout=15.0),
+                       transitions=any_motion_outcome("SAY_FOLLOW"))
         self.add_state(
             "SAY_FOLLOW",
             Say(text="I will follow you now. Please walk to the destination, and stop when we get there."),
@@ -382,7 +317,7 @@ class FollowPerson(StateMachine):
         # ---- host lost ----
         self.add_state(
             "RECOVER",
-            RecoverHost(),
+            WaitForReturn(timeout=lost_wait),
             transitions={"found": "MONITOR", "not_found": "STOP_LOST"},
         )
         self.add_state(

@@ -140,6 +140,10 @@ class TrackerParams:
     # An established track may not take a detection that clearly looks like someone else.
     appearance_veto: float = 0.3  # similarity below this is never associated
     appearance_veto_min_hits: int = 5
+    # ...unless the detection is right where the track is predicted: the same person's
+    # appearance can change abruptly (camera height or crop changes, turning round), and
+    # nobody else can be standing on the same spot
+    appearance_veto_free_distance: float = 0.4  # m
     confirm_hits: int = 3
     tentative_timeout: float = 0.6  # s without update before a tentative track is dropped
     confirmed_timeout: float = 3.0  # s a confirmed track coasts before deletion
@@ -175,6 +179,8 @@ class MultiTracker:
                     if (
                         sim < self.p.appearance_veto
                         and tr.hits >= self.p.appearance_veto_min_hits
+                        and math.hypot(det.x - tr.position[0], det.y - tr.position[1])
+                        > self.p.appearance_veto_free_distance
                         and tr.appearance is not None
                         and det.appearance is not None
                     ):
@@ -250,15 +256,8 @@ class HostParams:
     reid_walk_speed: float = 1.5  # m/s, how far the host may have walked while lost
     reid_base_radius: float = 1.5  # m
     reid_max_radius: float = 3.0  # m, never re-identify further than this from last seen
-    # (further away -> ask the host to come back instead of guessing)
-    # relaxed rule, used only if the strict one finds nobody: the single moving person in
-    # view (someone standing still is more likely a bystander) that roughly looks right
-    reid_relaxed_enabled: bool = True
-    reid_relaxed_similarity: float = 0.7
-    reid_relaxed_radius: float = 6.0
-    reid_relaxed_min_speed: float = 0.4
+    # (further away -> the host is asked to come back instead of guessing)
     reid_predict_time: float = 2.0  # s of last velocity used to predict where they went
-    reid_timeout: float = 30.0  # s after which any matching person may be re-identified
     appearance_rate: float = 0.05
     crowd_radius: float = 1.0  # don't learn appearance when others are this close
     stationary_speed: float = 0.15  # m/s
@@ -420,7 +419,10 @@ class HostTracker:
             self.appearance /= max(self.appearance.sum(), 1e-9)
 
     def _reidentify(self, t: float) -> Optional[Track]:
-        """Pick a confirmed track that looks like the host and could plausibly be them."""
+        """Pick a confirmed track that looks like the host and could plausibly be them.
+
+        Deliberately conservative: when in doubt the host stays lost (and is asked to come
+        back) rather than risk following someone else."""
         lost_for = t - (self.last_seen if self.last_seen is not None else t)
         radius = min(self.p.reid_max_radius,
                      self.p.reid_base_radius + self.p.reid_walk_speed * lost_for)
@@ -438,41 +440,21 @@ class HostTracker:
             px, py = tr.position
             d = min(math.hypot(px - self.last_pos[0], py - self.last_pos[1]),
                     math.hypot(px - cx, py - cy))
-            if lost_for < self.p.reid_timeout and d > radius:
+            if d > radius:
                 continue
             scored.append((sim, -d, tr))
         if not scored:
-            return self._reidentify_relaxed(cx, cy)
+            return None
         scored.sort(key=lambda s: (s[0], s[1]), reverse=True)
         best_sim, _, best = scored[0]
         if self.appearance is not None:
             if best_sim < self.p.reid_min_similarity:
-                return self._reidentify_relaxed(cx, cy)
+                return None
             if len(scored) > 1 and best_sim - scored[1][0] < self.p.reid_margin:
                 return None  # ambiguous: two people look alike, wait
         elif len(scored) > 1:
             return None  # no appearance model and several candidates: wait
         return best
-
-    def _reidentify_relaxed(self, cx: float, cy: float) -> Optional[Track]:
-        if not self.p.reid_relaxed_enabled:
-            return None
-        cands = []
-        for tr in self.tracker.confirmed():
-            if tr.id in self.others:
-                continue
-            px, py = tr.position
-            d = min(math.hypot(px - self.last_pos[0], py - self.last_pos[1]), math.hypot(px - cx, py - cy))
-            if (d <= self.p.reid_relaxed_radius and tr.speed >= self.p.reid_relaxed_min_speed
-                    and appearance_similarity(self.appearance, tr.appearance) >= self.p.reid_relaxed_similarity):
-                # if the host was walking, the candidate must walk the same way
-                lv = math.hypot(*self.last_vel)
-                if lv > 0.3:
-                    cos = (tr.velocity[0] * self.last_vel[0] + tr.velocity[1] * self.last_vel[1]) / (tr.speed * lv)
-                    if cos < 0.3:
-                        continue
-                cands.append(tr)
-        return cands[0] if len(cands) == 1 else None
 
     def _stationary(self, track: Track, t: float, visible: bool) -> Tuple[bool, float]:
         # Only movement restarts the clock: a standing host often drops out of detection

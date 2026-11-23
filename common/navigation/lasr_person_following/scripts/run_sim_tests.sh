@@ -8,7 +8,7 @@ PREFIX=${1:-run}; shift
 SCEN_DIR=$WS/install/lasr_person_following/share/lasr_person_following/config/scenarios
 SCENARIOS=("$@")
 [ ${#SCENARIOS[@]} -eq 0 ] && SCENARIOS=($(ls "$SCEN_DIR" | sed 's/\.yaml$//'))
-# extra launch arguments for person_following, e.g. FOLLOW_ARGS="global_frame:=odom reid_relaxed:=true"
+# extra launch arguments for person_following, e.g. FOLLOW_ARGS="follow_distance:=1.2"
 FOLLOWER="ros2 launch lasr_person_following person_following.launch.py use_sim_time:=true ${FOLLOW_ARGS:-} & sleep 3; ros2 run skills follow_person; wait"
 for sc in "${SCENARIOS[@]}"; do
   run=${PREFIX}_${sc%%_*}
