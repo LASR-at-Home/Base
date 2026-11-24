@@ -114,7 +114,6 @@ class YOLOServiceNode:
             self._depth_scale = 1000.0
             self.node.get_logger().info("REAL USE - Depth Scaling Applied")
 
-        
         for model in self.preload_param_list:
             self._maybe_load_model(model)
 

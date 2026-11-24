@@ -7,6 +7,7 @@ from launch.actions import IncludeLaunchDescription, TimerAction, DeclareLaunchA
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
+
 def generate_launch_description():
 
     sim = DeclareLaunchArgument("sim", default_value="False")

@@ -40,7 +40,9 @@ class QueryLLM(yasmin.State):
         ok, reason = check_command(command, self.world)
         if not ok:
             self.node.get_logger().warn(f"Command rejected before planning: {reason}")
-            blackboard["steps"] = [{"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}]
+            blackboard["steps"] = [
+                {"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}
+            ]
             return "succeeded"
 
         try:
@@ -60,10 +62,14 @@ class QueryLLM(yasmin.State):
         problems = validate_plan(steps, self.world)
         if problems:
             self.node.get_logger().warn(
-                "Plan rejected: " + "; ".join(problems)
-                + " | plan: " + ", ".join(s.get("skill", "?") for s in steps)
+                "Plan rejected: "
+                + "; ".join(problems)
+                + " | plan: "
+                + ", ".join(s.get("skill", "?") for s in steps)
             )
-            blackboard["steps"] = [{"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}]
+            blackboard["steps"] = [
+                {"skill": "say", "args": {"text": PLAN_FAILED_TOKEN}}
+            ]
             return "succeeded"
 
         # For local: separate announce call. For cloud: announcement already in steps.

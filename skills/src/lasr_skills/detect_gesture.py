@@ -47,7 +47,9 @@ class DetectGesture(ServiceState):
         )
 
     def _response_handler(self, blackboard, response):
-        blackboard["gesture_locations"] = []    # Empty previous gesture locations from memory
+        blackboard["gesture_locations"] = (
+            []
+        )  # Empty previous gesture locations from memory
         locations = list(response.locations)
 
         if self.area_polygon is not None:

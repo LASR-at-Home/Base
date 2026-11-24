@@ -3,6 +3,7 @@ import time
 
 import yasmin
 import yasmin_ros
+
 INPUT_PROMPT = "Enter command: "
 
 
@@ -21,7 +22,7 @@ class KeyboardInputState(yasmin.State):
             yasmin.YASMIN_LOG_ERROR(
                 "Keyboard input mode needs a terminal: start the node with "
                 "`ros2 run GPSR service` (not ros2 launch) and type in that terminal, "
-                "or set input_mode to \"microphone\"."
+                'or set input_mode to "microphone".'
             )
             time.sleep(5.0)
             return "aborted"

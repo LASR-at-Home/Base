@@ -92,7 +92,6 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-
             DeclareLaunchArgument(
                 "whisper_model",
                 default_value="small.en",

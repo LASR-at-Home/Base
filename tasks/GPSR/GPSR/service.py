@@ -107,9 +107,7 @@ class GPSR_sm(yasmin.StateMachine):
 
             self.add_state(
                 "CHECK_CONFIRMATION",
-                yasmin.CbState(
-                    outcomes=["yes", "no"], callback=self.checkConfirmation
-                ),
+                yasmin.CbState(outcomes=["yes", "no"], callback=self.checkConfirmation),
                 transitions={
                     "yes": "QUERY_LLM",
                     "no": "COUNT_SPEECH_FAILURE",
@@ -331,7 +329,7 @@ class GPSR_sm(yasmin.StateMachine):
 
     def checkOutcome(self, blackboard):
         steps = blackboard["steps"]
-        #yasmin.YASMIN_LOG_INFO(f"{steps}")
+        # yasmin.YASMIN_LOG_INFO(f"{steps}")
 
         if len(steps) == 1 and steps[0].get("skill") == "say":
             say_text = (steps[0].get("args") or {}).get("text", "")

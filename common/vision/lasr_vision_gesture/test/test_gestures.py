@@ -49,7 +49,9 @@ def test_pointing_needs_straight_arm():
 
 def test_lying_down_and_sitting():
     lying = person(
-        left_hip=(550, 230), right_hip=(550, 270), left_knee=(700, 230),
+        left_hip=(550, 230),
+        right_hip=(550, 270),
+        left_knee=(700, 230),
         right_knee=(700, 270),
     )
     assert STATIC["lying_down"](lying)

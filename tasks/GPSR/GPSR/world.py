@@ -255,7 +255,9 @@ def vocabulary_prompt(node=None) -> str:
     object_words = []
     for name, info in objects.items():
         object_words.append(normalise_name(name))
-        object_words.extend(normalise_name(a) for a in (info or {}).get("aliases") or [])
+        object_words.extend(
+            normalise_name(a) for a in (info or {}).get("aliases") or []
+        )
     categories = []
     for info in objects.values():
         category = normalise_name((info or {}).get("category"))

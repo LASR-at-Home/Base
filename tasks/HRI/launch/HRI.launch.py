@@ -6,6 +6,7 @@ from launch.actions import IncludeLaunchDescription, TimerAction, DeclareLaunchA
 from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
+
 def generate_launch_description():
     load_motions = IncludeLaunchDescription(
         AnyLaunchDescriptionSource(
@@ -64,7 +65,6 @@ def generate_launch_description():
     return LaunchDescription(
         [
             sim,
-
             load_motions,
             yolo_service,
             reid_service,

@@ -12,25 +12,100 @@ from GPSR.world import normalise_name
 
 # Words a command starts with / contains (see TRANSCRIPTION_CLEANER_PROMPT)
 COMMAND_WORDS = {
-    "go", "navigate", "find", "locate", "bring", "get", "fetch", "take", "put",
-    "place", "deliver", "count", "tell", "say", "follow", "escort", "guide", "lead",
-    "answer", "introduce", "greet", "meet", "give", "pick", "carry", "move", "look",
-    "search", "come", "return", "describe", "salute", "what", "how", "where", "who",
-    "which", "whats",
+    "go",
+    "navigate",
+    "find",
+    "locate",
+    "bring",
+    "get",
+    "fetch",
+    "take",
+    "put",
+    "place",
+    "deliver",
+    "count",
+    "tell",
+    "say",
+    "follow",
+    "escort",
+    "guide",
+    "lead",
+    "answer",
+    "introduce",
+    "greet",
+    "meet",
+    "give",
+    "pick",
+    "carry",
+    "move",
+    "look",
+    "search",
+    "come",
+    "return",
+    "describe",
+    "salute",
+    "what",
+    "how",
+    "where",
+    "who",
+    "which",
+    "whats",
 }
 
 # Things a command may be about that are not in the config files
 GENERIC_ENTITIES = {
-    "me", "you", "your", "yourself", "person", "people", "someone", "somebody",
-    "anyone", "everyone", "operator", "question", "questions", "team", "name",
-    "time", "date", "day", "week", "month", "tomorrow", "today", "joke", "object",
-    "objects", "something", "thing", "things", "waving", "sitting", "standing",
-    "lying", "pointing", "raising", "wearing", "shirt", "gesture", "pose",
+    "me",
+    "you",
+    "your",
+    "yourself",
+    "person",
+    "people",
+    "someone",
+    "somebody",
+    "anyone",
+    "everyone",
+    "operator",
+    "question",
+    "questions",
+    "team",
+    "name",
+    "time",
+    "date",
+    "day",
+    "week",
+    "month",
+    "tomorrow",
+    "today",
+    "joke",
+    "object",
+    "objects",
+    "something",
+    "thing",
+    "things",
+    "waving",
+    "sitting",
+    "standing",
+    "lying",
+    "pointing",
+    "raising",
+    "wearing",
+    "shirt",
+    "gesture",
+    "pose",
 }
 
 LOCATION_ARGS = ("location", "start", "end", "destination", "target", "surface")
 OBJECT_ARGS = ("object",)
-GENERIC_OBJECT_ARGS = {"", "object", "objects", "it", "item", "items", "something", "thing"}
+GENERIC_OBJECT_ARGS = {
+    "",
+    "object",
+    "objects",
+    "it",
+    "item",
+    "items",
+    "something",
+    "thing",
+}
 
 
 def _plural_forms(word: str) -> set:
@@ -112,7 +187,11 @@ def validate_plan(steps: list, world: dict) -> list:
             problems.append(f"step {i}: unknown skill '{skill}'")
         for key in LOCATION_ARGS:
             value = args.get(key)
-            if isinstance(value, str) and value.strip() and _text(value) not in locations:
+            if (
+                isinstance(value, str)
+                and value.strip()
+                and _text(value) not in locations
+            ):
                 problems.append(f"step {i} {skill}: unknown location '{value}'")
         for key in OBJECT_ARGS:
             value = args.get(key)

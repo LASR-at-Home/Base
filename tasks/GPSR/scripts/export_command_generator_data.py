@@ -56,9 +56,7 @@ def load(config_dir: Path, filename: str, key: str) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--config", type=Path, default=PKG_ROOT / "config")
-    parser.add_argument(
-        "--out", type=Path, default=PKG_ROOT / "command_generator_data"
-    )
+    parser.add_argument("--out", type=Path, default=PKG_ROOT / "command_generator_data")
     args = parser.parse_args()
 
     people = load(args.config, "people.yaml", "people")
@@ -111,7 +109,9 @@ def main() -> int:
 
         location = info.get("location")
         if location not in locations:
-            errors.append(f"Object '{name}' default location '{location}' is not in locations.yaml")
+            errors.append(
+                f"Object '{name}' default location '{location}' is not in locations.yaml"
+            )
         elif plural not in storage.setdefault(location, []):
             storage[location].append(plural)
 

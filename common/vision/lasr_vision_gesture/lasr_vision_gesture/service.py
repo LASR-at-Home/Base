@@ -150,10 +150,7 @@ class GestureService(Node):
         if res is None:
             return None
         return [
-            {
-                k.keypoint_name: (k.point.x, k.point.y, k.point.z)
-                for k in det.keypoints
-            }
+            {k.keypoint_name: (k.point.x, k.point.y, k.point.z) for k in det.keypoints}
             for det in res.detections
         ]
 
