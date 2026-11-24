@@ -4,6 +4,7 @@ NMS, depth at a box, and a check of each crop by a local VLM (Ollama HTTP API, s
 VLM: qwen2.5vl:3b works (ollama pull qwen2.5vl:3b). moondream does not: it ignores the image.
 Boxes are [cx, cy, w, h] in pixels, as returned by lasr_vision_open_vocabulary.
 """
+
 import base64
 import json
 import urllib.request
@@ -24,7 +25,11 @@ def label_for(phrase, queries, labels=None):
 
     def score(q):
         qw = q.lower().split()
-        return sum(1 for w in words if w and any(w == x or (len(w) >= 4 and w in x) for x in qw))
+        return sum(
+            1
+            for w in words
+            if w and any(w == x or (len(w) >= 4 and w in x) for x in qw)
+        )
 
     best = max(queries, key=score, default=None)
     if best is None or score(best) == 0:
@@ -34,9 +39,21 @@ def label_for(phrase, queries, labels=None):
 
 def iou(a, b):
     """IoU of two [cx, cy, w, h] boxes."""
-    ax1, ay1, ax2, ay2 = a[0] - a[2] / 2, a[1] - a[3] / 2, a[0] + a[2] / 2, a[1] + a[3] / 2
-    bx1, by1, bx2, by2 = b[0] - b[2] / 2, b[1] - b[3] / 2, b[0] + b[2] / 2, b[1] + b[3] / 2
-    inter = max(0.0, min(ax2, bx2) - max(ax1, bx1)) * max(0.0, min(ay2, by2) - max(ay1, by1))
+    ax1, ay1, ax2, ay2 = (
+        a[0] - a[2] / 2,
+        a[1] - a[3] / 2,
+        a[0] + a[2] / 2,
+        a[1] + a[3] / 2,
+    )
+    bx1, by1, bx2, by2 = (
+        b[0] - b[2] / 2,
+        b[1] - b[3] / 2,
+        b[0] + b[2] / 2,
+        b[1] + b[3] / 2,
+    )
+    inter = max(0.0, min(ax2, bx2) - max(ax1, bx1)) * max(
+        0.0, min(ay2, by2) - max(ay1, by1)
+    )
     union = a[2] * a[3] + b[2] * b[3] - inter
     return inter / union if union > 0 else 0.0
 
@@ -73,24 +90,31 @@ def draw(bgr, dets):
         (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         y = max(th + 6, p1[1])
         cv2.rectangle(out, (p1[0], y - th - 6), (p1[0] + tw + 6, y), (0, 200, 0), -1)
-        cv2.putText(out, text, (p1[0] + 3, y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
+        cv2.putText(
+            out, text, (p1[0] + 3, y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2
+        )
     return out
 
 
 # ---- VLM (Ollama) ----
 
+
 def _crop_b64(bgr, box, pad=0.12):
     h_img, w_img = bgr.shape[:2]
     cx, cy, w, h = box
     x1, y1 = int(max(0, cx - w / 2 - w * pad)), int(max(0, cy - h / 2 - h * pad))
-    x2, y2 = int(min(w_img, cx + w / 2 + w * pad)), int(min(h_img, cy + h / 2 + h * pad))
+    x2, y2 = int(min(w_img, cx + w / 2 + w * pad)), int(
+        min(h_img, cy + h / 2 + h * pad)
+    )
     if x2 <= x1 or y2 <= y1:
         return None
     ok, buf = cv2.imencode(".jpg", bgr[y1:y2, x1:x2])
     return base64.b64encode(buf.tobytes()).decode("utf-8") if ok else None
 
 
-def ask_vlm(img_b64, prompt, model=DEFAULT_VLM_MODEL, host=DEFAULT_VLM_HOST, timeout=30.0):
+def ask_vlm(
+    img_b64, prompt, model=DEFAULT_VLM_MODEL, host=DEFAULT_VLM_HOST, timeout=30.0
+):
     """The VLM's answer, or None if Ollama is not reachable / times out."""
     payload = {
         "model": model,
@@ -99,11 +123,19 @@ def ask_vlm(img_b64, prompt, model=DEFAULT_VLM_MODEL, host=DEFAULT_VLM_HOST, tim
         # small context = less VRAM, so the vision part stays on the GPU next to DINO
         "options": {"temperature": 0.0, "num_ctx": 2048},
     }
-    req = urllib.request.Request(host.rstrip("/") + "/api/chat", data=json.dumps(payload).encode("utf-8"),
-                                 headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(
+        host.rstrip("/") + "/api/chat",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8")).get("message", {}).get("content", "") or ""
+            return (
+                json.loads(r.read().decode("utf-8"))
+                .get("message", {})
+                .get("content", "")
+                or ""
+            )
     except Exception:
         return None
 
@@ -113,7 +145,9 @@ def vlm_is(bgr, box, label, **kw):
     img = _crop_b64(bgr, box)
     if img is None or not label:
         return None
-    text = ask_vlm(img, f"Is the object in this image a {label}? Answer only yes or no.", **kw)
+    text = ask_vlm(
+        img, f"Is the object in this image a {label}? Answer only yes or no.", **kw
+    )
     if text is None:
         return None
     t = text.strip().lower().lstrip(" .,'\"`*")
@@ -122,13 +156,22 @@ def vlm_is(bgr, box, label, **kw):
 
 def vlm_pick(bgr, box, labels, **kw):
     """The one label from `labels` the VLM gives the crop, or None."""
-    cands = [c for c in dict.fromkeys(l.strip().lower() for l in labels if l and l.strip()) if c != "unknown"]
+    cands = [
+        c
+        for c in dict.fromkeys(l.strip().lower() for l in labels if l and l.strip())
+        if c != "unknown"
+    ]
     img = _crop_b64(bgr, box) if cands else None
     if img is None:
         return None
-    text = ask_vlm(img, "You are labelling ONE object for a robot. Reply with EXACTLY ONE label from this "
-                   "list, lowercase, and nothing else:\n" + ", ".join(cands + ["unknown"])
-                   + "\nIf none clearly fits, reply 'unknown'.", **kw)
+    text = ask_vlm(
+        img,
+        "You are labelling ONE object for a robot. Reply with EXACTLY ONE label from this "
+        "list, lowercase, and nothing else:\n"
+        + ", ".join(cands + ["unknown"])
+        + "\nIf none clearly fits, reply 'unknown'.",
+        **kw,
+    )
     t = (text or "").strip().lower().split("\n")[0].strip(" .,'\"`*")
     if t in cands:
         return t
