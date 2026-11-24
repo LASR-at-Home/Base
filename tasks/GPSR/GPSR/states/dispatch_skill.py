@@ -415,6 +415,9 @@ class DispatchSkill(yasmin.State):
 
 
             if self._detect_gesture(gesture):
+                loc = self.task_bb["gesture_locations"][0]
+                self.node.get_logger().info(f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})")
+                self._look_at(loc)
                 self._say(f"I found someone with gesture {gesture_clean}.")
                 return "succeeded"
             
@@ -422,6 +425,9 @@ class DispatchSkill(yasmin.State):
             self._say(f"Please gesture {gesture_clean} so I can find you.")
             Wait(1)(self.task_bb)
             if self._detect_gesture(gesture):
+                loc = self.task_bb["gesture_locations"][0]
+                self.node.get_logger().info(f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})")
+                self._look_at(loc)
                 self._say(f"I found someone with gesture {gesture_clean}.")
                 return "succeeded"
             
@@ -433,6 +439,9 @@ class DispatchSkill(yasmin.State):
         if name:
             self._say(f"{name}, please wave so I can find you.")
             if self._detect_gesture("waving"):
+                loc = self.task_bb["gesture_locations"][0]
+                self.node.get_logger().info(f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})")
+                self._look_at(loc)
                 self._say(f"I found someone who may be {name}.")
                 return "succeeded"
 
@@ -452,6 +461,10 @@ class DispatchSkill(yasmin.State):
         # Final fallback - Just detect anybody 
         detections = self._detect_faces()
         if detections:
+            person = self.task_bb["detections_3d"].detected_objects[0]
+            point = PointStamped(header=Header(frame_id="map", stamp=Time().to_msg()), point=person.point)
+            self.node.get_logger().info(f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})")
+            self._look_at(point)
             self._say("I found a person.")
             return "succeeded"
 
@@ -460,6 +473,10 @@ class DispatchSkill(yasmin.State):
 
     def _pick_up(self, args: dict[str, Any]):
         obj = self._first_arg(args, "object") or "object"
+        if "object_point" in self.task_bb.keys():
+            point = self.task_bb["object_point"]
+            self.node.get_logger().info(f"'{obj}' is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})")
+            self._look_at(point)
         try:
             outcome = ReceiveObject(object_name=obj)(self.task_bb)
         except Exception as exc:
@@ -481,6 +498,11 @@ class DispatchSkill(yasmin.State):
 
     def _give_to_person(self, args: dict[str, Any]):
         obj = self._first_arg(args, "object") or "object"
+        people = self._detect(["person"])
+        if people:
+            point = PointStamped(header=Header(frame_id="map", stamp=Time().to_msg()), point=people[0].point)
+            self.node.get_logger().info(f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})")
+            self._look_at(point)
         try:
             outcome = HandoverObject(object_name=obj)(self.task_bb)
         except Exception as exc:
@@ -601,7 +623,7 @@ class DispatchSkill(yasmin.State):
             self._say(f"I can see the {spoken}.")
         else:
             self._say(f"I cannot see the {spoken}.")
-        self._play_motion("look_centre")
+            self._play_motion("look_centre")
         return "succeeded" if matches else "failed"
 
     def _count_objects(self, args: dict[str, Any]):
@@ -725,7 +747,6 @@ class DispatchSkill(yasmin.State):
 
         self._record_found_object(chosen, matches)
         self._say(f"The {prop} {spoken} is the {self._object_label(chosen.name, target)}.")
-        self._play_motion("look_centre")
         return "succeeded"
 
     def _execute_step(self, skill, args: Optional[dict] = None):

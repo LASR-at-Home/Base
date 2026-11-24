@@ -260,8 +260,8 @@ Tick a skill once it works on the real robot ([config/dispatch_tests.yaml](confi
 - [ ] `follow_person`
   - Untested but should have same success as HRI version as just wraps the skill call (integrate HRI version)
 - [x] `count_objects`
-  - Still need to test with multiple objects but can properly count them
 - [x] `count_people`
+  - Works but needs more information such as look at them
 - [ ] `find_object_by_property`
 - [ ] `answer_question`
 
