@@ -59,6 +59,10 @@ class CalculateDropPoint(State):
         v_y = wrist_point.y - elbow_point.y
         v_z = wrist_point.z - elbow_point.z
 
+        if v_z >= 0:  # level or upwards: never reaches the floor
+            yasmin.YASMIN_LOG_INFO("Not Pointing at floor")
+            return False, Point()
+
         t = -elbow_point.z / v_z
 
         drop_point = Point()
@@ -67,10 +71,10 @@ class CalculateDropPoint(State):
         drop_point.z = 0.0
 
         # Angle between z and pointing
-        angle = math.degrees(math.asin(abs(v_z) / math.sqrt(v_x**2 + v_y**2 + v_z**2)))
+        angle = math.degrees(math.acos(abs(v_z) / math.sqrt(v_x**2 + v_y**2 + v_z**2)))
         yasmin.YASMIN_LOG_INFO(f"Pointing at {drop_point} at angle{angle} from z.")
 
-        if v_z >= 0 or angle > angle_max:
+        if angle > angle_max:
             yasmin.YASMIN_LOG_INFO("Not Pointing at floor")
             return False, drop_point
 
@@ -265,6 +269,8 @@ class PlaceBag(StateMachine):
             transitions={
                 "succeeded": "FIND_DROP_POINT",
                 "failed": "NO_POSE_FOUND",  # Some recovery then return back
+                "aborted": "NO_POSE_FOUND",
+                "canceled": "failed",
             },
         )
         self.add_state(
