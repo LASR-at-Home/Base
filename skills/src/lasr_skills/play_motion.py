@@ -14,12 +14,19 @@ from play_motion2_msgs.action import PlayMotion2
 
 
 class PlayMotion(yasmin_ros.ActionState):
-    def __init__(self, motion_name):
+    def __init__(self, motion_name, timeout=None):
+        """timeout: seconds to wait for the motion to finish, after which the state
+        returns "timeout" (e.g. when play_motion2's goal response was lost). None waits
+        forever."""
+        kwargs = {}
+        if timeout is not None:
+            kwargs = dict(wait_timeout=timeout, response_timeout=timeout, maximum_retry=0)
         super().__init__(
             action_name="/play_motion2",
             action_type=PlayMotion2,
             create_goal_handler=self._create_goal,
             result_handler=self._result_handle,
+            **kwargs,
         )
         if motion_name is None:
             self.add_input_key("motion_name")

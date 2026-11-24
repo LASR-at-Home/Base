@@ -27,6 +27,17 @@ def generate_launch_description():
         )
     )
 
+    # person tracker + Nav2 follower used by FollowPerson
+    person_following = IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("lasr_person_following"),
+                "launch",
+                "person_following.launch.py",
+            )
+        )
+    )
+
     vlm = Node(
         package="lasr_vlm",
         executable="vlm_service",
@@ -70,6 +81,7 @@ def generate_launch_description():
         [
             load_motions,
             yolo_service,
+            person_following,
             reid_service,
             vlm,
             eye_tracker,
