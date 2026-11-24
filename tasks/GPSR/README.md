@@ -275,7 +275,7 @@ Tick a skill once it works on the real robot ([config/dispatch_tests.yaml](confi
 - Object detection runs unfiltered (the yolo service detects every class if the filter contains an unknown name). Detections are matched against the target's name, aliases, category and `detect_as`.
 - Any step outcome other than `succeeded` counts as a failure. The dispatcher says it is moving on and continues with the next step. Unknown skills fail.
 - `Detect3D` instances are cached per filter: they create camera subscribers that are never destroyed.
-- `_describe_person` calls `GetVlmAttributes` directly with the latest camera image (`DescribePeople` writes `img_msg` but the VLM state reads `image_raw`).
+- `_describe_person` follows HRI: Detect3D (person) writes `image_raw`, the robot looks at the most confident person, and `GetVlmAttributes` is called on the image cropped to that person.
 - Blackboard keys written: `object_point`, `found_object`, `object_detections`, `count`, `gesture_locations`, `detections_3d`, `image_raw`, `attributes`.
 
 **yasmin:** the container builds yasmin from `main` (6.x at the time of writing). yasmin 6 rejects state machines with unreachable states, so optional states (e.g. the entrance sequence) are only added when used.

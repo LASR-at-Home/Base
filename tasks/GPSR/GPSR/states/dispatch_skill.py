@@ -8,7 +8,6 @@ import yasmin_ros
 
 from std_msgs.msg import Header
 from geometry_msgs.msg import Point, Pose, Quaternion, PointStamped
-from rclpy.wait_for_message import wait_for_message
 from sensor_msgs.msg import Image
 
 from GPSR.world import load_locations, load_objects, normalise_name
@@ -66,7 +65,6 @@ class DispatchSkill(yasmin.State):
             self._normalise(name): info or {}
             for name, info in load_objects(node).items()
         }
-        self._image_topic = "/head_front_camera/rgb/image_raw"
         self._yolo_model = "yolo11n-seg.pt"
         self._detection_confidence = float(
             self._param("object_detection_confidence", 0.5)
@@ -148,9 +146,7 @@ class DispatchSkill(yasmin.State):
         if not matching:
             return detected
         # Prefer the most specific object, e.g. "bottle" -> water bottle over coke
-        return min(
-            matching, key=lambda n: len(self.objects[n].get("detect_as") or [])
-        )
+        return min(matching, key=lambda n: len(self.objects[n].get("detect_as") or []))
 
     def _matches_object(self, detected_name: str, target: str) -> bool:
         """Whether a detection counts as `target` (a normalised name, alias or category).
@@ -199,18 +195,6 @@ class DispatchSkill(yasmin.State):
         )
 
     ## --- CLAUDE end
-    
-    def _latest_image(self):
-        try:
-            return wait_for_message(
-                node=self.node,
-                topic=self._image_topic,
-                msg_type=Image,
-                timeout_sec=5.0,
-            )
-        except Exception as exc:
-            self.node.get_logger().error(f"Failed to get camera image: {exc}")
-            return None
 
     def _format_person_description(self, attributes: dict[str, Any] | None) -> str:
         if not attributes:
@@ -286,7 +270,11 @@ class DispatchSkill(yasmin.State):
         """Keep detections whose map (x, y) is inside `polygon`; no polygon = keep all."""
         if polygon is None:
             return detections
-        return [d for d in detections if polygon.contains(ShapelyPoint(d.point.x, d.point.y))]
+        return [
+            d
+            for d in detections
+            if polygon.contains(ShapelyPoint(d.point.x, d.point.y))
+        ]
 
     def _go_to_location(self, location_name):
         key = self._resolve_location(location_name)
@@ -336,8 +324,8 @@ class DispatchSkill(yasmin.State):
             )
             return False
 
-    def _detect_gesture(self, gesture: str="") -> bool:
-        #TODO: update to get and use room polygon
+    def _detect_gesture(self, gesture: str = "") -> bool:
+        # TODO: update to get and use room polygon
         try:
             outcome = DetectGesture(gesture=gesture)(self.task_bb)
             if outcome == "succeeded" and len(self.task_bb["gesture_locations"]) > 0:
@@ -350,15 +338,26 @@ class DispatchSkill(yasmin.State):
         return False
 
     def _describe_person(self, image: Optional[Image] = None):
-        """Describe the person in `image` (default: the current camera image) using the VLM service.
+        """Describe the person in `image` using the VLM service (/vlm/describe_people).
 
-        DescribePeople is not used as its GetImage state writes `img_msg` while the
-        VLM state reads `image_raw`, so the image is fetched here and passed directly.
+        Without an image, people are detected first (as in HRI: Detect3D writes
+        `image_raw`, which GetVlmAttributes reads); the robot looks at the most
+        confident person and the image is cropped to them.
         """
         if image is None:
-            image = self._latest_image()
-        if image is None:
-            return None
+            people = self._detect(["person"])
+            if not people:
+                self.node.get_logger().warning("No person detected to describe")
+                return None
+            person = max(people, key=lambda d: d.confidence)
+            point = PointStamped(
+                header=Header(frame_id="map", stamp=Time().to_msg()), point=person.point
+            )
+            self.node.get_logger().info(
+                f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})"
+            )
+            self._look_at(point)
+            image = self._crop_image(self.task_bb["image_raw"], person.xywh)
         self.task_bb["image_raw"] = image
         try:
             outcome = GetVlmAttributes()(self.task_bb)
@@ -393,7 +392,7 @@ class DispatchSkill(yasmin.State):
             self._say(f"Please follow me to the {end}.")
         return self._go_to_location(end)
 
-    def _find_person(self, args: dict[str, Any]):  
+    def _find_person(self, args: dict[str, Any]):
         # TODO:  Update with a 'search in area' which scans and rotates to find an object/person in the room - creatrea a new service/skill for this
         location = self._first_arg(args, "location")
         name = self._first_arg(args, "name")
@@ -409,38 +408,44 @@ class DispatchSkill(yasmin.State):
 
             # If gesture is not handled default to waving
             if gesture not in VALID_GESTURES:
-                self._say(f"Requested gesture {gesture_clean}, is not a handled gesture. Please wave instead.")
+                self._say(
+                    f"Requested gesture {gesture_clean}, is not a handled gesture. Please wave instead."
+                )
                 gesture = "waving"
                 gesture_clean = "waving"
 
-
             if self._detect_gesture(gesture):
                 loc = self.task_bb["gesture_locations"][0]
-                self.node.get_logger().info(f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})")
+                self.node.get_logger().info(
+                    f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})"
+                )
                 self._look_at(loc)
                 self._say(f"I found someone with gesture {gesture_clean}.")
                 return "succeeded"
-            
+
             # Backup Behaviour
             self._say(f"Please gesture {gesture_clean} so I can find you.")
             Wait(1)(self.task_bb)
             if self._detect_gesture(gesture):
                 loc = self.task_bb["gesture_locations"][0]
-                self.node.get_logger().info(f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})")
+                self.node.get_logger().info(
+                    f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})"
+                )
                 self._look_at(loc)
                 self._say(f"I found someone with gesture {gesture_clean}.")
                 return "succeeded"
-            
+
             self._say(f"I could not confirm someone with gesture {gesture_clean}.")
-            
+
             return "failed"
-            
 
         if name:
             self._say(f"{name}, please wave so I can find you.")
             if self._detect_gesture("waving"):
                 loc = self.task_bb["gesture_locations"][0]
-                self.node.get_logger().info(f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})")
+                self.node.get_logger().info(
+                    f"Person is at ({loc.point.x:.2f}, {loc.point.y:.2f}, {loc.point.z:.2f})"
+                )
                 self._look_at(loc)
                 self._say(f"I found someone who may be {name}.")
                 return "succeeded"
@@ -458,12 +463,16 @@ class DispatchSkill(yasmin.State):
         )
         Wait(3)(self.task_bb)
 
-        # Final fallback - Just detect anybody 
+        # Final fallback - Just detect anybody
         detections = self._detect_faces()
         if detections:
             person = self.task_bb["detections_3d"].detected_objects[0]
-            point = PointStamped(header=Header(frame_id="map", stamp=Time().to_msg()), point=person.point)
-            self.node.get_logger().info(f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})")
+            point = PointStamped(
+                header=Header(frame_id="map", stamp=Time().to_msg()), point=person.point
+            )
+            self.node.get_logger().info(
+                f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})"
+            )
             self._look_at(point)
             self._say("I found a person.")
             return "succeeded"
@@ -475,12 +484,16 @@ class DispatchSkill(yasmin.State):
         obj = self._first_arg(args, "object") or "object"
         if "object_point" in self.task_bb.keys():
             point = self.task_bb["object_point"]
-            self.node.get_logger().info(f"'{obj}' is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})")
+            self.node.get_logger().info(
+                f"'{obj}' is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})"
+            )
             self._look_at(point)
         try:
             outcome = ReceiveObject(object_name=obj)(self.task_bb)
         except Exception as exc:
-            self.node.get_logger().error(f"ReceiveObject for object pick-up failed: {exc}")
+            self.node.get_logger().error(
+                f"ReceiveObject for object pick-up failed: {exc}"
+            )
             return "failed"
         return outcome
 
@@ -500,8 +513,13 @@ class DispatchSkill(yasmin.State):
         obj = self._first_arg(args, "object") or "object"
         people = self._detect(["person"])
         if people:
-            point = PointStamped(header=Header(frame_id="map", stamp=Time().to_msg()), point=people[0].point)
-            self.node.get_logger().info(f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})")
+            point = PointStamped(
+                header=Header(frame_id="map", stamp=Time().to_msg()),
+                point=people[0].point,
+            )
+            self.node.get_logger().info(
+                f"Person is at ({point.point.x:.2f}, {point.point.y:.2f}, {point.point.z:.2f})"
+            )
             self._look_at(point)
         try:
             outcome = HandoverObject(object_name=obj)(self.task_bb)
@@ -746,14 +764,18 @@ class DispatchSkill(yasmin.State):
             chosen = min(matches, key=weight)
 
         self._record_found_object(chosen, matches)
-        self._say(f"The {prop} {spoken} is the {self._object_label(chosen.name, target)}.")
+        self._say(
+            f"The {prop} {spoken} is the {self._object_label(chosen.name, target)}."
+        )
         return "succeeded"
 
     def _execute_step(self, skill, args: Optional[dict] = None):
         args = args or {}
         if skill == "say":  # CHECKED
             text = args.get("text", "")
-            count = self.task_bb["count"] if "count" in self.task_bb.keys() else "unknown"
+            count = (
+                self.task_bb["count"] if "count" in self.task_bb.keys() else "unknown"
+            )
             return self._say(text.replace("{count}", str(count)))
         if skill == "go_to_location":  # CHECKED
             return self._go_to_location(args.get("location", ""))
@@ -767,7 +789,9 @@ class DispatchSkill(yasmin.State):
             return self._pick_up(args)
         if skill == "place_object":  # WORKED IN ROBOCUP (RETEST) - WITHOUT MANIPULATION
             return self._place_object(args)
-        if skill == "give_to_person":  # WORKED IN ROBOCUP (RETEST) - WITHOUT MANIPULATION
+        if (
+            skill == "give_to_person"
+        ):  # WORKED IN ROBOCUP (RETEST) - WITHOUT MANIPULATION
             return self._give_to_person(args)
         if skill == "follow_person":  # UNTESTED
             return self._follow_person()
@@ -797,8 +821,12 @@ class DispatchSkill(yasmin.State):
                 self.node.get_logger().error(f"Skill '{skill}' raised: {exc}")
                 outcome = "failed"
             if outcome != "succeeded":
-                self.node.get_logger().warning(f"Skill '{skill}' ended with '{outcome}'")
-                self._say("I couldn't complete that step. Moving to the next part of the plan.")
+                self.node.get_logger().warning(
+                    f"Skill '{skill}' ended with '{outcome}'"
+                )
+                self._say(
+                    "I couldn't complete that step. Moving to the next part of the plan."
+                )
             time.sleep(0.5)
         return "succeeded"
 

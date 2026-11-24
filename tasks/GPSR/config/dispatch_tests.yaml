@@ -79,3 +79,19 @@ cases:
   follow:
     - {skill: find_person, args: {location: dining table}}
     - {skill: follow_person, args: {}}
+
+
+
+
+####
+
+# Please fetch the rubiks cube from the cube from the coffee table and bring it to me
+  # - please fetch the water bottle from the dining table and bring it to me 
+
+# She will proceed to the kitchen and subsequently find Simone when follow algon with her
+  # - You will proceed to the office and subsequently find the person waving and follow along with them.
+
+# May I ask you to inform me of the item on your diswasher that is the thinnest
+  # - Can you investigate how many people sitting on the sofa then tell them your team afficiation. 
+  # - Can you investigate the number of water bottles on the tv stand and tell it to the person sitting on the sofa
+  # - Count the number of water bottle are on the tv stand and tell it to me
