@@ -32,3 +32,5 @@ from .safe_go_to_location import SafeGoToLocation
 from .start_task import StartDoorSM
 
 from .follow_person import FollowPerson
+
+from .detect_objects_open_vocab import DetectObjectsOpenVocab
