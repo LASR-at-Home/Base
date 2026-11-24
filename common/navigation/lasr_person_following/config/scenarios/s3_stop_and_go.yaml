@@ -1,0 +1,10 @@
+# S3: 3 s stop in the hall (must NOT count as arrival), then walk on and arrive.
+test_person:
+  start: {x: 2.5, y: -0.8, yaw: 0.0}
+  steps:
+    - {pause: 2.0}
+    - {x: 4.4, y: -1.0, speed: 0.6}
+    - {x: 5.8, y: -1.0, speed: 0.6}
+    - {pause: 3.0}
+    - {x: 6.8, y: -2.6, speed: 0.6}
+    - {x: 10.0, y: -2.8, speed: 0.6}

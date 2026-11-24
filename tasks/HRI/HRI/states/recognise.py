@@ -91,7 +91,7 @@ class Recognise(yasmin_ros.ServiceState):
         request.image_raw = image
         request.depth_image = depth
         request.depth_camera_info = self.cache.getLast()
-        request.threshold = 0.2
+        request.threshold = 0.5
         request.target_frame = "map"
 
         return request

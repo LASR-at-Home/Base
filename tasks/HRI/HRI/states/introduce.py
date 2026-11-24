@@ -127,7 +127,7 @@ class Introduce(yasmin.StateMachine):
             transitions={
                 "succeeded": "WAIT",
                 "aborted": "WAIT",
-                "canceled": "failed",
+                "canceled": "WAIT",
                 "timeout": "WAIT",
             },
             remappings={"pointstamped": "person_point_stamped"},
@@ -197,7 +197,7 @@ class Introduce(yasmin.StateMachine):
             transitions={
                 "succeeded": "SAY_INTRODUCTION",
                 "aborted": "SAY_INTRODUCTION",
-                "canceled": "failed",
+                "canceled": "SAY_INTRODUCTION",
                 "timeout": "SAY_INTRODUCTION",
             },
             remappings={"pointstamped": "guest_point_stamped"},
