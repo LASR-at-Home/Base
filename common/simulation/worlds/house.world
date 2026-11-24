@@ -1,5 +1,14 @@
 <sdf version='1.7'>
   <world name='house'>
+    <!-- Holds objects in TIAGo's gripper while both fingers touch them, since
+         Gazebo's friction cannot (see src/grasp_assist.cpp). Any non-static
+         model up to max_mass kg can be grasped. -->
+    <plugin name='grasp_assist' filename='libgrasp_assist.so'>
+      <robot>tiago</robot>
+      <finger_joint>gripper_left_finger_joint</finger_joint>
+      <finger_joint>gripper_right_finger_joint</finger_joint>
+      <max_mass>2.0</max_mass>
+    </plugin>
     <light name='sun' type='directional'>
       <cast_shadows>1</cast_shadows>
       <pose>0 0 10 0 -0 0</pose>

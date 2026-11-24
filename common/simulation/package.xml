@@ -6,12 +6,16 @@
   <description>Launch files and worlds: Tiago</description>
   <maintainer email="brienza@diag.uniroma1.it">Michele Brienza</maintainer>
   <license>Apache-2.0</license>
-  <buildtool_depend>ament_python</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>gazebo_dev</build_depend>
   <depend>rclpy</depend>
   <depend>ament_index_python</depend>
   <depend>launch</depend>
   <depend>launch_ros</depend>
+  <exec_depend>tiago_gazebo</exec_depend>
+  <exec_depend>tiago_moveit_config</exec_depend>
+  <exec_depend>moveit_task_constructor_capabilities</exec_depend>
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

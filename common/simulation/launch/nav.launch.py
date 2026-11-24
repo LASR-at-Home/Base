@@ -3,220 +3,174 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, IncludeLaunchDescription, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    ExecuteProcess,
+    IncludeLaunchDescription,
+    RegisterEventHandler,
+)
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     pkg_sim = get_package_share_directory("simulation")
-    pkg_tiago_gazebo = get_package_share_directory("tiago_gazebo")
-
-    my_models_path = os.path.join(pkg_sim, "models")
-    existing = os.environ.get("GAZEBO_MODEL_PATH", "")
-    os.environ["GAZEBO_MODEL_PATH"] = (
-        (existing + ":" + my_models_path) if existing else my_models_path
-    )
-
-    maps_dir = os.path.join(pkg_sim, "maps")
-    map_pgm = os.path.join(maps_dir, "map.pgm")
-    map_yaml = "/tmp/map_resolved.yaml"
-    with open(os.path.join(maps_dir, "map.yaml")) as f:
-        content = f.read()
-    with open(map_yaml, "w") as f:
-        f.write(content.replace("image: map.pgm", f"image: {map_pgm}"))
-
     nav_params = os.path.join(pkg_sim, "config", "nav2_params_scan_raw.yaml")
-    rviz_config = os.path.join(pkg_sim, "config", "mapping.rviz")
+    sim_time = {"use_sim_time": True}
 
-    INITIAL_POSE_X = "9.151"
-    INITIAL_POSE_Y = "-6.340"
-    INITIAL_POSE_YAW = "2.204"
+    # Start pose in the map frame. The map was built in the Gazebo world frame, so
+    # this is also where TIAGo is teleported to (tiago_gazebo spawns it at 0, 0).
+    x, y, yaw = 2.37254, -0.9725, -0.1406
+    qz, qw = round(math.sin(yaw / 2), 6), round(math.cos(yaw / 2), 6)
 
-    tiago = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(pkg_tiago_gazebo, "launch", "tiago_gazebo.launch.py")
+    # world:=<name> loads worlds/<name>.world and the matching maps/<name>.yaml
+    world_arg = DeclareLaunchArgument(
+        "world",
+        default_value="robocup",
+        description="World and map name in worlds/ and maps/ without extension (robocup or house)",
+    )
+    world = LaunchConfiguration("world")
+
+    # 1. The simulation: Gazebo, TIAGo and MoveIt
+    sim = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(os.path.join(pkg_sim, "launch", "sim.launch.py")),
+        launch_arguments={"world": world}.items(),
+    )
+
+    # 2. Wait until TIAGo is ready for navigation: its controllers are up, its arm is
+    # tucked (PAL's arm_tucker node has finished) and its lidar is publishing.
+    # Moving or navigating before that is what makes it fall or flail its arm.
+    sim_ready = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-c",
+            "timeout 120 bash -c 'until ros2 node list 2>/dev/null | grep -q /arm_tucker; do sleep 1; done'; "
+            "while ros2 node list 2>/dev/null | grep -q /arm_tucker; do sleep 1; done; "
+            "ros2 topic echo --once --qos-reliability best_effort /scan_raw",
+        ],
+        output="log",
+    )
+
+    def nav2(package, name, remappings=None):
+        return Node(
+            package=package,
+            executable=name,
+            name=name,
+            output="screen",
+            parameters=[nav_params, sim_time],
+            remappings=remappings,
+        )
+
+    def lifecycle_manager(name, node_names):
+        return Node(
+            package="nav2_lifecycle_manager",
+            executable="lifecycle_manager",
+            name=name,
+            output="screen",
+            parameters=[sim_time, {"autostart": True}, {"node_names": node_names}],
+        )
+
+    localisation = [
+        Node(
+            package="nav2_map_server",
+            executable="map_server",
+            name="map_server",
+            output="screen",
+            parameters=[
+                {"yaml_filename": PathJoinSubstitution([pkg_sim, "maps", [world, ".yaml"]])},
+                sim_time,
+            ],
         ),
-        launch_arguments={
-            "is_public_sim": "True",
-            "world_name": "house",
-            "moveit": "True",
-            "rviz": "False",
-            "navigation": "False",
-            "tuck_arm": "True",
-        }.items(),
+        nav2("nav2_amcl", "amcl"),
+        lifecycle_manager("lifecycle_manager_localization", ["map_server", "amcl"]),
+    ]
+
+    navigation = [
+        nav2("nav2_controller", "controller_server", [("cmd_vel", "cmd_vel_nav")]),
+        nav2("nav2_smoother", "smoother_server"),
+        nav2("nav2_planner", "planner_server"),
+        nav2("nav2_behaviors", "behavior_server"),
+        nav2("nav2_bt_navigator", "bt_navigator"),
+        nav2("nav2_waypoint_follower", "waypoint_follower"),
+        nav2(
+            "nav2_velocity_smoother",
+            "velocity_smoother",
+            [("cmd_vel", "cmd_vel_nav"), ("cmd_vel_smoothed", "cmd_vel")],
+        ),
+        lifecycle_manager(
+            "lifecycle_manager_navigation",
+            [
+                "controller_server",
+                "smoother_server",
+                "planner_server",
+                "behavior_server",
+                "bt_navigator",
+                "waypoint_follower",
+                "velocity_smoother",
+            ],
+        ),
+    ]
+
+    rviz = Node(
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        arguments=["-d", os.path.join(pkg_sim, "config", "mapping.rviz")],
+        parameters=[sim_time],
+        output="screen",
     )
 
-    map_server = Node(
-        package="nav2_map_server",
-        executable="map_server",
-        name="map_server",
-        output="screen",
-        parameters=[
-            {"yaml_filename": map_yaml},
-            {"use_sim_time": True},
+    teleport_msg = (
+        f"{{state: {{name: tiago, reference_frame: world, pose: {{"
+        f"position: {{x: {x}, y: {y}, z: 0.01}}, "
+        f"orientation: {{x: 0.0, y: 0.0, z: {qz}, w: {qw}}}}}}}}}"
+    )
+    initial_pose_msg = (
+        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
+        f'"position": {{"x": {x}, "y": {y}, "z": 0.0}}, '
+        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {qz}, "w": {qw}}}'
+        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
+    )
+    # 3. Teleport TIAGo to its start pose (retrying until Gazebo's service answers)
+    place_robot = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-c",
+            "until ros2 service call /gazebo/set_entity_state "
+            f"gazebo_msgs/srv/SetEntityState '{teleport_msg}' | grep -q 'success=True'; "
+            "do sleep 2; done",
         ],
+        output="screen",
     )
 
-    amcl = Node(
-        package="nav2_amcl",
-        executable="amcl",
-        name="amcl",
-        output="screen",
-        parameters=[nav_params],
-    )
-
-    lifecycle_manager = Node(
-        package="nav2_lifecycle_manager",
-        executable="lifecycle_manager",
-        name="lifecycle_manager_localization",
-        output="screen",
-        parameters=[
-            {"use_sim_time": True},
-            {"autostart": True},
-            {"node_names": ["map_server", "amcl"]},
+    # 5. Give AMCL the same pose once it is active
+    initial_pose = ExecuteProcess(
+        cmd=[
+            "bash",
+            "-c",
+            "until ros2 lifecycle get /amcl 2>/dev/null | grep -q '^active'; do sleep 1; done; "
+            "ros2 topic pub -r 1 -t 5 /initialpose "
+            f"geometry_msgs/msg/PoseWithCovarianceStamped '{initial_pose_msg}'",
         ],
-    )
-
-    controller_server = Node(
-        package="nav2_controller",
-        executable="controller_server",
-        name="controller_server",
         output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-        remappings=[("cmd_vel", "cmd_vel_nav")],
     )
 
-    smoother_server = Node(
-        package="nav2_smoother",
-        executable="smoother_server",
-        name="smoother_server",
-        output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-    )
-
-    planner_server = Node(
-        package="nav2_planner",
-        executable="planner_server",
-        name="planner_server",
-        output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-    )
-
-    behavior_server = Node(
-        package="nav2_behaviors",
-        executable="behavior_server",
-        name="behavior_server",
-        output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-    )
-
-    bt_navigator = Node(
-        package="nav2_bt_navigator",
-        executable="bt_navigator",
-        name="bt_navigator",
-        output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-    )
-
-    waypoint_follower = Node(
-        package="nav2_waypoint_follower",
-        executable="waypoint_follower",
-        name="waypoint_follower",
-        output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-    )
-
-    velocity_smoother = Node(
-        package="nav2_velocity_smoother",
-        executable="velocity_smoother",
-        name="velocity_smoother",
-        output="screen",
-        parameters=[nav_params, {"use_sim_time": True}],
-        remappings=[("cmd_vel", "cmd_vel_nav"), ("cmd_vel_smoothed", "cmd_vel")],
-    )
-
-    navigation_lifecycle_manager = Node(
-        package="nav2_lifecycle_manager",
-        executable="lifecycle_manager",
-        name="lifecycle_manager_navigation",
-        output="screen",
-        parameters=[
-            {"use_sim_time": True},
-            {"autostart": True},
-            {
-                "node_names": [
-                    "controller_server",
-                    "smoother_server",
-                    "planner_server",
-                    "behavior_server",
-                    "bt_navigator",
-                    "waypoint_follower",
-                    "velocity_smoother",
-                ]
-            },
-        ],
-    )
-
-    nav2_nodes = TimerAction(
-        period=15.0,
-        actions=[
-            map_server,
-            amcl,
-            lifecycle_manager,
-            controller_server,
-            smoother_server,
-            planner_server,
-            behavior_server,
-            bt_navigator,
-            waypoint_follower,
-            velocity_smoother,
-            navigation_lifecycle_manager,
-        ],
-    )
-
-    rviz = TimerAction(
-        period=20.0,
-        actions=[
-            Node(
-                package="rviz2",
-                executable="rviz2",
-                name="rviz2",
-                arguments=["-d", rviz_config],
-                parameters=[{"use_sim_time": True}],
-                output="screen",
-            )
-        ],
-    )
-
-    initial_pose = TimerAction(
-        period=25.0,
-        actions=[
-            ExecuteProcess(
-                cmd=[
-                    "ros2",
-                    "topic",
-                    "pub",
-                    "--once",
-                    "/initialpose",
-                    "geometry_msgs/msg/PoseWithCovarianceStamped",
-                    (
-                        '{"header": {"frame_id": "map"}, "pose": {"pose": {'
-                        f'"position": {{"x": {INITIAL_POSE_X}, "y": {INITIAL_POSE_Y}, "z": 0.0}}, '
-                        f'"orientation": {{"x": 0.0, "y": 0.0, "z": {round(math.sin(float(INITIAL_POSE_YAW)/2), 6)}, "w": {round(math.cos(float(INITIAL_POSE_YAW)/2), 6)}}}'
-                        '}, "covariance": [0.25,0,0,0,0,0, 0,0.25,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0, 0,0,0,0,0,0.068]}}'
-                    ),
-                ],
-                output="screen",
-            )
-        ],
-    )
-
+    # sim -> sim_ready -> place_robot -> navigation (4) + initial_pose (5)
     return LaunchDescription(
         [
-            tiago,
-            nav2_nodes,
-            rviz,
-            initial_pose,
+            world_arg,
+            sim,
+            sim_ready,
+            RegisterEventHandler(
+                OnProcessExit(target_action=sim_ready, on_exit=[place_robot])
+            ),
+            RegisterEventHandler(
+                OnProcessExit(
+                    target_action=place_robot,
+                    on_exit=[*localisation, *navigation, rviz, initial_pose],
+                )
+            ),
         ]
     )

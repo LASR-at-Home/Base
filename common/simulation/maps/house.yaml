@@ -1,4 +1,4 @@
-image: map.pgm
+image: house.pgm
 mode: trinary
 resolution: 0.05
 origin: [-6.44, -7.76, 0]
