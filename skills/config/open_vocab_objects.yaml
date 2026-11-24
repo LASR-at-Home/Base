@@ -1,0 +1,18 @@
+# Objects for lasr_skills.DetectObjectsOpenVocab and for: ros2 run skills detect_objects_open_vocab
+# prompts: what Grounding DINO is told. Describe what the camera sees (colour + brand + shape).
+# names:   what comes back in detection.name, same order as prompts. Leave out to use the prompts.
+# Edit a copy and pass it with --config ~/my_objects.yaml (or config="/path/to/file.yaml").
+prompts:
+  - red coca cola can
+  - white paper cup
+  - clear plastic water bottle
+  - purple granola cereal box
+  - green pringles crisps tube
+  - silver tea spoon
+names:
+  - coke can
+  - paper cup
+  - water bottle
+  - granola box
+  - pringles tube
+  - tea spoon

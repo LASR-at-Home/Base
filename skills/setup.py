@@ -67,6 +67,7 @@ setup(
             "detect_wave = lasr_skills.detect_wave:main",
             "safety = lasr_skills.safety:main",
             "detect_doorbell = lasr_skills.detect_doorbell:main",
+            "detect_objects_open_vocab = lasr_skills.detect_objects_open_vocab:main",
         ],
     },
 )
