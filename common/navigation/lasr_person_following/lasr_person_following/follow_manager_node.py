@@ -5,15 +5,18 @@ Reads the host estimate from person_tracker (~/host_state) and, while active, ke
 re-sending one goal (a new goal pre-empts the running one without stopping):
 
   following     host further than follow_distance (+ margin) or walking away:
-                goal = `follow_distance` short of where the host will be in `lookahead`
-                seconds, on the line robot -> host. The lookahead makes up for the
-                controller slowing down as it nears a goal that keeps moving away.
+                goal on the straight line robot -> host, facing them, `follow_distance`
+                short of them plus `lookahead` s of their speed away from the robot
+                (the controller slows down near a goal that keeps moving away), never
+                closer than `min_distance` to them. Never beside or past the host: Nav2
+                would plan around them and turn the robot away from them.
   facing        host close and standing: stay put, only turn to face them
   to_last_seen  tracker lost the host: drive to `follow_distance` short of where they
                 were last seen (the state machine decides what to do next)
 
 Nav2's global planner takes care of walls and doorways. While following, Nav2's speed
-limits are raised (dynamic parameters) and restored on stop.
+limits are raised (dynamic parameters) and restored on stop. A Nav2 recovery behaviour
+(spin / wait / back up) starting while following cancels the goal (a fresh one follows).
 
 Services:  ~/start, ~/stop  (std_srvs/Trigger)
 Topics:    ~/status  (std_msgs/String JSON: active, mode, host status, distance, nav, settled)
@@ -34,7 +37,7 @@ from rcl_interfaces.msg import ParameterType
 from rcl_interfaces.srv import GetParameters, SetParameters
 
 import tf2_ros
-from action_msgs.msg import GoalStatus
+from action_msgs.msg import GoalStatus, GoalStatusArray
 from geometry_msgs.msg import PoseStamped
 from nav2_msgs.action import NavigateToPose
 from std_msgs.msg import String
@@ -49,6 +52,28 @@ def _wrap(a):
     return math.atan2(math.sin(a), math.cos(a))
 
 
+def drive_goal(host, vel, robot, fd, lookahead, min_distance, min_move):
+    """(x, y, yaw, "drive") goal on the straight line from the robot to the host, facing
+    the host: `fd` short of them, plus `lookahead` s of their speed away from the robot,
+    but never closer than `min_distance` to them. None if the robot is already close
+    enough (the goal would be less than `min_move` ahead).
+
+    The goal is never beside or past the host: the host is an obstacle in Nav2's
+    costmap, and a goal beyond them makes the planner route around them, turning the
+    robot sideways (the camera loses them). On this line the robot keeps facing the host,
+    and the line is free (the camera sees them along it)."""
+    dx, dy = host[0] - robot[0], host[1] - robot[1]
+    dist = math.hypot(dx, dy)
+    if dist < 1e-3:
+        return None
+    ux, uy = dx / dist, dy / dist
+    away = max(0.0, vel[0] * ux + vel[1] * uy)  # host speed away from the robot
+    along = min(dist - fd + lookahead * away, dist - min_distance)
+    if along < min_move:
+        return None
+    return robot[0] + ux * along, robot[1] + uy * along, math.atan2(dy, dx), "drive"
+
+
 class FollowManagerNode(Node):
     def __init__(self):
         super().__init__("follow_manager")
@@ -61,7 +86,7 @@ class FollowManagerNode(Node):
         d("robot_frame", "base_footprint")
         d("follow_distance", 1.0)  # m to keep behind the host
         d("close_margin", 0.5)  # standing host within follow_distance + this: just face them
-        d("min_distance", 0.5)  # a goal is never closer than this to the host
+        d("min_distance", 0.8)  # a goal is never closer than this to the host
         d("moving_speed", 0.25)  # m/s, host speed above which they count as walking
         d("lookahead", 2.0)  # s of host motion to aim ahead
         d("face_tolerance", 0.35)  # rad heading error before turning on the spot
@@ -75,6 +100,10 @@ class FollowManagerNode(Node):
         d("controller_speed_params", ["FollowPath.max_vel_x", "FollowPath.max_speed_xy"])
         d("smoother_node", "/velocity_smoother")
         d("smoother_speed_param", "max_velocity")
+        # Nav2 recovery behaviours (default BT: spin 90 deg, wait, back up) only make the
+        # robot lose the host: if one starts while following, the goal is cancelled and a
+        # fresh one sent
+        d("recovery_actions", ["/spin", "/backup", "/wait"])
 
         self.p = lambda n: self.get_parameter(n).value
         self.frame = self.p("frame")
@@ -100,6 +129,11 @@ class FollowManagerNode(Node):
         self.nav_state = "idle"
         self.saved_speed = {}
         self.shutting_down = False
+        self.recovering = set()
+        for name in self.p("recovery_actions"):
+            self.create_subscription(
+                GoalStatusArray, f"{name}/_action/status",
+                lambda msg, name=name: self._recovery_cb(name, msg), 10)
         self.create_timer(1.0 / self.p("rate"), self._tick)
 
     # ------------------------------------------------------------------ io
@@ -109,6 +143,18 @@ class FollowManagerNode(Node):
             self.host = json.loads(msg.data)
         except ValueError:
             pass
+
+    def _recovery_cb(self, name, msg):
+        running = any(s.status in (GoalStatus.STATUS_ACCEPTED, GoalStatus.STATUS_EXECUTING)
+                      for s in msg.status_list)
+        if running and name not in self.recovering and self.active and self.goal_handle is not None:
+            self.get_logger().warn(f"Nav2 started recovery {name} while following: "
+                                   "cancelling the goal")
+            self._cancel_goal()
+        if running:
+            self.recovering.add(name)
+        else:
+            self.recovering.discard(name)
 
     def _lookup(self, target, source):
         try:
@@ -237,30 +283,20 @@ class FollowManagerNode(Node):
         moving = speed >= self.p("moving_speed")
         out = {"distance": round(dist, 2)}
 
+        goal = None
         if dist > fd + self.p("close_margin") or (moving and dist > fd):
             out["mode"] = "to_last_seen" if lost else "following"
-            la = 0.0 if lost else self.p("lookahead")
-            goal = self._drive_goal((hx, hy), (hx + hvx * la, hy + hvy * la), (rx, ry), fd)
-        else:
+            goal = self._drive_goal((hx, hy), (0.0, 0.0) if lost else (hvx, hvy), (rx, ry), fd)
+        if goal is None:
             out["mode"] = "facing"
             goal = self._face_goal((hx, hy), robot)
         if goal is not None:
             self._send(goal)
         return out
 
-    def _drive_goal(self, host, target, robot, fd):
-        """`fd` short of `target` on the line from the robot, at least `min_distance` from
-        the host's current position, facing the target."""
-        dx, dy = target[0] - robot[0], target[1] - robot[1]
-        n = max(math.hypot(dx, dy), 1e-6)
-        gx, gy = target[0] - dx / n * fd, target[1] - dy / n * fd
-        hd = math.hypot(gx - host[0], gy - host[1])
-        md = self.p("min_distance")
-        if hd < md:  # pull the goal back towards the robot, away from the host
-            ux, uy = robot[0] - host[0], robot[1] - host[1]
-            un = max(math.hypot(ux, uy), 1e-6)
-            gx, gy = host[0] + ux / un * md, host[1] + uy / un * md
-        return gx, gy, math.atan2(dy, dx), "drive"
+    def _drive_goal(self, host, vel, robot, fd):
+        return drive_goal(host, vel, robot, fd, self.p("lookahead"), self.p("min_distance"),
+                          self.p("goal_min_move"))
 
     def _face_goal(self, host, robot):
         rx, ry, ryaw = robot

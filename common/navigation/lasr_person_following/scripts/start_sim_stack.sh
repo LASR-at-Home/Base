@@ -11,9 +11,11 @@ SIM_PARAMS=$WS/install/simulation/share/simulation/config/nav2_params_scan_raw.y
 # with a configured max of 0.7; reset_episode lowers it to 0.26 for normal driving and
 # follow_manager raises it again while following (exactly what happens on a robot whose
 # configured max is above its normal driving speed).
-sed -e 's/max_vel_x: 0.26/max_vel_x: 0.7/' -e 's/max_speed_xy: 0.26/max_speed_xy: 0.7/' \
-    -e 's/max_velocity: \[0.26, 0.0, 1.0\]/max_velocity: [0.7, 0.0, 1.0]/' \
-    -e 's/min_velocity: \[-0.26, 0.0, -1.0\]/min_velocity: [-0.7, 0.0, -1.0]/' "$SIM_PARAMS" > "$FAST_NAV_PARAMS"
+# SIM_MAX_SPEED: configured maximum (follow_max_speed must not exceed it)
+V=${SIM_MAX_SPEED:-0.7}
+sed -e "s/max_vel_x: 0.26/max_vel_x: $V/" -e "s/max_speed_xy: 0.26/max_speed_xy: $V/" \
+    -e "s/max_velocity: \[0.26, 0.0, 1.0\]/max_velocity: [$V, 0.0, 1.0]/" \
+    -e "s/min_velocity: \[-0.26, 0.0, -1.0\]/min_velocity: [-$V, 0.0, -1.0]/" "$SIM_PARAMS" > "$FAST_NAV_PARAMS"
 
 # Stop everything from a previous run. Leftover nodes (e.g. a second play_motion2) break
 # the new stack, so kill every ROS process, not just the launch.

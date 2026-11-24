@@ -23,6 +23,7 @@ Services:
                                       enabled; disabling also forgets all tracks)
 """
 
+import copy
 import json
 import math
 import threading
@@ -134,6 +135,11 @@ class PersonTrackerNode(Node):
         d("start_enabled", False)
         d("surface_offset", 0.12)  # m: mask points lie on the body surface, push to centre
         d("stationary_time", 4.0)
+        # s between an image being captured and its stamp (real drivers stamp on arrival).
+        # Detections are placed with the robot/head pose at stamp - camera_latency; a
+        # wrong pose shifts the host sideways while the robot or head turns. Negative
+        # values add latency (to test in simulation, whose stamps are exact).
+        d("camera_latency", 0.0)
 
         p = lambda n: self.get_parameter(n).value  # noqa: E731
         self.fixed_frame = p("fixed_frame")
@@ -223,6 +229,9 @@ class PersonTrackerNode(Node):
             return
         rgb, depth = self.latest
         self.sent_seq = self.latest_seq
+        latency = float(self.get_parameter("camera_latency").value)
+        if latency != 0.0:
+            rgb, depth = self._restamp(rgb, -latency), self._restamp(depth, -latency)
         req = YoloDetection3D.Request(
             image_raw=rgb, depth_image=depth, depth_camera_info=self.camera_info,
             model=self.get_parameter("model").value,
@@ -233,6 +242,15 @@ class PersonTrackerNode(Node):
         sent = time.monotonic()
         fut = self.yolo.call_async(req)
         fut.add_done_callback(lambda f: self._detections_cb(f, rgb, sent))
+
+    @staticmethod
+    def _restamp(msg, offset):
+        out = copy.copy(msg)  # shallow: the pixel data is shared
+        out.header = copy.copy(msg.header)
+        t = (rclpy.time.Time.from_msg(msg.header.stamp)
+             + Duration(nanoseconds=int(offset * 1e9)))
+        out.header.stamp = t.to_msg()
+        return out
 
     def _detections_cb(self, fut, rgb_msg, sent):
         self.in_flight = False
@@ -296,7 +314,10 @@ class PersonTrackerNode(Node):
                         f"host track {host_id} at ({host.position[0]:.2f}, {host.position[1]:.2f}) "
                         f"std {host.position_std():.2f} not matched; detections "
                         + ", ".join(f"({d.x:.2f}, {d.y:.2f}) sim {appearance_similarity(host.appearance, d.appearance):.2f}"
-                                    for d in dets),
+                                    for d in dets)
+                        + "; other tracks " + (", ".join(
+                            f"{tr.id} ({tr.position[0]:.2f}, {tr.position[1]:.2f}) hits {tr.hits}"
+                            for tr in self.tracker.tracks if tr.id != host_id) or "none"),
                         throttle_duration_sec=0.5)
 
     def _robot_pose(self, at=None):
@@ -442,6 +463,9 @@ class PersonTrackerNode(Node):
             if db < math.radians(self.get_parameter("head_deadband_deg").value) and now - self.last_head_time < 2.0:
                 return
         if not self.head_client.server_is_ready():
+            self.get_logger().warn(
+                "/head_controller/point_head_action not available: the head is not "
+                "following the host", throttle_duration_sec=10.0)
             return
         goal = PointHead.Goal()
         goal.target = PointStamped()

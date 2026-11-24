@@ -270,15 +270,19 @@ class FollowPerson(StateMachine):
             "SETUP",
             CallService([("stop", None), ("enable", True), ("release_host", None),
                          ("head_tracking", True)], required=True),
-            transitions={"succeeded": "POST_NAV", "failed": "failed"},
+            transitions={"succeeded": "PRE_NAV", "failed": "failed"},
         )
-        # torso up: better view while the host gets into position
-        self.add_state("POST_NAV", PlayMotion("post_navigation", timeout=15.0),
+        # Torso down / head centred for driving BEFORE locking the host: moving the camera
+        # after the lock (21 cm lower, head swung back) makes the host's detections jump
+        # and look different just as the robot starts driving, and the tracker loses them.
+        # Nothing but head tracking moves the camera from the lock on. (No head tracking
+        # fight: the head only follows a locked host.)
+        self.add_state("PRE_NAV", PlayMotion("pre_navigation", timeout=15.0),
                        transitions=any_motion_outcome("WAIT_FOR_HOST"))
         self.add_state(
             "WAIT_FOR_HOST",
             WaitForHost(timeout=15.0),
-            transitions={"succeeded": "HEAD_OFF", "timeout": "WAIT_COUNTER"},
+            transitions={"succeeded": "SAY_FOLLOW", "timeout": "WAIT_COUNTER"},
         )
         self.add_state(
             "WAIT_COUNTER",
@@ -290,14 +294,6 @@ class FollowPerson(StateMachine):
             Say(text="Please stand in front of me, so that I can follow you."),
             transitions=any_outcome("WAIT_FOR_HOST"),
         )
-        # the motion moves the head too: pause head tracking so they don't fight
-        self.add_state(
-            "HEAD_OFF",
-            CallService([("head_tracking", False)]),
-            transitions={"succeeded": "PRE_NAV", "failed": "PRE_NAV"},
-        )
-        self.add_state("PRE_NAV", PlayMotion("pre_navigation", timeout=15.0),
-                       transitions=any_motion_outcome("SAY_FOLLOW"))
         self.add_state(
             "SAY_FOLLOW",
             Say(text="I will follow you now. Please walk to the destination, and stop when we get there."),
