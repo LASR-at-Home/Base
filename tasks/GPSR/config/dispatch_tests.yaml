@@ -15,9 +15,16 @@ cases:
   say:
     - {skill: say, args: {text: "Hello, I am testing my speech."}}
   nav:
-    - {skill: go_to_location, args: {location: dining table}}
-    - {skill: go_to_location, args: {location: computer desk}}
     - {skill: go_to_location, args: {location: instruction point}}
+    - {skill: go_to_location, args: {location: office}}
+    - {skill: go_to_location, args: {location: study table}}
+    - {skill: go_to_location, args: {location: computer desk}}
+    - {skill: go_to_location, args: {location: coat rack}}
+    - {skill: go_to_location, args: {location: living room}}
+    - {skill: go_to_location, args: {location: tv stand}}
+    - {skill: go_to_location, args: {location: dining table}}
+    - {skill: go_to_location, args: {location: sofa}}
+    
 
   # --- objects ---
   find_bottle:
@@ -57,7 +64,7 @@ cases:
   find_name:
     - {skill: find_person, args: {name: charlie, location: office}}
   find_clothes:
-    - {skill: find_person, args: {clothes: blue, location: living room}}
+    - {skill: find_person, args: {clothes: black, location: living room}}
   describe_person:
     - {skill: get_person_info, args: {location: sofa}}
   count_people:

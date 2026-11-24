@@ -77,6 +77,8 @@ ros2 launch GPSR GPSR.launch.py
 
 Runs the named cases from [config/dispatch_tests.yaml](config/dispatch_tests.yaml) (one or more per skill, written for the lab object layout).
 
+*This only requires the GPSR to be launched.*
+
 ```bash
 ros2 run GPSR dispatch_skill                       # list the cases
 ros2 run GPSR dispatch_skill say nav               # start here
@@ -228,7 +230,44 @@ Implemented in [dispatch_skill.py](GPSR/states/dispatch_skill.py).
 
 ---
 
-## 5. Implementation notes
+## 5. Skill test log
+
+Tick a skill once it works on the real robot ([config/dispatch_tests.yaml](config/dispatch_tests.yaml) has the test cases). Add notes as indented bullets.
+
+- [x] `go_to_location`
+- [x] `say`
+- [x] `guide_person`
+- [x] `find_person`
+  - Gesture, name and location works but requires more. 
+  - Add something such as approaching the person and looking at them to ensure it is clear we have found them 
+- [ ] `get_person_info`
+  - FAILS: 
+    ```bash
+      [INFO] [1795456871.874275692] [basic_navigator]: Navigating to goal: 2.4020402431488037 0.7907199263572693...
+      [ERROR] [1795456872.981423729] [gpsr]: Failed to get camera image: wait_for_message() got an unexpected keyword argument 'timeout_sec'
+      [INFO] [1795456872.982736736] [gpsr]: Saying: I cannot see you so can you please step infront of me. I will wait a few seconds
+
+    ```
+- [x] `pick_up`
+  - Simple open-close gripper (need to add a distance check to ensure the hand out doesnt hit the table for manipulation)
+- [x] `place_object`
+  - same as `pick_up`
+- [x] `give_to_person`
+  - same as `pick_up`
+  - Need to add a new `approach person` skill - Can also be used for HRI get back
+- [x] `find_object`
+  - Works but needs to be replaced with VLM (P&P version) for better detection. 
+- [ ] `follow_person`
+  - Untested but should have same success as HRI version as just wraps the skill call (integrate HRI version)
+- [x] `count_objects`
+  - Still need to test with multiple objects but can properly count them
+- [x] `count_people`
+- [ ] `find_object_by_property`
+- [ ] `answer_question`
+
+---
+
+## 6. Implementation notes
 
 **Command / plan checks** ([validation.py](GPSR/validation.py)): a command must contain a command verb and mention a known location, object, category, person or generic entity ("me", "person", ...). It is checked before planning. Plans are rejected if they use an unknown skill, location or object. Both lead to "could you rephrase". In microphone mode the robot also asks for a yes/no confirmation before planning.
 
