@@ -362,24 +362,6 @@ def main():
     yasmin_ros.set_ros_loggers()
 
     sm = StateMachine(outcomes=["succeeded", "failed"])
-    sm.add_state(
-        "CALL_HOST",
-        Say(text="I have a bag. Can the host stand infront of me to lead the way."),
-        transitions={
-            "succeeded": "FOLLOW_HOST",
-            "aborted": "failed",
-            "canceled": "failed",
-        },
-    )
-
-    sm.add_state(
-        "FOLLOW_HOST",
-        FollowPerson(),
-        transitions={
-            "succeeded": "PLACE_BAG",
-            "failed": "failed",
-        },
-    )
 
     sm.add_state(
         "PLACE_BAG",
